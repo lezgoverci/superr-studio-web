@@ -27,6 +27,7 @@ import {
   executionLogsAtom,
   selectedExecutionIdAtom,
 } from "@/lib/workflow-store";
+import { usePolling } from "@/hooks/use-polling";
 import { findActionById } from "@/plugins";
 import { Button } from "../ui/button";
 import { Spinner } from "../ui/spinner";
@@ -691,13 +692,11 @@ export function WorkflowRuns({
   );
 
   // Poll for new executions when tab is active
-  useEffect(() => {
-    if (!(isActive && currentWorkflowId)) {
-      return;
-    }
-
-    const pollExecutions = async () => {
+  usePolling(
+    async () => {
       try {
+        if (!currentWorkflowId) return;
+
         const data = await api.workflow.getExecutions(currentWorkflowId);
         setExecutions(data as WorkflowExecution[]);
 
@@ -708,11 +707,10 @@ export function WorkflowRuns({
       } catch (error) {
         console.error("Failed to poll executions:", error);
       }
-    };
-
-    const interval = setInterval(pollExecutions, 2000);
-    return () => clearInterval(interval);
-  }, [isActive, currentWorkflowId, expandedRuns, refreshExecutionLogs]);
+    },
+    5000, // Poll every 5 seconds (increased from 2000ms)
+    isActive && !!currentWorkflowId
+  );
 
   const toggleRun = async (executionId: string) => {
     const newExpanded = new Set(expandedRuns);
