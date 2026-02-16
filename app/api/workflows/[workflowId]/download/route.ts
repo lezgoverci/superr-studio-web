@@ -3,11 +3,16 @@ import { join } from "node:path";
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { AUTO_GENERATED_TEMPLATES } from "@/lib/codegen-registry";
 import { db } from "@/lib/db";
 import { workflows } from "@/lib/db/schema";
 import { generateWorkflowModule } from "@/lib/workflow-codegen";
 import type { WorkflowEdge, WorkflowNode } from "@/lib/workflow-store";
-import { getAllEnvVars, getDependenciesForActions } from "@/plugins";
+import {
+  findActionById,
+  getAllEnvVars,
+  getDependenciesForActions,
+} from "@/plugins";
 
 // Path to the Next.js boilerplate directory
 const BOILERPLATE_PATH = join(process.cwd(), "lib", "next-boilerplate");
@@ -247,6 +252,31 @@ export async function GET(
       }
     }
 
+    // Add auto-generated templates from the registry (for plugins)
+    // This is required for plugin actions that don't have static templates in lib/codegen-templates
+    const usedActionTypes = new Set(
+      (workflow.nodes as WorkflowNode[])
+        .filter((n) => n.data.type === "action")
+        .map((n) => n.data.config?.actionType as string)
+        .filter(Boolean)
+    );
+
+    for (const actionType of usedActionTypes) {
+      const action = findActionById(actionType);
+      if (!action) continue;
+
+      // Use the action's full ID to look up the template
+      const fullActionId = action.id; // Corrected: use .id property which contains full ID
+      const template = AUTO_GENERATED_TEMPLATES[fullActionId];
+
+      if (template) {
+        // Add the file to stepFiles
+        // The import path in generated code is `./steps/${action.stepImportPath}-step`
+        // So we place the file at `lib/steps/${action.stepImportPath}-step.ts`
+        stepFiles[`lib/steps/${action.stepImportPath}-step.ts`] = template;
+      }
+    }
+
     // Generate workflow-specific files
     const workflowFiles = generateWorkflowFiles({
       name: workflow.name,
@@ -302,7 +332,7 @@ cp .env.example .env.local
 pnpm dev
 \`\`\`
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+4. Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 ## Workflow API
 

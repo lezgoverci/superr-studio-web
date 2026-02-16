@@ -475,7 +475,7 @@ async function generateCodegenTemplate(
 
   // Build the raw template (formatter will fix indentation)
   const rawTemplate = `${imports.join("\n")}
-import { fetchCredentials } from './lib/credential-helper';
+import { fetchCredentials } from '@/lib/credential-helper';
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;

@@ -292,19 +292,19 @@ const SYSTEM_STEP_INFO: Record<
 > = {
   "Database Query": {
     functionName: "databaseQueryStep",
-    importPath: "./steps/database-query-step",
+    importPath: "@/lib/steps/database-query-step",
   },
   "HTTP Request": {
     functionName: "httpRequestStep",
-    importPath: "./steps/http-request-step",
+    importPath: "@/lib/steps/http-request-step",
   },
   "Run Workflow": {
     functionName: "runWorkflowStep",
-    importPath: "./steps/run-workflow-step",
+    importPath: "@/lib/steps/run-workflow-step",
   },
   Condition: {
     functionName: "conditionStep",
-    importPath: "./steps/condition-step",
+    importPath: "@/lib/steps/condition-step",
   },
 };
 
@@ -328,14 +328,14 @@ export function getStepInfo(actionType: string): {
     return {
       functionName: action.stepFunction,
       // Convert plugin's stepImportPath to generated code import path
-      // Plugin uses "send-email", generated code uses "./steps/send-email-step"
-      importPath: `./steps/${action.stepImportPath}-step`,
+      // Plugin uses "send-email", generated code uses "@/lib/steps/send-email-step"
+      importPath: `@/lib/steps/${action.stepImportPath}-step`,
     };
   }
 
   // Fallback for unknown actions
   return {
     functionName: "unknownStep",
-    importPath: "./steps/unknown-step",
+    importPath: "@/lib/steps/unknown-step",
   };
 }
