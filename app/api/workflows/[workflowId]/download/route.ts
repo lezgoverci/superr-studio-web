@@ -24,6 +24,19 @@ const CODEGEN_TEMPLATES_PATH = join(process.cwd(), "lib", "codegen-templates");
 const NON_ALPHANUMERIC_REGEX = /[^a-zA-Z0-9\s]/g;
 const WHITESPACE_SPLIT_REGEX = /\s+/;
 const TEMPLATE_EXPORT_REGEX = /export default `([\s\S]*)`/;
+const DEFAULT_WORKFLOW_VERSION = "4.0.1-beta.17";
+
+const BINARY_EXTENSIONS = new Set([
+  ".ico",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".woff",
+  ".woff2",
+  ".ttf",
+  ".eot",
+]);
 
 /**
  * Recursively read all files from a directory
@@ -43,8 +56,13 @@ async function readDirectoryRecursive(
       const subFiles = await readDirectoryRecursive(fullPath, baseDir);
       Object.assign(files, subFiles);
     } else if (entry.isFile()) {
+      // Check if file is binary based on extension
+      const ext = fullPath.substring(fullPath.lastIndexOf(".")).toLowerCase();
+      const isBinary = BINARY_EXTENSIONS.has(ext);
+
       // Read file content
-      const content = await readFile(fullPath, "utf-8");
+      const content = await readFile(fullPath, isBinary ? "base64" : "utf-8");
+
       // Use relative path from base directory
       const relativePath = fullPath.substring(baseDir.length + 1);
       files[relativePath] = content;
@@ -263,7 +281,9 @@ export async function GET(
 
     for (const actionType of usedActionTypes) {
       const action = findActionById(actionType);
-      if (!action) continue;
+      if (!action) {
+        continue;
+      }
 
       // Use the action's full ID to look up the template
       const fullActionId = action.id; // Corrected: use .id property which contains full ID
@@ -287,18 +307,31 @@ export async function GET(
     // Merge boilerplate, step files, and workflow files
     const allFiles = { ...boilerplateFiles, ...stepFiles, ...workflowFiles };
 
+    // Resolve workflow version from current project package.json to keep exports in sync
+    const rootPackageJson = JSON.parse(
+      await readFile(join(process.cwd(), "package.json"), "utf-8")
+    );
+    const workflowVersion =
+      (rootPackageJson.dependencies?.workflow as string | undefined) ||
+      DEFAULT_WORKFLOW_VERSION;
+
     // Update package.json to include workflow dependencies
     const packageJson = JSON.parse(allFiles["package.json"]);
     packageJson.dependencies = {
       ...packageJson.dependencies,
-      workflow: "4.0.1-beta.7",
+      workflow: workflowVersion,
       ...getIntegrationDependencies(workflow.nodes as WorkflowNode[]),
+    };
+    packageJson.scripts = {
+      ...packageJson.scripts,
+      dev: "next dev --webpack",
+      build: "next build --webpack",
     };
     allFiles["package.json"] = JSON.stringify(packageJson, null, 2);
 
     // Update next.config.ts to include workflow plugin
-    allFiles["next.config.ts"] = `import { withWorkflow } from 'workflow/next';
-import type { NextConfig } from 'next';
+    allFiles["next.config.ts"] = `import { withWorkflow } from "workflow/next";
+import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {};
 

@@ -15,6 +15,7 @@ import {
 import Image from "next/image";
 import type { JSX } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePolling } from "@/hooks/use-polling";
 import { api } from "@/lib/api-client";
 import {
   OUTPUT_DISPLAY_CONFIGS,
@@ -27,7 +28,6 @@ import {
   executionLogsAtom,
   selectedExecutionIdAtom,
 } from "@/lib/workflow-store";
-import { usePolling } from "@/hooks/use-polling";
 import { findActionById } from "@/plugins";
 import { Button } from "../ui/button";
 import { Spinner } from "../ui/spinner";
@@ -695,7 +695,9 @@ export function WorkflowRuns({
   usePolling(
     async () => {
       try {
-        if (!currentWorkflowId) return;
+        if (!currentWorkflowId) {
+          return;
+        }
 
         const data = await api.workflow.getExecutions(currentWorkflowId);
         setExecutions(data as WorkflowExecution[]);

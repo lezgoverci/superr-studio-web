@@ -600,7 +600,9 @@ const WorkflowEditor = ({ params }: WorkflowPageProps) => {
       // but here we just need the logic.
 
       try {
-        if (!selectedExecutionId) return;
+        if (!selectedExecutionId) {
+          return;
+        }
 
         const statusData =
           await api.workflow.getExecutionStatus(selectedExecutionId);

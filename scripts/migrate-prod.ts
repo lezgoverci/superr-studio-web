@@ -4,6 +4,7 @@ import dns from "node:dns";
 if (dns.setDefaultResultOrder) {
   dns.setDefaultResultOrder("ipv4first");
 }
+
 import postgres from "postgres";
 import {
   migrationDatabaseUrlEnvKeys,
@@ -39,7 +40,8 @@ function buildMigrationEnv(databaseUrl: string): NodeJS.ProcessEnv {
   };
 
   // Force IPv4 ordering to avoid ENETUNREACH on IPv6-only resolved addresses in environments without IPv6 routing
-  env.NODE_OPTIONS = `${env.NODE_OPTIONS || ""} --dns-result-order=ipv4first`.trim();
+  env.NODE_OPTIONS =
+    `${env.NODE_OPTIONS || ""} --dns-result-order=ipv4first`.trim();
 
   return env;
 }

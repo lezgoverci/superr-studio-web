@@ -926,9 +926,25 @@ function useWorkflowActions(state: ReturnType<typeof useWorkflowState>) {
       const JSZip = (await import("jszip")).default;
       const zip = new JSZip();
 
+      // Binary extensions that should be treated as base64
+      const BINARY_EXTENSIONS = new Set([
+        ".ico",
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".woff",
+        ".woff2",
+        ".ttf",
+        ".eot",
+      ]);
+
       // Add all files to the zip
       for (const [path, content] of Object.entries(result.files)) {
-        zip.file(path, content);
+        const ext = path.substring(path.lastIndexOf(".")).toLowerCase();
+        const isBinary = BINARY_EXTENSIONS.has(ext);
+
+        zip.file(path, content, { base64: isBinary });
       }
 
       // Generate the zip file
