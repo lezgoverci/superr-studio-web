@@ -16,6 +16,7 @@ import {
   Redo2,
   Save,
   Settings2,
+  Sparkles,
   Trash2,
   Undo2,
   Upload,
@@ -1118,6 +1119,25 @@ function useWorkflowActions(state: ReturnType<typeof useWorkflowState>) {
     }
   };
 
+  const handleGenerateUi = async () => {
+    if (!currentWorkflowId) {
+      return;
+    }
+
+    try {
+      const result = await api.workflow.composeUiSpec(currentWorkflowId);
+      toast.success("Run form generated");
+      router.push(result.runUrl);
+    } catch (error) {
+      console.error("Failed to generate workflow run form:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to generate workflow run form"
+      );
+    }
+  };
+
   return {
     handleSave,
     handleExecute,
@@ -1129,6 +1149,7 @@ function useWorkflowActions(state: ReturnType<typeof useWorkflowState>) {
     loadWorkflows,
     handleToggleVisibility,
     handleDuplicate,
+    handleGenerateUi,
   };
 }
 
@@ -1369,6 +1390,7 @@ function ToolbarActions({
       {/* Visibility Toggle */}
       <VisibilityButton actions={actions} state={state} />
 
+      <GenerateUiButton actions={actions} state={state} />
       <RunButtonGroup actions={actions} state={state} />
     </>
   );
@@ -1607,6 +1629,48 @@ function RunButtonGroup({
         <Loader2 className="size-4 animate-spin" />
       ) : (
         <Play className="size-4" />
+      )}
+    </Button>
+  );
+}
+
+function GenerateUiButton({
+  state,
+  actions,
+}: {
+  state: ReturnType<typeof useWorkflowState>;
+  actions: ReturnType<typeof useWorkflowActions>;
+}) {
+  const [isGeneratingUi, setIsGeneratingUi] = useState(false);
+
+  const handleClick = async () => {
+    setIsGeneratingUi(true);
+    try {
+      await actions.handleGenerateUi();
+    } finally {
+      setIsGeneratingUi(false);
+    }
+  };
+
+  return (
+    <Button
+      className="border hover:bg-black/5 disabled:opacity-100 dark:hover:bg-white/5 disabled:[&>svg]:text-muted-foreground"
+      disabled={
+        !state.currentWorkflowId ||
+        state.isGenerating ||
+        state.isExecuting ||
+        state.isSaving ||
+        isGeneratingUi
+      }
+      onClick={handleClick}
+      size="icon"
+      title={isGeneratingUi ? "Generating run form..." : "Generate run form"}
+      variant="secondary"
+    >
+      {isGeneratingUi ? (
+        <Loader2 className="size-4 animate-spin" />
+      ) : (
+        <Sparkles className="size-4" />
       )}
     </Button>
   );

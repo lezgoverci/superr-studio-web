@@ -62,6 +62,15 @@ const aiAgentPlugin: IntegrationPlugin = {
           field: "skillsUsed",
           description: "Skill names the agent invoked via the skill tool",
         },
+        {
+          field: "uiSpecAttached",
+          description: "Workflow IDs that received generated run UI specs",
+        },
+        {
+          field: "uiSpecWarnings",
+          description:
+            "Non-fatal warnings encountered while composing or attaching run UI specs",
+        },
       ],
       configFields: [
         {
@@ -188,6 +197,25 @@ const aiAgentPlugin: IntegrationPlugin = {
           defaultValue: "skills",
           placeholder: "skills",
           showWhen: { field: "skillsEnabled", equals: "on" },
+        },
+        {
+          key: "includeWorkflowUi",
+          label: "Include Workflow UI",
+          type: "select",
+          defaultValue: "off",
+          options: [
+            { value: "off", label: "Off" },
+            { value: "on", label: "On" },
+          ],
+        },
+        {
+          key: "workflowUiPrompt",
+          label: "Workflow UI Prompt",
+          type: "template-textarea",
+          placeholder:
+            "Optional instructions for generated /run forms. Example: Ask for customerId and priority before submit.",
+          rows: 3,
+          showWhen: { field: "includeWorkflowUi", equals: "on" },
         },
         {
           key: "agentPrompt",

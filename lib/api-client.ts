@@ -590,6 +590,24 @@ export const workflowApi = {
       error?: string;
     }>(`/api/workflows/${id}/download`),
 
+  // Compose and persist run UI spec for a workflow
+  composeUiSpec: (
+    id: string,
+    payload: {
+      prompt?: string;
+      model?: string;
+    } = {}
+  ) =>
+    apiCall<{
+      workflowId: string;
+      spec: Record<string, unknown>;
+      modelUsed: string;
+      runUrl: string;
+    }>(`/api/workflows/${id}/ui-spec/compose`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
   // Auto-save with debouncing (kept for backwards compatibility)
   autoSaveCurrent: (() => {
     let autosaveTimeout: NodeJS.Timeout | null = null;

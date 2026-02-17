@@ -6,6 +6,7 @@
  */
 import "server-only";
 
+import { and, eq } from "drizzle-orm";
 import { Sandbox as VercelSandbox } from "@vercel/sandbox";
 import { createGateway, stepCountIs, ToolLoopAgent } from "ai";
 import { createBashTool, experimental_createSkillTool } from "bash-tool";
@@ -14,8 +15,16 @@ import { resolveSkills, sanitizeSkillsDestination } from "@/lib/skills/resolve";
 import type { SkillSourceConfig } from "@/lib/skills/types";
 import { parseSkillsAllowlist } from "@/lib/skills/validate";
 import { fetchCredentials } from "@/lib/credential-fetcher";
+import { db } from "@/lib/db";
+import { getIntegrationById } from "@/lib/db/integrations";
+import { workflows } from "@/lib/db/schema";
 import { type StepInput, withStepLogging } from "@/lib/steps/step-handler";
 import { getErrorMessageAsync } from "@/lib/utils";
+import {
+  buildWorkflowSummary,
+  composeWorkflowUiSpec,
+  DEFAULT_UI_SPEC_PROMPT,
+} from "@/lib/workflow-ui-spec/compose";
 import type { AiAgentCredentials } from "../credentials";
 
 type SandboxType = "vercel" | "just-bash";
@@ -29,6 +38,11 @@ type RunAgentResult =
       sandboxTypeResolved: SandboxType;
       skillsAvailable: string[];
       skillsUsed: string[];
+      uiSpecAttached: string[];
+      uiSpecWarnings: Array<{
+        workflowId?: string;
+        message: string;
+      }>;
     }
   | {
       success: false;
@@ -54,6 +68,8 @@ export type RunAgentCoreInput = {
   skillsRepoSubdir?: string;
   skillsAllowlist?: string;
   skillsDestination?: string;
+  includeWorkflowUi?: string;
+  workflowUiPrompt?: string;
 };
 
 export type RunAgentInput = StepInput &
@@ -80,6 +96,298 @@ function getModelString(modelId: string): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object";
+}
+
+type WorkflowUiTarget = {
+  workflowId: string;
+  summary?: string;
+  prompt?: string;
+};
+
+type UiSpecAttachmentOutcome = {
+  attachedWorkflowIds: string[];
+  warnings: Array<{
+    workflowId?: string;
+    message: string;
+  }>;
+};
+
+const WORKFLOW_URL_PATTERN = /\/workflows\/([a-zA-Z0-9_-]{8,})/g;
+const WORKFLOW_ID_PATTERN =
+  /\bworkflow(?:Id|_id)\b["']?\s*[:=]\s*["']([a-zA-Z0-9_-]{8,})["']/gi;
+
+function shouldIncludeWorkflowUi(input: RunAgentCoreInput): boolean {
+  return input.includeWorkflowUi === "on";
+}
+
+function normalizeWorkflowId(value: unknown): string {
+  if (typeof value !== "string") {
+    return "";
+  }
+  return value.trim();
+}
+
+function parseWorkflowUiTarget(value: unknown): WorkflowUiTarget | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const workflowId = normalizeWorkflowId(value.workflowId);
+  if (!workflowId) {
+    return null;
+  }
+
+  const summary = typeof value.summary === "string" ? value.summary.trim() : "";
+  const prompt = typeof value.prompt === "string" ? value.prompt.trim() : "";
+
+  return {
+    workflowId,
+    ...(summary ? { summary } : {}),
+    ...(prompt ? { prompt } : {}),
+  };
+}
+
+function extractWorkflowIdsFromText(text: string): string[] {
+  const ids = new Set<string>();
+
+  for (const match of text.matchAll(WORKFLOW_URL_PATTERN)) {
+    if (match[1]) {
+      ids.add(match[1]);
+    }
+  }
+
+  for (const match of text.matchAll(WORKFLOW_ID_PATTERN)) {
+    if (match[1]) {
+      ids.add(match[1]);
+    }
+  }
+
+  return [...ids];
+}
+
+function extractWorkflowUiTargetsFromData(data: unknown): WorkflowUiTarget[] {
+  if (!isRecord(data)) {
+    return [];
+  }
+
+  const targets: WorkflowUiTarget[] = [];
+  const workflowsRaw = Array.isArray(data.workflows) ? data.workflows : [];
+  for (const item of workflowsRaw) {
+    const target = parseWorkflowUiTarget(item);
+    if (target) {
+      targets.push(target);
+    }
+  }
+
+  const directWorkflowId = normalizeWorkflowId(data.workflowId);
+  if (directWorkflowId) {
+    targets.push({ workflowId: directWorkflowId });
+  }
+
+  const workflowIdsRaw = Array.isArray(data.workflowIds) ? data.workflowIds : [];
+  for (const workflowIdRaw of workflowIdsRaw) {
+    const workflowId = normalizeWorkflowId(workflowIdRaw);
+    if (workflowId) {
+      targets.push({ workflowId });
+    }
+  }
+
+  return targets;
+}
+
+function mergeWorkflowUiTargets(
+  structuredTargets: WorkflowUiTarget[],
+  textWorkflowIds: string[]
+): WorkflowUiTarget[] {
+  const byWorkflowId = new Map<string, WorkflowUiTarget>();
+
+  for (const target of structuredTargets) {
+    byWorkflowId.set(target.workflowId, target);
+  }
+
+  for (const workflowId of textWorkflowIds) {
+    if (!byWorkflowId.has(workflowId)) {
+      byWorkflowId.set(workflowId, { workflowId });
+    }
+  }
+
+  return [...byWorkflowId.values()];
+}
+
+function buildUiTrackingInstructions(workflowUiPrompt: string): string {
+  const promptClause = workflowUiPrompt
+    ? `When creating run forms, follow this guidance: ${workflowUiPrompt}`
+    : "";
+
+  return [
+    "If you create or update workflows, include a final JSON object in your response.",
+    'Use this shape: {"workflows":[{"workflowId":"<id>","summary":"optional context for UI form","prompt":"optional per-workflow UI prompt"}]}',
+    "If no workflows were created or updated, return {\"workflows\":[]}.",
+    "Do not invent workflow IDs.",
+    promptClause,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+function buildAgentInstructions(input: RunAgentCoreInput): string {
+  const baseInstructions = input.agentInstructions || DEFAULT_INSTRUCTIONS;
+  if (!shouldIncludeWorkflowUi(input)) {
+    return baseInstructions;
+  }
+
+  const uiPrompt = typeof input.workflowUiPrompt === "string"
+    ? input.workflowUiPrompt.trim()
+    : "";
+
+  return `${baseInstructions}\n\n${buildUiTrackingInstructions(uiPrompt)}`;
+}
+
+async function resolveOwnerUserId(
+  integrationId: string | undefined
+): Promise<string | null> {
+  if (!integrationId) {
+    return null;
+  }
+
+  const integration = await getIntegrationById(integrationId);
+  return integration?.userId ?? null;
+}
+
+async function attachUiSpecToWorkflow(options: {
+  workflowId: string;
+  ownerUserId: string;
+  workflowUiPrompt: string;
+  targetPrompt?: string;
+  targetSummary?: string;
+  modelId: string;
+}): Promise<{ ok: true } | { ok: false; message: string }> {
+  const workflow = await db.query.workflows.findFirst({
+    where: and(
+      eq(workflows.id, options.workflowId),
+      eq(workflows.userId, options.ownerUserId)
+    ),
+  });
+
+  if (!workflow) {
+    return {
+      ok: false,
+      message: "Workflow not found for current owner.",
+    };
+  }
+
+  const workflowPrompt =
+    options.targetPrompt || options.workflowUiPrompt || DEFAULT_UI_SPEC_PROMPT;
+  const workflowSummaryParts = [
+    options.targetSummary ? `Agent summary: ${options.targetSummary}` : "",
+    buildWorkflowSummary({
+      name: workflow.name,
+      description: workflow.description,
+      nodes: workflow.nodes,
+      edges: workflow.edges,
+    }),
+  ].filter(Boolean);
+
+  const composed = await composeWorkflowUiSpec({
+    prompt: workflowPrompt,
+    workflowSummary: workflowSummaryParts.join("\n\n"),
+    currentSpec: workflow.uiSpec,
+    model: options.modelId,
+  });
+
+  await db
+    .update(workflows)
+    .set({
+      uiSpec: composed.spec,
+      uiSpecVersion: "1",
+      uiMetadata: {
+        generatedBy: "ai-agent",
+        generatedAt: new Date().toISOString(),
+        model: composed.modelUsed,
+      },
+      updatedAt: new Date(),
+    })
+    .where(eq(workflows.id, workflow.id));
+
+  return { ok: true };
+}
+
+async function maybeAttachWorkflowUiSpecs(options: {
+  input: RunAgentInput;
+  modelId: string;
+  text: string;
+  data: unknown;
+}): Promise<UiSpecAttachmentOutcome> {
+  if (!shouldIncludeWorkflowUi(options.input)) {
+    return { attachedWorkflowIds: [], warnings: [] };
+  }
+
+  const ownerUserId = await resolveOwnerUserId(options.input.integrationId);
+  if (!ownerUserId) {
+    return {
+      attachedWorkflowIds: [],
+      warnings: [
+        {
+          message:
+            "Include Workflow UI is enabled, but integration owner could not be resolved.",
+        },
+      ],
+    };
+  }
+
+  const structuredTargets = extractWorkflowUiTargetsFromData(options.data);
+  const textTargets = extractWorkflowIdsFromText(options.text);
+  const targets = mergeWorkflowUiTargets(structuredTargets, textTargets);
+
+  if (targets.length === 0) {
+    return {
+      attachedWorkflowIds: [],
+      warnings: [
+        {
+          message:
+            "Include Workflow UI is enabled, but no workflow IDs were detected in the agent response.",
+        },
+      ],
+    };
+  }
+
+  const workflowUiPrompt =
+    typeof options.input.workflowUiPrompt === "string"
+      ? options.input.workflowUiPrompt.trim()
+      : "";
+  const attachedWorkflowIds: string[] = [];
+  const warnings: UiSpecAttachmentOutcome["warnings"] = [];
+
+  for (const target of targets) {
+    try {
+      const result = await attachUiSpecToWorkflow({
+        workflowId: target.workflowId,
+        ownerUserId,
+        workflowUiPrompt,
+        targetPrompt: target.prompt,
+        targetSummary: target.summary,
+        modelId: options.modelId,
+      });
+
+      if (result.ok) {
+        attachedWorkflowIds.push(target.workflowId);
+      } else {
+        warnings.push({
+          workflowId: target.workflowId,
+          message: result.message,
+        });
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to attach UI spec";
+      warnings.push({
+        workflowId: target.workflowId,
+        message,
+      });
+    }
+  }
+
+  return { attachedWorkflowIds, warnings };
 }
 
 /**
@@ -455,7 +763,7 @@ Always explain what you're doing briefly before executing commands.`;
  * Core agent logic
  */
 async function stepHandler(
-  input: RunAgentCoreInput,
+  input: RunAgentInput,
   credentials: AiAgentCredentials
 ): Promise<RunAgentResult> {
   const apiKey = credentials.AI_GATEWAY_API_KEY;
@@ -508,7 +816,7 @@ async function stepHandler(
     const agent = new ToolLoopAgent({
       model: gateway(modelString),
       tools: sandboxRuntime.tools,
-      instructions: input.agentInstructions || DEFAULT_INSTRUCTIONS,
+      instructions: buildAgentInstructions(input),
       stopWhen: stepCountIs(maxSteps),
     });
 
@@ -521,6 +829,12 @@ async function stepHandler(
       : [];
 
     const data = parseAgentOutput(result.text, steps);
+    const uiSpecOutcome = await maybeAttachWorkflowUiSpecs({
+      input,
+      modelId: modelString,
+      text: result.text,
+      data,
+    });
 
     return {
       success: true,
@@ -530,6 +844,8 @@ async function stepHandler(
       sandboxTypeResolved,
       skillsAvailable: skillToolkit?.skills ?? [],
       skillsUsed: skillToolkit ? extractSkillsUsed(steps) : [],
+      uiSpecAttached: uiSpecOutcome.attachedWorkflowIds,
+      uiSpecWarnings: uiSpecOutcome.warnings,
     };
   } catch (error) {
     const message = await getErrorMessageAsync(error);
