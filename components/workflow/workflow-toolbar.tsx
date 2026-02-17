@@ -473,7 +473,6 @@ type ExecuteTestWorkflowParams = {
     id: string;
     data: { status?: "idle" | "running" | "success" | "error" };
   }) => void;
-  pollingIntervalRef: React.MutableRefObject<NodeJS.Timeout | null>;
   setIsExecuting: (value: boolean) => void;
   setSelectedExecutionId: (value: string | null) => void;
 };
@@ -482,7 +481,6 @@ async function executeTestWorkflow({
   workflowId,
   nodes,
   updateNodeData,
-  pollingIntervalRef,
   setIsExecuting,
   setSelectedExecutionId,
 }: ExecuteTestWorkflowParams) {
@@ -514,46 +512,6 @@ async function executeTestWorkflow({
 
     // Select the new execution
     setSelectedExecutionId(result.executionId);
-
-    // Poll for execution status updates
-    const pollInterval = setInterval(async () => {
-      try {
-        const statusData = await api.workflow.getExecutionStatus(
-          result.executionId
-        );
-
-        // Update node statuses based on the execution logs
-        for (const nodeStatus of statusData.nodeStatuses) {
-          updateNodeData({
-            id: nodeStatus.nodeId,
-            data: {
-              status: nodeStatus.status as
-                | "idle"
-                | "running"
-                | "success"
-                | "error",
-            },
-          });
-        }
-
-        // Stop polling if execution is complete
-        if (statusData.status !== "running") {
-          if (pollingIntervalRef.current) {
-            clearInterval(pollingIntervalRef.current);
-            pollingIntervalRef.current = null;
-          }
-
-          setIsExecuting(false);
-
-          // Don't reset node statuses - let them show the final state
-          // The user can click another run or deselect to reset
-        }
-      } catch (error) {
-        console.error("Failed to poll execution status:", error);
-      }
-    }, 500); // Poll every 500ms
-
-    pollingIntervalRef.current = pollInterval;
   } catch (error) {
     console.error("Failed to execute workflow:", error);
     toast.error(
@@ -602,17 +560,6 @@ function useWorkflowHandlers({
   userIntegrations,
 }: WorkflowHandlerParams) {
   const { open: openOverlay } = useOverlay();
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Cleanup polling interval on unmount
-  useEffect(
-    () => () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-      }
-    },
-    []
-  );
 
   const handleSave = async () => {
     if (!currentWorkflowId) {
@@ -650,11 +597,10 @@ function useWorkflowHandlers({
       workflowId: currentWorkflowId,
       nodes,
       updateNodeData,
-      pollingIntervalRef,
       setIsExecuting,
       setSelectedExecutionId,
     });
-    // Don't set executing to false here - let polling handle it
+    // Don't set executing to false here - page-level polling handles completion.
   };
 
   const handleGoToStep = (nodeId: string, fieldKey?: string) => {

@@ -531,6 +531,7 @@ export function WorkflowRuns({
   const [expandedRuns, setExpandedRuns] = useState<Set<string>>(new Set());
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const runsListRef = useRef<HTMLDivElement | null>(null);
 
   // Track which execution we've already auto-expanded to prevent loops
   const autoExpandedExecutionRef = useRef<string | null>(null);
@@ -570,6 +571,34 @@ export function WorkflowRuns({
   useEffect(() => {
     loadExecutions();
   }, [loadExecutions]);
+
+  // Deselect the currently selected run when clicking outside the runs list.
+  useEffect(() => {
+    if (!isActive) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!(selectedExecutionId && runsListRef.current)) {
+        return;
+      }
+
+      const target = event.target;
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (runsListRef.current.contains(target)) {
+        return;
+      }
+
+      setSelectedExecutionId(null);
+      setExecutionLogs({});
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [isActive, selectedExecutionId, setExecutionLogs, setSelectedExecutionId]);
 
   // Helper function to map node IDs to labels
   const mapNodeLabels = useCallback(
@@ -700,10 +729,24 @@ export function WorkflowRuns({
         }
 
         const data = await api.workflow.getExecutions(currentWorkflowId);
-        setExecutions(data as WorkflowExecution[]);
+        const workflowExecutions = data as WorkflowExecution[];
+        setExecutions(workflowExecutions);
 
-        // Also refresh logs for expanded runs
+        // Refresh logs only for expanded runs that are still active.
+        // Completed runs are immutable and don't need periodic refreshes.
+        const activeExecutionIds = new Set(
+          workflowExecutions
+            .filter(
+              (execution) =>
+                execution.status === "running" || execution.status === "pending"
+            )
+            .map((execution) => execution.id)
+        );
+
         for (const executionId of expandedRuns) {
+          if (!activeExecutionIds.has(executionId)) {
+            continue;
+          }
           await refreshExecutionLogs(executionId);
         }
       } catch (error) {
@@ -801,7 +844,7 @@ export function WorkflowRuns({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" ref={runsListRef}>
       {executions.map((execution, index) => {
         const isExpanded = expandedRuns.has(execution.id);
         const isSelected = selectedExecutionId === execution.id;

@@ -24,6 +24,7 @@ import {
   edgesAtom,
   hasSidebarBeenShownAtom,
   hasUnsavedChangesAtom,
+  isExecutingAtom,
   isGeneratingAtom,
   isPanelAnimatingAtom,
   isSavingAtom,
@@ -66,6 +67,8 @@ type IntegrationFixResult = {
   nodeId: string;
   newIntegrationId: string | undefined;
 };
+
+const TERMINAL_EXECUTION_STATUSES = new Set(["success", "error", "cancelled"]);
 
 function checkNodeIntegration(
   node: WorkflowNode,
@@ -116,6 +119,7 @@ const WorkflowEditor = ({ params }: WorkflowPageProps) => {
   const [selectedExecutionId] = useAtom(selectedExecutionIdAtom);
   const setNodes = useSetAtom(nodesAtom);
   const setEdges = useSetAtom(edgesAtom);
+  const setIsExecuting = useSetAtom(isExecutingAtom);
   const setCurrentWorkflowId = useSetAtom(currentWorkflowIdAtom);
   const setCurrentWorkflowName = useSetAtom(currentWorkflowNameAtom);
   const updateNodeData = useSetAtom(updateNodeDataAtom);
@@ -142,6 +146,8 @@ const WorkflowEditor = ({ params }: WorkflowPageProps) => {
   // Start visible if sidebar has already been shown (switching between workflows)
   const [panelVisible, setPanelVisible] = useState(hasSidebarBeenShown);
   const [isDraggingResize, setIsDraggingResize] = useState(false);
+  const [isExecutionPollingEnabled, setIsExecutionPollingEnabled] =
+    useState(false);
   const isResizing = useRef(false);
   const hasReadCookies = useRef(false);
 
@@ -282,8 +288,6 @@ const WorkflowEditor = ({ params }: WorkflowPageProps) => {
     document.body.style.userSelect = "none";
   }, []);
 
-  // Ref to track polling interval
-  const executionPollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   // Ref to access current nodes without triggering effect re-runs
   const nodesRef = useRef(nodes);
 
@@ -581,26 +585,15 @@ const WorkflowEditor = ({ params }: WorkflowPageProps) => {
     return () => document.removeEventListener("keydown", handleKeyDown, true);
   }, [handleSaveShortcut, handleRunShortcut]);
 
-  // Cleanup polling interval on unmount
-  useEffect(
-    () => () => {
-      if (executionPollingIntervalRef.current) {
-        clearInterval(executionPollingIntervalRef.current);
-      }
-    },
-    []
-  );
+  useEffect(() => {
+    setIsExecutionPollingEnabled(!!selectedExecutionId);
+  }, [selectedExecutionId]);
 
   // Poll for selected execution status
   usePolling(
     async () => {
-      // Create a local reference to avoid closure staleness if needed,
-      // though usePolling handles callback refs internally.
-      // We check selectedExecutionId inside the effect of usePolling via the enabled flag/dependency,
-      // but here we just need the logic.
-
       try {
-        if (!selectedExecutionId) {
+        if (!(selectedExecutionId && isExecutionPollingEnabled)) {
           return;
         }
 
@@ -619,33 +612,40 @@ const WorkflowEditor = ({ params }: WorkflowPageProps) => {
           }))
         );
 
-        // Note: We don't need to manually stop polling like with setInterval/clearInterval
-        // The parent component controls the 'enabled' prop or 'selectedExecutionId'
-        // If execution finishes, we might want to stop polling via a separate state,
-        // but for now, we'll rely on the fact that if it's not running, we could update state to stop it.
-        // However, usePolling will keep going until unmounted or disabled.
-        // If we want to stop when status is not running, we should likely check that state.
-        // Current implementation continues polling as long as selectedExecutionId matches.
-        // Let's optimize: checking status inside poll is fine, but maybe we want to
-        // invalidating the selectedExecutionId if it's done?
-        // Actually, the original code stopped the interval.
-        // We can mimic that by having a state `isPollingEnabled`.
+        if (
+          statusData.status === "running" ||
+          statusData.status === "pending"
+        ) {
+          setIsExecuting(true);
+          return;
+        }
+
+        if (TERMINAL_EXECUTION_STATUSES.has(statusData.status)) {
+          setIsExecutionPollingEnabled(false);
+          setIsExecuting(false);
+          return;
+        }
+
+        // Unknown status values should not keep polling indefinitely.
+        setIsExecutionPollingEnabled(false);
+        setIsExecuting(false);
       } catch (error) {
         console.error("Failed to poll selected execution status:", error);
       }
     },
     1000, // Poll every 1 second (increased from 500ms)
-    !!selectedExecutionId // Only poll if an execution is selected
+    !!selectedExecutionId && isExecutionPollingEnabled
   );
 
   // Clear statuses when deselecting
   useEffect(() => {
     if (!selectedExecutionId) {
+      setIsExecuting(false);
       updateNodeStatuses(
         nodesRef.current.map((node) => ({ nodeId: node.id, status: "idle" }))
       );
     }
-  }, [selectedExecutionId, updateNodeStatuses]);
+  }, [selectedExecutionId, setIsExecuting, updateNodeStatuses]);
 
   return (
     <div className="flex h-dvh w-full flex-col overflow-hidden">
