@@ -73,6 +73,11 @@ export const workflows = pgTable("workflows", {
   nodes: jsonb("nodes").notNull().$type<any[]>(),
   // biome-ignore lint/suspicious/noExplicitAny: JSONB type - structure validated at application level
   edges: jsonb("edges").notNull().$type<any[]>(),
+  // biome-ignore lint/suspicious/noExplicitAny: JSONB type - structure validated at application level
+  uiSpec: jsonb("ui_spec").$type<Record<string, any> | null>(),
+  uiSpecVersion: text("ui_spec_version"),
+  // biome-ignore lint/suspicious/noExplicitAny: JSONB type - structure validated at application level
+  uiMetadata: jsonb("ui_metadata").$type<Record<string, any> | null>(),
   visibility: text("visibility")
     .notNull()
     .default("private")
@@ -159,6 +164,8 @@ export const apiKeys = pgTable("api_keys", {
   name: text("name"), // Optional label for the API key
   keyHash: text("key_hash").notNull(), // Store hashed version of the key
   keyPrefix: text("key_prefix").notNull(), // Store first few chars for display (e.g., "wf_abc...")
+  // Optional list of scopes. Empty or null means full access for backward compatibility.
+  scopes: jsonb("scopes").$type<string[] | null>(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   lastUsedAt: timestamp("last_used_at"),
 });

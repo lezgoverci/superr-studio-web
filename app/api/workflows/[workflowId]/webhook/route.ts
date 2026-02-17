@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { start } from "workflow/api";
+import { AGENT_SCOPES, isScopeGranted } from "@/lib/agent-auth";
 import { db } from "@/lib/db";
 import { validateWorkflowIntegrations } from "@/lib/db/integrations";
 import { apiKeys, workflowExecutions, workflows } from "@/lib/db/schema";
@@ -47,6 +48,23 @@ async function validateApiKey(
     return {
       valid: false,
       error: "You do not have permission to run this workflow",
+      statusCode: 403,
+    };
+  }
+
+  const configuredScopes = Array.isArray(apiKey.scopes)
+    ? apiKey.scopes.filter(
+        (scope): scope is string => typeof scope === "string"
+      )
+    : [];
+
+  if (
+    configuredScopes.length > 0 &&
+    !isScopeGranted(configuredScopes, AGENT_SCOPES.workflowWebhookExecute)
+  ) {
+    return {
+      valid: false,
+      error: `API key is missing required scope "${AGENT_SCOPES.workflowWebhookExecute}".`,
       statusCode: 403,
     };
   }

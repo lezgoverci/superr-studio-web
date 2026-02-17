@@ -139,6 +139,9 @@ export async function POST(
         description: sourceWorkflow.description,
         nodes: newNodes,
         edges: newEdges,
+        uiSpec: sourceWorkflow.uiSpec,
+        uiSpecVersion: sourceWorkflow.uiSpecVersion,
+        uiMetadata: sourceWorkflow.uiMetadata,
         userId: session.user.id,
         visibility: "private", // Duplicated workflows are always private
       })

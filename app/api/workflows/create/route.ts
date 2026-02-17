@@ -1,27 +1,15 @@
 import { eq } from "drizzle-orm";
-import { nanoid } from "nanoid";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { validateWorkflowIntegrations } from "@/lib/db/integrations";
 import { workflows } from "@/lib/db/schema";
 import { generateId } from "@/lib/utils/id";
-
-// Helper function to create a default trigger node
-function createDefaultTriggerNode() {
-  return {
-    id: nanoid(),
-    type: "trigger" as const,
-    position: { x: 0, y: 0 },
-    data: {
-      label: "",
-      description: "",
-      type: "trigger" as const,
-      config: { triggerType: "Manual" },
-      status: "idle" as const,
-    },
-  };
-}
+import {
+  createDefaultTriggerNode,
+  normalizeWorkflowVisibility,
+  serializeWorkflowDates,
+} from "@/lib/workflow-route-utils";
 
 export async function POST(request: Request) {
   try {
@@ -82,14 +70,19 @@ export async function POST(request: Request) {
         nodes,
         edges: body.edges,
         userId: session.user.id,
+        visibility: normalizeWorkflowVisibility(body.visibility),
+        uiSpec:
+          body.uiSpec && typeof body.uiSpec === "object" ? body.uiSpec : null,
+        uiSpecVersion:
+          typeof body.uiSpecVersion === "string" ? body.uiSpecVersion : null,
+        uiMetadata:
+          body.uiMetadata && typeof body.uiMetadata === "object"
+            ? body.uiMetadata
+            : null,
       })
       .returning();
 
-    return NextResponse.json({
-      ...newWorkflow,
-      createdAt: newWorkflow.createdAt.toISOString(),
-      updatedAt: newWorkflow.updatedAt.toISOString(),
-    });
+    return NextResponse.json(serializeWorkflowDates(newWorkflow));
   } catch (error) {
     console.error("Failed to create workflow:", error);
     return NextResponse.json(

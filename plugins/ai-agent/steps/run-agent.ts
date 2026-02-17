@@ -41,6 +41,8 @@ export type RunAgentCoreInput = {
   aiModel?: string;
   sandboxType?: string;
   vercelSandboxToken?: string;
+  vercelSandboxTeamId?: string;
+  vercelSandboxProjectId?: string;
   agentPrompt?: string;
   agentInstructions?: string;
   maxSteps?: string;
@@ -213,11 +215,32 @@ function parseOidcTokenCredentials(
 }
 
 function resolveVercelSandboxCredentials(
-  token: string
+  token: string,
+  options?: {
+    explicitTeamId?: string;
+    explicitProjectId?: string;
+  }
 ): VercelSandboxCredentials {
   const parsed = parseOidcTokenCredentials(token);
   if (parsed) {
     return parsed;
+  }
+
+  const explicitTeamId = options?.explicitTeamId?.trim();
+  const explicitProjectId = options?.explicitProjectId?.trim();
+
+  if (explicitTeamId && explicitProjectId) {
+    return {
+      token,
+      teamId: explicitTeamId,
+      projectId: explicitProjectId,
+    };
+  }
+
+  if (explicitTeamId || explicitProjectId) {
+    throw new Error(
+      "Provide both Vercel Sandbox Team ID and Project ID together when using a non-OIDC token."
+    );
   }
 
   const teamId = process.env.VERCEL_TEAM_ID?.trim();
@@ -238,7 +261,7 @@ function resolveVercelSandboxCredentials(
   }
 
   throw new Error(
-    "Invalid Vercel Sandbox token configuration. Provide an OIDC token or set VERCEL_TEAM_ID and VERCEL_PROJECT_ID in server environment variables."
+    "Invalid Vercel Sandbox token configuration. Provide an OIDC token, set Vercel Sandbox Team ID and Project ID in this node, or configure VERCEL_TEAM_ID and VERCEL_PROJECT_ID in server environment variables."
   );
 }
 
@@ -391,7 +414,10 @@ async function createSandboxTools(
     );
   }
 
-  const credentials = resolveVercelSandboxCredentials(token);
+  const credentials = resolveVercelSandboxCredentials(token, {
+    explicitTeamId: input.vercelSandboxTeamId,
+    explicitProjectId: input.vercelSandboxProjectId,
+  });
   const sandbox = await VercelSandbox.create(credentials);
   const destination = await resolveVercelSandboxDestination(sandbox);
 

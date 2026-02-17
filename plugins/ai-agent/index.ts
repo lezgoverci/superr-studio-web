@@ -105,6 +105,22 @@ const aiAgentPlugin: IntegrationPlugin = {
           showWhen: { field: "sandboxType", equals: "vercel" },
         },
         {
+          key: "vercelSandboxTeamId",
+          label: "Vercel Sandbox Team ID",
+          type: "text",
+          placeholder:
+            "Required for non-OIDC tokens unless VERCEL_TEAM_ID is set on server",
+          showWhen: { field: "sandboxType", equals: "vercel" },
+        },
+        {
+          key: "vercelSandboxProjectId",
+          label: "Vercel Sandbox Project ID",
+          type: "text",
+          placeholder:
+            "Required for non-OIDC tokens unless VERCEL_PROJECT_ID is set on server",
+          showWhen: { field: "sandboxType", equals: "vercel" },
+        },
+        {
           key: "skillsEnabled",
           label: "Agent Skills",
           type: "select",

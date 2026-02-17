@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { validateScopeList } from "@/lib/agent-auth";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { apiKeys } from "@/lib/db/schema";
@@ -31,6 +32,7 @@ export async function GET(request: Request) {
         id: true,
         name: true,
         keyPrefix: true,
+        scopes: true,
         createdAt: true,
         lastUsedAt: true,
       },
@@ -73,6 +75,16 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     const name = body.name || null;
 
+    let scopes: string[] | null;
+    try {
+      scopes = validateScopeList(body.scopes);
+    } catch (error) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Invalid scopes" },
+        { status: 400 }
+      );
+    }
+
     // Generate new API key
     const { key, hash, prefix } = generateApiKey();
 
@@ -84,11 +96,13 @@ export async function POST(request: Request) {
         name,
         keyHash: hash,
         keyPrefix: prefix,
+        scopes,
       })
       .returning({
         id: apiKeys.id,
         name: apiKeys.name,
         keyPrefix: apiKeys.keyPrefix,
+        scopes: apiKeys.scopes,
         createdAt: apiKeys.createdAt,
       });
 

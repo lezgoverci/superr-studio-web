@@ -15,6 +15,9 @@ export type WorkflowData = {
   description?: string;
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
+  uiSpec?: Record<string, unknown> | null;
+  uiSpecVersion?: string | null;
+  uiMetadata?: Record<string, unknown> | null;
   visibility?: WorkflowVisibility;
 };
 
@@ -632,6 +635,90 @@ export const workflowApi = {
   })(),
 };
 
+export const agentWorkflowApi = {
+  compose: (
+    apiKey: string,
+    payload: {
+      prompt: string;
+      existingWorkflow?: {
+        nodes: WorkflowNode[];
+        edges: WorkflowEdge[];
+        name?: string;
+      };
+      model?: string;
+    }
+  ) =>
+    fetch("/api/agent/workflows/compose", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(payload),
+    }),
+
+  create: (
+    apiKey: string,
+    payload: Omit<WorkflowData, "id"> & { visibility?: WorkflowVisibility }
+  ) =>
+    apiCall<SavedWorkflow>("/api/agent/workflows", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(payload),
+    }),
+
+  update: (
+    apiKey: string,
+    workflowId: string,
+    payload: Partial<WorkflowData>
+  ) =>
+    apiCall<SavedWorkflow>(`/api/agent/workflows/${workflowId}`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(payload),
+    }),
+
+  execute: (
+    apiKey: string,
+    workflowId: string,
+    input: Record<string, unknown> = {}
+  ) =>
+    apiCall<{ executionId: string; status: string }>(
+      `/api/agent/workflows/${workflowId}/execute`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({ input }),
+      }
+    ),
+
+  composeUiSpec: (
+    apiKey: string,
+    payload: {
+      prompt: string;
+      workflowSummary?: string;
+      currentSpec?: Record<string, unknown>;
+      model?: string;
+    }
+  ) =>
+    apiCall<{ spec: Record<string, unknown> }>(
+      "/api/agent/workflows/ui-spec/compose",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(payload),
+      }
+    ),
+};
+
 // AI Gateway API (User Keys feature)
 export const aiGatewayApi = {
   // Get status (whether feature is enabled, user has managed key, etc.)
@@ -658,6 +745,7 @@ export const aiGatewayApi = {
 export const api = {
   ai: aiApi,
   aiGateway: aiGatewayApi,
+  agentWorkflow: agentWorkflowApi,
   integration: integrationApi,
   user: userApi,
   workflow: workflowApi,

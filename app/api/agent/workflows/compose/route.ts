@@ -1,6 +1,6 @@
 import { streamText } from "ai";
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { AGENT_SCOPES, authenticateAgentRequest } from "@/lib/agent-auth";
 import {
   buildWorkflowSystemPrompt,
   buildWorkflowUserPrompt,
@@ -11,12 +11,15 @@ import { generateAIActionPrompts } from "@/plugins";
 
 export async function POST(request: Request) {
   try {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    });
+    const agentAuth = await authenticateAgentRequest(request, [
+      AGENT_SCOPES.workflowCompose,
+    ]);
 
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!agentAuth.ok) {
+      return NextResponse.json(
+        { error: agentAuth.error },
+        { status: agentAuth.status }
+      );
     }
 
     const body = await request.json();
@@ -43,6 +46,8 @@ export async function POST(request: Request) {
       );
     }
 
+    const requestedModel =
+      typeof body.model === "string" ? body.model.trim() : "";
     const configuredModel = process.env.AI_GENERATION_MODEL?.trim();
     const systemPrompt = buildWorkflowSystemPrompt(generateAIActionPrompts());
     const userPrompt = buildWorkflowUserPrompt({
@@ -52,9 +57,10 @@ export async function POST(request: Request) {
 
     const result = streamText({
       model:
-        configuredModel && configuredModel.length > 0
+        requestedModel ||
+        (configuredModel && configuredModel.length > 0
           ? configuredModel
-          : "openai/gpt-5.1-instant",
+          : "openai/gpt-5.1-instant"),
       system: systemPrompt,
       prompt: userPrompt,
     });
@@ -67,13 +73,11 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Failed to generate workflow:", error);
+    console.error("Failed to compose workflow with agent key:", error);
     return NextResponse.json(
       {
         error:
-          error instanceof Error
-            ? error.message
-            : "Failed to generate workflow",
+          error instanceof Error ? error.message : "Failed to compose workflow",
       },
       { status: 500 }
     );

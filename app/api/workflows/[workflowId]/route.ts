@@ -91,6 +91,14 @@ export async function GET(
   }
 }
 
+function parseObjectOrNull(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  return value as Record<string, unknown>;
+}
+
 // Helper to build update data from request body
 function buildUpdateData(
   body: Record<string, unknown>
@@ -99,20 +107,28 @@ function buildUpdateData(
     updatedAt: new Date(),
   };
 
-  if (body.name !== undefined) {
-    updateData.name = body.name;
+  const passthroughKeys = [
+    "name",
+    "description",
+    "nodes",
+    "edges",
+    "visibility",
+  ];
+  for (const key of passthroughKeys) {
+    if (body[key] !== undefined) {
+      updateData[key] = body[key];
+    }
   }
-  if (body.description !== undefined) {
-    updateData.description = body.description;
+
+  if (body.uiSpec !== undefined) {
+    updateData.uiSpec = parseObjectOrNull(body.uiSpec);
   }
-  if (body.nodes !== undefined) {
-    updateData.nodes = body.nodes;
+  if (body.uiSpecVersion !== undefined) {
+    updateData.uiSpecVersion =
+      typeof body.uiSpecVersion === "string" ? body.uiSpecVersion : null;
   }
-  if (body.edges !== undefined) {
-    updateData.edges = body.edges;
-  }
-  if (body.visibility !== undefined) {
-    updateData.visibility = body.visibility;
+  if (body.uiMetadata !== undefined) {
+    updateData.uiMetadata = parseObjectOrNull(body.uiMetadata);
   }
 
   return updateData;
