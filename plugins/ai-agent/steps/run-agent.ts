@@ -8,15 +8,34 @@ import "server-only";
 
 import { Sandbox as VercelSandbox } from "@vercel/sandbox";
 import { createGateway, stepCountIs, ToolLoopAgent } from "ai";
-import { createBashTool } from "bash-tool";
+import { createBashTool, experimental_createSkillTool } from "bash-tool";
+import { createSkillPolicyHooks } from "@/lib/skills/policy";
+import { resolveSkills, sanitizeSkillsDestination } from "@/lib/skills/resolve";
+import type { SkillSourceConfig } from "@/lib/skills/types";
+import { parseSkillsAllowlist } from "@/lib/skills/validate";
 import { fetchCredentials } from "@/lib/credential-fetcher";
 import { type StepInput, withStepLogging } from "@/lib/steps/step-handler";
 import { getErrorMessageAsync } from "@/lib/utils";
 import type { AiAgentCredentials } from "../credentials";
 
+type SandboxType = "vercel" | "just-bash";
+
 type RunAgentResult =
-  | { success: true; text: string; stepsUsed: number; data?: unknown }
-  | { success: false; error: string };
+  | {
+      success: true;
+      text: string;
+      stepsUsed: number;
+      data?: unknown;
+      sandboxTypeResolved: SandboxType;
+      skillsAvailable: string[];
+      skillsUsed: string[];
+    }
+  | {
+      success: false;
+      error: {
+        message: string;
+      };
+    };
 
 export type RunAgentCoreInput = {
   aiModel?: string;
@@ -25,6 +44,14 @@ export type RunAgentCoreInput = {
   agentPrompt?: string;
   agentInstructions?: string;
   maxSteps?: string;
+  skillsEnabled?: string;
+  skillsSource?: string;
+  skillsDirectory?: string;
+  skillsRepoUrl?: string;
+  skillsRepoRef?: string;
+  skillsRepoSubdir?: string;
+  skillsAllowlist?: string;
+  skillsDestination?: string;
 };
 
 export type RunAgentInput = StepInput &
@@ -49,19 +76,20 @@ function getModelString(modelId: string): string {
   return `openai/${modelId}`;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object";
+}
+
 /**
  * Attempt to parse stdout as JSON for structured output.
  * Falls back to raw text if parsing fails.
  */
 function parseAgentOutput(
   text: string,
-  steps: Array<{ toolCalls?: Array<{ toolName: string }> }>
+  steps: Array<{ toolCalls?: unknown }>
 ): unknown {
-  // Try to extract the last meaningful data from tool results
-  // The agent's text response is the primary output
   const trimmed = text.trim();
 
-  // Try to parse as JSON if it looks like JSON
   if (
     (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
     (trimmed.startsWith("[") && trimmed.endsWith("]"))
@@ -76,7 +104,42 @@ function parseAgentOutput(
   return { text: trimmed, stepsUsed: steps.length };
 }
 
-type SandboxType = "vercel" | "just-bash";
+function extractSkillsUsed(steps: Array<{ toolCalls?: unknown }>): string[] {
+  const names = new Set<string>();
+
+  for (const step of steps) {
+    if (!Array.isArray(step.toolCalls)) {
+      continue;
+    }
+
+    for (const rawCall of step.toolCalls) {
+      if (!isRecord(rawCall)) {
+        continue;
+      }
+
+      if (rawCall.toolName !== "skill") {
+        continue;
+      }
+
+      const input = isRecord(rawCall.input)
+        ? rawCall.input
+        : isRecord(rawCall.args)
+          ? rawCall.args
+          : undefined;
+
+      const skillName =
+        input && typeof input.skillName === "string"
+          ? input.skillName.trim()
+          : "";
+
+      if (skillName) {
+        names.add(skillName);
+      }
+    }
+  }
+
+  return [...names];
+}
 
 type VercelSandboxCredentials = {
   token: string;
@@ -85,6 +148,22 @@ type VercelSandboxCredentials = {
 };
 
 type SandboxTools = Awaited<ReturnType<typeof createBashTool>>["tools"];
+type SkillTool = Awaited<
+  ReturnType<typeof experimental_createSkillTool>
+>["skill"];
+
+type AgentTools = SandboxTools & {
+  skill?: SkillTool;
+};
+
+type PreparedSkillToolkit = {
+  skill: SkillTool;
+  files: Record<string, string>;
+  instructions: string;
+  skills: string[];
+  hasExecutableSkills: boolean;
+  cleanup: () => Promise<void>;
+};
 
 function getSandboxType(sandboxType: string | undefined): SandboxType {
   if (sandboxType === "just-bash") {
@@ -198,16 +277,109 @@ async function resolveVercelSandboxDestination(
   return destination;
 }
 
-async function createSandboxTools(input: RunAgentCoreInput): Promise<{
-  tools: SandboxTools;
+function buildSkillSourceConfig(input: RunAgentCoreInput): SkillSourceConfig {
+  const source = input.skillsSource === "git" ? "git" : "preloaded";
+
+  if (source === "preloaded") {
+    const directory = input.skillsDirectory?.trim();
+    if (!directory) {
+      throw new Error(
+        "Skills directory is required when Skill Source is set to Preloaded Directory."
+      );
+    }
+
+    return {
+      source,
+      directory,
+    };
+  }
+
+  const repoUrl = input.skillsRepoUrl?.trim();
+  if (!repoUrl) {
+    throw new Error(
+      "Skills repository URL is required when Skill Source is set to Git Repository."
+    );
+  }
+
+  return {
+    source,
+    repoUrl,
+    repoRef: input.skillsRepoRef?.trim() || "main",
+    repoSubdir: input.skillsRepoSubdir?.trim() || "skills",
+  };
+}
+
+async function createSkillToolkit(
+  input: RunAgentCoreInput
+): Promise<PreparedSkillToolkit | null> {
+  if (input.skillsEnabled !== "on") {
+    return null;
+  }
+
+  const source = buildSkillSourceConfig(input);
+  const allowlist = parseSkillsAllowlist(input.skillsAllowlist);
+  const destination = sanitizeSkillsDestination(input.skillsDestination);
+
+  const resolvedSkills = await resolveSkills({
+    source,
+    allowlist,
+  });
+
+  try {
+    const toolkit = await experimental_createSkillTool({
+      skillsDirectory: resolvedSkills.skillsDirectory,
+      destination,
+    });
+
+    if (toolkit.skills.length === 0) {
+      throw new Error(
+        "Skills are enabled but no valid skills were discovered from the configured source."
+      );
+    }
+
+    return {
+      skill: toolkit.skill,
+      files: toolkit.files,
+      instructions: toolkit.instructions,
+      skills: toolkit.skills.map((skill) => skill.name),
+      hasExecutableSkills: resolvedSkills.hasExecutableSkills,
+      cleanup: resolvedSkills.cleanup,
+    };
+  } catch (error) {
+    await resolvedSkills.cleanup();
+    throw error;
+  }
+}
+
+async function createSandboxTools(
+  input: RunAgentCoreInput,
+  skillToolkit: PreparedSkillToolkit | null
+): Promise<{
+  tools: AgentTools;
+  sandboxType: SandboxType;
   cleanup: () => Promise<void>;
 }> {
-  const sandboxType = getSandboxType(input.sandboxType);
+  const requestedSandboxType = getSandboxType(input.sandboxType);
 
-  if (sandboxType === "just-bash") {
-    const { tools } = await createBashTool();
+  if (skillToolkit?.hasExecutableSkills && requestedSandboxType !== "vercel") {
+    throw new Error(
+      'Selected sandbox is "just-bash", but one or more loaded skills include scripts. Use "Vercel Sandbox (full)" for script-capable skills.'
+    );
+  }
+
+  const policyHooks = createSkillPolicyHooks();
+
+  if (requestedSandboxType === "just-bash") {
+    const { tools } = await createBashTool({
+      files: skillToolkit?.files,
+      extraInstructions: skillToolkit?.instructions,
+      onBeforeBashCall: policyHooks.onBeforeBashCall,
+      onAfterBashCall: policyHooks.onAfterBashCall,
+    });
+
     return {
-      tools,
+      tools: skillToolkit ? { ...tools, skill: skillToolkit.skill } : tools,
+      sandboxType: requestedSandboxType,
       cleanup: async () => {},
     };
   }
@@ -222,13 +394,19 @@ async function createSandboxTools(input: RunAgentCoreInput): Promise<{
   const credentials = resolveVercelSandboxCredentials(token);
   const sandbox = await VercelSandbox.create(credentials);
   const destination = await resolveVercelSandboxDestination(sandbox);
+
   const { tools } = await createBashTool({
     sandbox,
     destination,
+    files: skillToolkit?.files,
+    extraInstructions: skillToolkit?.instructions,
+    onBeforeBashCall: policyHooks.onBeforeBashCall,
+    onAfterBashCall: policyHooks.onAfterBashCall,
   });
 
   return {
-    tools,
+    tools: skillToolkit ? { ...tools, skill: skillToolkit.skill } : tools,
+    sandboxType: requestedSandboxType,
     cleanup: async () => {
       await sandbox.stop();
     },
@@ -259,8 +437,10 @@ async function stepHandler(
   if (!apiKey) {
     return {
       success: false,
-      error:
-        "AI_GATEWAY_API_KEY is not configured. Please add it in Project Integrations.",
+      error: {
+        message:
+          "AI_GATEWAY_API_KEY is not configured. Please add it in Project Integrations.",
+      },
     };
   }
 
@@ -270,7 +450,9 @@ async function stepHandler(
   if (!promptText || promptText.trim() === "") {
     return {
       success: false,
-      error: "Agent prompt is required",
+      error: {
+        message: "Agent prompt is required.",
+      },
     };
   }
 
@@ -279,17 +461,27 @@ async function stepHandler(
     50
   );
   const modelString = getModelString(modelId);
-  let cleanup = async () => {};
+
+  let sandboxCleanup = async () => {};
+  let skillCleanup = async () => {};
+  let sandboxTypeResolved = getSandboxType(input.sandboxType);
+  let skillToolkit: PreparedSkillToolkit | null = null;
 
   try {
     const gateway = createGateway({ apiKey });
-    const { tools: sandboxTools, cleanup: sandboxCleanup } =
-      await createSandboxTools(input);
-    cleanup = sandboxCleanup;
+
+    skillToolkit = await createSkillToolkit(input);
+    if (skillToolkit) {
+      skillCleanup = skillToolkit.cleanup;
+    }
+
+    const sandboxRuntime = await createSandboxTools(input, skillToolkit);
+    sandboxCleanup = sandboxRuntime.cleanup;
+    sandboxTypeResolved = sandboxRuntime.sandboxType;
 
     const agent = new ToolLoopAgent({
       model: gateway(modelString),
-      tools: sandboxTools,
+      tools: sandboxRuntime.tools,
       instructions: input.agentInstructions || DEFAULT_INSTRUCTIONS,
       stopWhen: stepCountIs(maxSteps),
     });
@@ -298,28 +490,40 @@ async function stepHandler(
       prompt: promptText,
     });
 
-    const data = parseAgentOutput(
-      result.text,
-      result.steps as Array<{ toolCalls?: Array<{ toolName: string }> }>
-    );
+    const steps = Array.isArray(result.steps)
+      ? (result.steps as Array<{ toolCalls?: unknown }>)
+      : [];
+
+    const data = parseAgentOutput(result.text, steps);
 
     return {
       success: true,
       text: result.text,
-      stepsUsed: result.steps.length,
+      stepsUsed: steps.length,
       data,
+      sandboxTypeResolved,
+      skillsAvailable: skillToolkit?.skills ?? [],
+      skillsUsed: skillToolkit ? extractSkillsUsed(steps) : [],
     };
   } catch (error) {
     const message = await getErrorMessageAsync(error);
     return {
       success: false,
-      error: `Agent execution failed: ${message}`,
+      error: {
+        message: `Agent execution failed: ${message}`,
+      },
     };
   } finally {
     try {
-      await cleanup();
+      await sandboxCleanup();
     } catch (cleanupError) {
       console.error("[ai-agent] Failed to cleanup sandbox:", cleanupError);
+    }
+
+    try {
+      await skillCleanup();
+    } catch (cleanupError) {
+      console.error("[ai-agent] Failed to cleanup skill staging:", cleanupError);
     }
   }
 }

@@ -34,14 +34,6 @@ const aiAgentPlugin: IntegrationPlugin = {
     },
   },
 
-  dependencies: {
-    ai: "^6.0.0",
-    "bash-tool": "^1.3.14",
-    "just-bash": "^2.9.8",
-    "@vercel/sandbox": "^1.5.0",
-    zod: "^4.1.12",
-  },
-
   actions: [
     {
       slug: "run-agent",
@@ -57,6 +49,18 @@ const aiAgentPlugin: IntegrationPlugin = {
         {
           field: "stepsUsed",
           description: "Number of tool steps the agent took",
+        },
+        {
+          field: "sandboxTypeResolved",
+          description: "Sandbox runtime that executed the task",
+        },
+        {
+          field: "skillsAvailable",
+          description: "Skill names discovered for this run",
+        },
+        {
+          field: "skillsUsed",
+          description: "Skill names the agent invoked via the skill tool",
         },
       ],
       configFields: [
@@ -99,6 +103,75 @@ const aiAgentPlugin: IntegrationPlugin = {
           placeholder:
             "OIDC token recommended. For access tokens, set VERCEL_TEAM_ID and VERCEL_PROJECT_ID in server env.",
           showWhen: { field: "sandboxType", equals: "vercel" },
+        },
+        {
+          key: "skillsEnabled",
+          label: "Agent Skills",
+          type: "select",
+          defaultValue: "off",
+          options: [
+            { value: "off", label: "Off" },
+            { value: "on", label: "On (experimental)" },
+          ],
+        },
+        {
+          key: "skillsSource",
+          label: "Skill Source",
+          type: "select",
+          defaultValue: "preloaded",
+          showWhen: { field: "skillsEnabled", equals: "on" },
+          options: [
+            { value: "preloaded", label: "Preloaded Directory" },
+            { value: "git", label: "Git Repository" },
+          ],
+        },
+        {
+          key: "skillsDirectory",
+          label: "Preloaded Skills Directory",
+          type: "text",
+          defaultValue: "skills",
+          placeholder: "Example: ./skills",
+          showWhen: { field: "skillsSource", equals: "preloaded" },
+        },
+        {
+          key: "skillsRepoUrl",
+          label: "Skills Repository URL",
+          type: "text",
+          placeholder: "https://github.com/your-org/skills-repo",
+          showWhen: { field: "skillsSource", equals: "git" },
+        },
+        {
+          key: "skillsRepoRef",
+          label: "Skills Repository Ref",
+          type: "text",
+          defaultValue: "main",
+          placeholder: "main",
+          showWhen: { field: "skillsSource", equals: "git" },
+        },
+        {
+          key: "skillsRepoSubdir",
+          label: "Skills Repository Subdirectory",
+          type: "text",
+          defaultValue: "skills",
+          placeholder: "skills",
+          showWhen: { field: "skillsSource", equals: "git" },
+        },
+        {
+          key: "skillsAllowlist",
+          label: "Skills Allowlist",
+          type: "template-textarea",
+          placeholder:
+            "Optional list of skill names (one per line or comma-separated). Empty allows all discovered skills.",
+          rows: 3,
+          showWhen: { field: "skillsEnabled", equals: "on" },
+        },
+        {
+          key: "skillsDestination",
+          label: "Skill Path In Sandbox",
+          type: "text",
+          defaultValue: "skills",
+          placeholder: "skills",
+          showWhen: { field: "skillsEnabled", equals: "on" },
         },
         {
           key: "agentPrompt",
