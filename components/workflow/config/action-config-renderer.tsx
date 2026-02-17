@@ -16,6 +16,7 @@ import { TemplateBadgeTextarea } from "@/components/ui/template-badge-textarea";
 import {
   type ActionConfigField,
   type ActionConfigFieldBase,
+  flattenConfigFields,
   isFieldGroup,
 } from "@/plugins";
 import { SchemaBuilder, type SchemaField } from "./schema-builder";
@@ -126,25 +127,61 @@ const FIELD_RENDERERS: Record<
   "schema-builder": SchemaBuilderField,
 };
 
+function resolveFieldValue(
+  config: Record<string, unknown>,
+  key: string,
+  fieldDefaults: Record<string, string | undefined>
+): unknown {
+  const configValue = config[key];
+  if (configValue !== undefined && configValue !== null) {
+    return configValue;
+  }
+  return fieldDefaults[key];
+}
+
+function getFieldDefaults(
+  fields: ActionConfigField[]
+): Record<string, string | undefined> {
+  const defaults: Record<string, string | undefined> = {};
+
+  for (const field of flattenConfigFields(fields)) {
+    defaults[field.key] = field.defaultValue;
+  }
+
+  return defaults;
+}
+
 /**
  * Renders a single base field
  */
+type RenderFieldContext = {
+  config: Record<string, unknown>;
+  fieldDefaults: Record<string, string | undefined>;
+  onUpdateConfig: (key: string, value: unknown) => void;
+  disabled?: boolean;
+};
+
 function renderField(
   field: ActionConfigFieldBase,
-  config: Record<string, unknown>,
-  onUpdateConfig: (key: string, value: unknown) => void,
-  disabled?: boolean
+  context: RenderFieldContext
 ) {
+  const { config, fieldDefaults, onUpdateConfig, disabled } = context;
+
   // Check conditional rendering
   if (field.showWhen) {
-    const dependentValue = config[field.showWhen.field];
+    const dependentValue = resolveFieldValue(
+      config,
+      field.showWhen.field,
+      fieldDefaults
+    );
     if (dependentValue !== field.showWhen.equals) {
       return null;
     }
   }
 
-  const value =
-    (config[field.key] as string | undefined) || field.defaultValue || "";
+  const value = String(
+    resolveFieldValue(config, field.key, fieldDefaults) ?? ""
+  );
   const FieldRenderer = FIELD_RENDERERS[field.type];
 
   return (
@@ -170,6 +207,7 @@ function FieldGroup({
   label,
   fields,
   config,
+  fieldDefaults,
   onUpdateConfig,
   disabled,
   defaultExpanded = false,
@@ -177,6 +215,7 @@ function FieldGroup({
   label: string;
   fields: ActionConfigFieldBase[];
   config: Record<string, unknown>;
+  fieldDefaults: Record<string, string | undefined>;
   onUpdateConfig: (key: string, value: unknown) => void;
   disabled?: boolean;
   defaultExpanded?: boolean;
@@ -199,9 +238,15 @@ function FieldGroup({
       </button>
       {isExpanded && (
         <div className="ml-1 space-y-4 border-primary/50 border-l-2 py-2 pl-3">
-          {fields.map((field) =>
-            renderField(field, config, onUpdateConfig, disabled)
-          )}
+          {fields.map((field) => {
+            const context = {
+              config,
+              fieldDefaults,
+              onUpdateConfig,
+              disabled,
+            };
+            return renderField(field, context);
+          })}
         </div>
       )}
     </div>
@@ -225,6 +270,9 @@ export function ActionConfigRenderer({
   onUpdateConfig,
   disabled,
 }: ActionConfigRendererProps) {
+  const fieldDefaults = getFieldDefaults(fields);
+  const context = { config, fieldDefaults, onUpdateConfig, disabled };
+
   return (
     <>
       {fields.map((field) => {
@@ -234,6 +282,7 @@ export function ActionConfigRenderer({
               config={config}
               defaultExpanded={field.defaultExpanded}
               disabled={disabled}
+              fieldDefaults={fieldDefaults}
               fields={field.fields}
               key={`group-${field.label}`}
               label={field.label}
@@ -242,7 +291,7 @@ export function ActionConfigRenderer({
           );
         }
 
-        return renderField(field, config, onUpdateConfig, disabled);
+        return renderField(field, context);
       })}
     </>
   );
