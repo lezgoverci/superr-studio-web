@@ -61,6 +61,7 @@ import {
   selectedEdgeAtom,
   selectedExecutionIdAtom,
   selectedNodeAtom,
+  setExecutionRunIdForExecutionAtom,
   triggerExecuteAtom,
   undoAtom,
   updateNodeDataAtom,
@@ -476,6 +477,10 @@ type ExecuteTestWorkflowParams = {
   }) => void;
   setIsExecuting: (value: boolean) => void;
   setSelectedExecutionId: (value: string | null) => void;
+  setExecutionRunIdForExecution: (payload: {
+    executionId: string;
+    workflowRunId: string | null;
+  }) => void;
 };
 
 async function executeTestWorkflow({
@@ -484,6 +489,7 @@ async function executeTestWorkflow({
   updateNodeData,
   setIsExecuting,
   setSelectedExecutionId,
+  setExecutionRunIdForExecution,
 }: ExecuteTestWorkflowParams) {
   // Set all nodes to idle first
   updateNodesStatus(nodes, updateNodeData, "idle");
@@ -510,6 +516,16 @@ async function executeTestWorkflow({
     }
 
     const result = await response.json();
+
+    if (typeof result.executionId === "string") {
+      setExecutionRunIdForExecution({
+        executionId: result.executionId,
+        workflowRunId:
+          typeof result.workflowRunId === "string"
+            ? result.workflowRunId
+            : null,
+      });
+    }
 
     // Select the new execution
     setSelectedExecutionId(result.executionId);
@@ -541,6 +557,10 @@ type WorkflowHandlerParams = {
   setEdges: (edges: WorkflowEdge[]) => void;
   setSelectedNodeId: (id: string | null) => void;
   setSelectedExecutionId: (id: string | null) => void;
+  setExecutionRunIdForExecution: (payload: {
+    executionId: string;
+    workflowRunId: string | null;
+  }) => void;
   userIntegrations: Array<{ id: string; type: IntegrationType }>;
 };
 
@@ -558,6 +578,7 @@ function useWorkflowHandlers({
   setEdges,
   setSelectedNodeId,
   setSelectedExecutionId,
+  setExecutionRunIdForExecution,
   userIntegrations,
 }: WorkflowHandlerParams) {
   const { open: openOverlay } = useOverlay();
@@ -600,6 +621,7 @@ function useWorkflowHandlers({
       updateNodeData,
       setIsExecuting,
       setSelectedExecutionId,
+      setExecutionRunIdForExecution,
     });
     // Don't set executing to false here - page-level stream events handle completion.
   };
@@ -688,6 +710,9 @@ function useWorkflowState() {
   const setActiveTab = useSetAtom(propertiesPanelActiveTabAtom);
   const setSelectedNodeId = useSetAtom(selectedNodeAtom);
   const setSelectedExecutionId = useSetAtom(selectedExecutionIdAtom);
+  const setExecutionRunIdForExecution = useSetAtom(
+    setExecutionRunIdForExecutionAtom
+  );
   const userIntegrations = useAtomValue(integrationsAtom);
   const [triggerExecute, setTriggerExecute] = useAtom(triggerExecuteAtom);
 
@@ -750,6 +775,7 @@ function useWorkflowState() {
     setEdges,
     setSelectedNodeId,
     setSelectedExecutionId,
+    setExecutionRunIdForExecution,
     userIntegrations,
     triggerExecute,
     setTriggerExecute,
@@ -781,6 +807,7 @@ function useWorkflowActions(state: ReturnType<typeof useWorkflowState>) {
     setEdges,
     setSelectedNodeId,
     setSelectedExecutionId,
+    setExecutionRunIdForExecution,
     userIntegrations,
     triggerExecute,
     setTriggerExecute,
@@ -802,6 +829,7 @@ function useWorkflowActions(state: ReturnType<typeof useWorkflowState>) {
     setEdges,
     setSelectedNodeId,
     setSelectedExecutionId,
+    setExecutionRunIdForExecution,
     userIntegrations,
   });
 

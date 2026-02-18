@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { NodeConfigPanel } from "@/components/workflow/node-config-panel";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useWorkflowExecutionStreams } from "@/hooks/use-workflow-execution-streams";
 import { api } from "@/lib/api-client";
 import {
   integrationsAtom,
@@ -16,10 +17,6 @@ import {
   integrationsVersionAtom,
 } from "@/lib/integrations-store";
 import type { IntegrationType } from "@/lib/types/integration";
-import {
-  isWorkflowStatusStreamEvent,
-  type WorkflowStatusStreamEvent,
-} from "@/lib/workflow-status-stream";
 import {
   currentWorkflowIdAtom,
   currentWorkflowNameAtom,
@@ -70,60 +67,6 @@ type IntegrationFixResult = {
   nodeId: string;
   newIntegrationId: string | undefined;
 };
-
-const TERMINAL_EXECUTION_STATUSES = new Set(["success", "error", "cancelled"]);
-
-function parseWorkflowStatusStreamMessage(
-  messageData: string
-): WorkflowStatusStreamEvent | null {
-  try {
-    const parsedData = JSON.parse(messageData);
-    if (isWorkflowStatusStreamEvent(parsedData)) {
-      return parsedData;
-    }
-  } catch (error) {
-    console.error("Failed to parse workflow stream message:", error);
-  }
-
-  return null;
-}
-
-function applyWorkflowStatusStreamEvent(options: {
-  streamEvent: WorkflowStatusStreamEvent;
-  updateNodeStatuses: (
-    updates: Array<{
-      nodeId: string;
-      status: "idle" | "running" | "success" | "error";
-    }>
-  ) => void;
-  setIsExecuting: (value: boolean) => void;
-  source: EventSource;
-  executionStreamRef: { current: EventSource | null };
-}): void {
-  const { streamEvent, updateNodeStatuses, setIsExecuting, source } = options;
-
-  if (streamEvent.type === "node_status") {
-    updateNodeStatuses([
-      {
-        nodeId: streamEvent.nodeId,
-        status: streamEvent.status,
-      },
-    ]);
-
-    if (streamEvent.status === "running") {
-      setIsExecuting(true);
-    }
-    return;
-  }
-
-  if (TERMINAL_EXECUTION_STATUSES.has(streamEvent.status)) {
-    setIsExecuting(false);
-    source.close();
-    if (options.executionStreamRef.current === source) {
-      options.executionStreamRef.current = null;
-    }
-  }
-}
 
 function checkNodeIntegration(
   node: WorkflowNode,
@@ -203,7 +146,11 @@ const WorkflowEditor = ({ params }: WorkflowPageProps) => {
   const [isDraggingResize, setIsDraggingResize] = useState(false);
   const isResizing = useRef(false);
   const hasReadCookies = useRef(false);
-  const executionStreamRef = useRef<EventSource | null>(null);
+
+  useWorkflowExecutionStreams({
+    selectedExecutionId,
+    workflowId,
+  });
 
   // Read sidebar preferences from cookies on mount (after hydration)
   useEffect(() => {
@@ -639,61 +586,9 @@ const WorkflowEditor = ({ params }: WorkflowPageProps) => {
     return () => document.removeEventListener("keydown", handleKeyDown, true);
   }, [handleSaveShortcut, handleRunShortcut]);
 
-  useEffect(() => {
-    if (!selectedExecutionId) {
-      return;
-    }
-
-    const source = new EventSource(
-      `/api/workflows/executions/${selectedExecutionId}/stream`
-    );
-    executionStreamRef.current?.close();
-    executionStreamRef.current = source;
-
-    const handleStreamMessage = (event: MessageEvent<string>) => {
-      const streamEvent = parseWorkflowStatusStreamMessage(event.data);
-      if (!streamEvent) {
-        return;
-      }
-
-      applyWorkflowStatusStreamEvent({
-        streamEvent,
-        updateNodeStatuses,
-        setIsExecuting,
-        source,
-        executionStreamRef,
-      });
-    };
-
-    const handleNamedStreamMessage = (event: Event) => {
-      handleStreamMessage(event as MessageEvent<string>);
-    };
-
-    source.onmessage = handleStreamMessage;
-    source.addEventListener("node_status", handleNamedStreamMessage);
-    source.addEventListener("execution_status", handleNamedStreamMessage);
-    source.onerror = (error) => {
-      // EventSource reconnects automatically on transient disconnects.
-      console.error("Workflow execution stream error:", error);
-    };
-
-    return () => {
-      source.onmessage = null;
-      source.onerror = null;
-      source.removeEventListener("node_status", handleNamedStreamMessage);
-      source.removeEventListener("execution_status", handleNamedStreamMessage);
-      source.close();
-      if (executionStreamRef.current === source) {
-        executionStreamRef.current = null;
-      }
-    };
-  }, [selectedExecutionId, setIsExecuting, updateNodeStatuses]);
-
   // Clear statuses when deselecting
   useEffect(() => {
     if (!selectedExecutionId) {
-      executionStreamRef.current?.close();
-      executionStreamRef.current = null;
       setIsExecuting(false);
       updateNodeStatuses(
         nodesRef.current.map((node) => ({ nodeId: node.id, status: "idle" }))

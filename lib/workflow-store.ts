@@ -2,6 +2,10 @@ import type { Edge, EdgeChange, Node, NodeChange } from "@xyflow/react";
 import { applyEdgeChanges, applyNodeChanges } from "@xyflow/react";
 import { atom } from "jotai";
 import { api } from "./api-client";
+import type {
+  ExecutionStatusStreamEvent,
+  NodeStatusStreamEvent,
+} from "./workflow-status-stream";
 
 export type WorkflowNodeType = "trigger" | "action" | "add";
 
@@ -88,6 +92,125 @@ export type ExecutionLogEntry = {
 
 // Map of nodeId -> execution log entry for the currently selected execution
 export const executionLogsAtom = atom<Record<string, ExecutionLogEntry>>({});
+
+export type ExecutionLiveNodeState = {
+  nodeId: string;
+  nodeName: string;
+  nodeType: string;
+  status: "running" | "success" | "error";
+  timestamp: string;
+  output?: unknown;
+  error?: string;
+};
+
+export type ExecutionLiveState = {
+  status: "pending" | "running" | "success" | "error" | "cancelled";
+  updatedAt: string;
+  nodes: Record<string, ExecutionLiveNodeState>;
+  output?: unknown;
+  error?: string;
+};
+
+export const executionLiveStateAtom = atom<Record<string, ExecutionLiveState>>(
+  {}
+);
+export const trackedExecutionIdsAtom = atom<string[]>([]);
+export const executionRunIdByExecutionIdAtom = atom<
+  Record<string, string | null>
+>({});
+
+export const mergeExecutionRunIdsAtom = atom(
+  null,
+  (get, set, mapping: Record<string, string | null>) => {
+    set(executionRunIdByExecutionIdAtom, {
+      ...get(executionRunIdByExecutionIdAtom),
+      ...mapping,
+    });
+  }
+);
+
+export const setExecutionRunIdForExecutionAtom = atom(
+  null,
+  (
+    get,
+    set,
+    payload: { executionId: string; workflowRunId: string | null }
+  ) => {
+    set(executionRunIdByExecutionIdAtom, {
+      ...get(executionRunIdByExecutionIdAtom),
+      [payload.executionId]: payload.workflowRunId,
+    });
+  }
+);
+
+export const setTrackedExecutionIdsAtom = atom(
+  null,
+  (_get, set, executionIds: string[]) => {
+    set(trackedExecutionIdsAtom, [...new Set(executionIds)]);
+  }
+);
+
+export const removeTrackedExecutionIdAtom = atom(
+  null,
+  (get, set, executionId: string) => {
+    set(
+      trackedExecutionIdsAtom,
+      get(trackedExecutionIdsAtom).filter((id) => id !== executionId)
+    );
+  }
+);
+
+export const upsertExecutionLiveNodeEventAtom = atom(
+  null,
+  (get, set, event: NodeStatusStreamEvent) => {
+    const current = get(executionLiveStateAtom)[event.executionId];
+
+    set(executionLiveStateAtom, {
+      ...get(executionLiveStateAtom),
+      [event.executionId]: {
+        status: current?.status ?? "running",
+        updatedAt: event.timestamp,
+        output: current?.output,
+        error: current?.error,
+        nodes: {
+          ...current?.nodes,
+          [event.nodeId]: {
+            nodeId: event.nodeId,
+            nodeName: event.nodeName,
+            nodeType: event.nodeType,
+            status: event.status,
+            timestamp: event.timestamp,
+            output: event.output,
+            error: event.error,
+          },
+        },
+      },
+    });
+  }
+);
+
+export const upsertExecutionLiveTerminalEventAtom = atom(
+  null,
+  (get, set, event: ExecutionStatusStreamEvent) => {
+    const current = get(executionLiveStateAtom)[event.executionId];
+
+    set(executionLiveStateAtom, {
+      ...get(executionLiveStateAtom),
+      [event.executionId]: {
+        status: event.status,
+        updatedAt: event.timestamp,
+        output: event.output,
+        error: event.error,
+        nodes: current?.nodes ?? {},
+      },
+    });
+  }
+);
+
+export const clearExecutionLiveStateAtom = atom(null, (_get, set) => {
+  set(executionLiveStateAtom, {});
+  set(trackedExecutionIdsAtom, []);
+});
 
 // Autosave functionality
 let autosaveTimeoutId: NodeJS.Timeout | null = null;

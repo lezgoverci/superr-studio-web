@@ -1,6 +1,6 @@
 "use client";
 
-import { useAtom } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
   Check,
   ChevronDown,
@@ -26,8 +26,12 @@ import { cn } from "@/lib/utils";
 import { getRelativeTime } from "@/lib/utils/time";
 import {
   currentWorkflowIdAtom,
+  type ExecutionLiveNodeState,
+  executionLiveStateAtom,
   executionLogsAtom,
+  mergeExecutionRunIdsAtom,
   selectedExecutionIdAtom,
+  setTrackedExecutionIdsAtom,
 } from "@/lib/workflow-store";
 import { findActionById } from "@/plugins";
 import { Button } from "../ui/button";
@@ -50,6 +54,7 @@ type ExecutionLog = {
 type WorkflowExecution = {
   id: string;
   workflowId: string;
+  workflowRunId: string | null;
   status: "pending" | "running" | "success" | "error" | "cancelled";
   artifactCount?: number;
   startedAt: Date;
@@ -126,6 +131,97 @@ function createExecutionLogsMap(logs: ExecutionLog[]): Record<
     };
   }
   return logsMap;
+}
+
+function parseTimestamp(value: string): Date {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return new Date();
+  }
+  return date;
+}
+
+function sortExecutionLogsByStart(logEntries: ExecutionLog[]): ExecutionLog[] {
+  return [...logEntries].sort(
+    (a, b) => a.startedAt.getTime() - b.startedAt.getTime()
+  );
+}
+
+function mergeLiveNodeIntoExistingLog(options: {
+  existingLog: ExecutionLog;
+  liveNode: ExecutionLiveNodeState;
+}): ExecutionLog {
+  const { existingLog, liveNode } = options;
+  const liveTimestamp = parseTimestamp(liveNode.timestamp);
+
+  return {
+    ...existingLog,
+    nodeName: liveNode.nodeName || existingLog.nodeName,
+    nodeType: liveNode.nodeType || existingLog.nodeType,
+    status: liveNode.status,
+    output: liveNode.output ?? existingLog.output,
+    error: liveNode.error ?? existingLog.error,
+    completedAt:
+      liveNode.status === "running"
+        ? existingLog.completedAt
+        : existingLog.completedAt || liveTimestamp,
+  };
+}
+
+function createSyntheticExecutionLog(options: {
+  executionId: string;
+  liveNode: ExecutionLiveNodeState;
+}): ExecutionLog {
+  const { executionId, liveNode } = options;
+  const liveTimestamp = parseTimestamp(liveNode.timestamp);
+
+  return {
+    id: `live-${executionId}-${liveNode.nodeId}`,
+    nodeId: liveNode.nodeId,
+    nodeName: liveNode.nodeName,
+    nodeType: liveNode.nodeType,
+    status: liveNode.status,
+    startedAt: liveTimestamp,
+    completedAt: liveNode.status === "running" ? null : liveTimestamp,
+    duration: null,
+    output: liveNode.output,
+    error: liveNode.error || null,
+  };
+}
+
+function orderLiveNodes(
+  liveNodes: Record<string, ExecutionLiveNodeState>
+): ExecutionLiveNodeState[] {
+  return Object.values(liveNodes).sort(
+    (a, b) =>
+      parseTimestamp(a.timestamp).getTime() -
+      parseTimestamp(b.timestamp).getTime()
+  );
+}
+
+function mergeExecutionLogsWithLiveNodes(options: {
+  executionId: string;
+  logEntries: ExecutionLog[];
+  liveNodes: Record<string, ExecutionLiveNodeState> | undefined;
+}): ExecutionLog[] {
+  const { executionId, logEntries, liveNodes } = options;
+
+  const byNodeId = new Map(logEntries.map((log) => [log.nodeId, log]));
+
+  if (!liveNodes) {
+    return sortExecutionLogsByStart(Array.from(byNodeId.values()));
+  }
+
+  for (const liveNode of orderLiveNodes(liveNodes)) {
+    const existingLog = byNodeId.get(liveNode.nodeId);
+    const nextLog = existingLog
+      ? mergeLiveNodeIntoExistingLog({ existingLog, liveNode })
+      : createSyntheticExecutionLog({ executionId, liveNode });
+
+    byNodeId.set(liveNode.nodeId, nextLog);
+  }
+
+  return sortExecutionLogsByStart(Array.from(byNodeId.values()));
 }
 
 // Helper to check if a string is a URL
@@ -524,11 +620,14 @@ export function WorkflowRuns({
   onStartRun,
 }: WorkflowRunsProps) {
   const router = useRouter();
-  const [currentWorkflowId] = useAtom(currentWorkflowIdAtom);
+  const currentWorkflowId = useAtomValue(currentWorkflowIdAtom);
   const [selectedExecutionId, setSelectedExecutionId] = useAtom(
     selectedExecutionIdAtom
   );
-  const [, setExecutionLogs] = useAtom(executionLogsAtom);
+  const setExecutionLogs = useSetAtom(executionLogsAtom);
+  const executionLiveState = useAtomValue(executionLiveStateAtom);
+  const mergeExecutionRunIds = useSetAtom(mergeExecutionRunIdsAtom);
+  const setTrackedExecutionIds = useSetAtom(setTrackedExecutionIdsAtom);
   const [executions, setExecutions] = useState<WorkflowExecution[]>([]);
   const [logs, setLogs] = useState<Record<string, ExecutionLog[]>>({});
   const [expandedRuns, setExpandedRuns] = useState<Set<string>>(new Set());
@@ -575,6 +674,36 @@ export function WorkflowRuns({
   useEffect(() => {
     loadExecutions();
   }, [loadExecutions]);
+
+  useEffect(() => {
+    const runIdByExecutionId: Record<string, string | null> = {};
+    const activeExecutionIds: string[] = [];
+
+    for (const execution of executions) {
+      runIdByExecutionId[execution.id] = execution.workflowRunId;
+      if (
+        (execution.status === "pending" || execution.status === "running") &&
+        execution.workflowRunId
+      ) {
+        activeExecutionIds.push(execution.id);
+      }
+    }
+
+    if (Object.keys(runIdByExecutionId).length > 0) {
+      mergeExecutionRunIds(runIdByExecutionId);
+    }
+    setTrackedExecutionIds(activeExecutionIds);
+  }, [executions, mergeExecutionRunIds, setTrackedExecutionIds]);
+
+  useEffect(() => {
+    if (!currentWorkflowId) {
+      setTrackedExecutionIds([]);
+    }
+
+    return () => {
+      setTrackedExecutionIds([]);
+    };
+  }, [currentWorkflowId, setTrackedExecutionIds]);
 
   // Deselect the currently selected run when clicking outside the runs list.
   useEffect(() => {
@@ -653,15 +782,33 @@ export function WorkflowRuns({
 
         // Update global execution logs atom if this is the selected execution
         if (executionId === selectedExecutionId) {
-          setExecutionLogs(createExecutionLogsMap(mappedLogs));
+          const mergedLogs = mergeExecutionLogsWithLiveNodes({
+            executionId,
+            logEntries: mappedLogs,
+            liveNodes: executionLiveState[executionId]?.nodes,
+          });
+          setExecutionLogs(createExecutionLogsMap(mergedLogs));
         }
       } catch (error) {
         console.error("Failed to load execution logs:", error);
         setLogs((prev) => ({ ...prev, [executionId]: [] }));
       }
     },
-    [mapNodeLabels, selectedExecutionId, setExecutionLogs]
+    [executionLiveState, mapNodeLabels, selectedExecutionId, setExecutionLogs]
   );
+
+  useEffect(() => {
+    if (!selectedExecutionId) {
+      return;
+    }
+
+    const mergedLogs = mergeExecutionLogsWithLiveNodes({
+      executionId: selectedExecutionId,
+      logEntries: logs[selectedExecutionId] || [],
+      liveNodes: executionLiveState[selectedExecutionId]?.nodes,
+    });
+    setExecutionLogs(createExecutionLogsMap(mergedLogs));
+  }, [executionLiveState, logs, selectedExecutionId, setExecutionLogs]);
 
   // Notify parent when a new execution starts and auto-expand it
   useEffect(() => {
@@ -759,7 +906,11 @@ export function WorkflowRuns({
     setSelectedExecutionId(executionId);
 
     // Update global execution logs atom with logs for this execution
-    const executionLogEntries = logs[executionId] || [];
+    const executionLogEntries = mergeExecutionLogsWithLiveNodes({
+      executionId,
+      logEntries: logs[executionId] || [],
+      liveNodes: executionLiveState[executionId]?.nodes,
+    });
     setExecutionLogs(createExecutionLogsMap(executionLogEntries));
   };
 
@@ -827,11 +978,12 @@ export function WorkflowRuns({
       {executions.map((execution, index) => {
         const isExpanded = expandedRuns.has(execution.id);
         const isSelected = selectedExecutionId === execution.id;
-        const executionLogs = (logs[execution.id] || []).sort((a, b) => {
-          // Sort by startedAt to ensure first to last order
-          return (
-            new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime()
-          );
+        const liveExecutionState = executionLiveState[execution.id];
+        const executionStatus = liveExecutionState?.status ?? execution.status;
+        const executionLogs = mergeExecutionLogsWithLiveNodes({
+          executionId: execution.id,
+          logEntries: logs[execution.id] || [],
+          liveNodes: liveExecutionState?.nodes,
         });
 
         return (
@@ -852,10 +1004,10 @@ export function WorkflowRuns({
                 <div
                   className={cn(
                     "flex size-5 items-center justify-center rounded-full border-0",
-                    getStatusDotClass(execution.status)
+                    getStatusDotClass(executionStatus)
                   )}
                 >
-                  {getStatusIcon(execution.status)}
+                  {getStatusIcon(executionStatus)}
                 </div>
               </button>
 

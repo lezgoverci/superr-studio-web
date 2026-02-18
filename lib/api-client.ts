@@ -523,6 +523,7 @@ export const workflowApi = {
         id: string;
         workflowId: string;
         userId: string;
+        workflowRunId: string | null;
         status: string;
         artifactCount?: number;
         input: unknown;
