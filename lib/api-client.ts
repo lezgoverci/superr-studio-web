@@ -489,6 +489,7 @@ export const workflowApi = {
   execute: (id: string, input: Record<string, unknown> = {}) =>
     apiCall<{
       executionId: string;
+      workflowRunId: string;
       status: string;
       output?: unknown;
       error?: string;
@@ -502,6 +503,7 @@ export const workflowApi = {
   triggerWebhook: (id: string, input: Record<string, unknown> = {}) =>
     apiCall<{
       executionId: string;
+      workflowRunId: string;
       status: string;
     }>(`/api/workflows/${id}/webhook`, {
       method: "POST",
@@ -831,7 +833,7 @@ export const agentWorkflowApi = {
     workflowId: string,
     input: Record<string, unknown> = {}
   ) =>
-    apiCall<{ executionId: string; status: string }>(
+    apiCall<{ executionId: string; workflowRunId: string; status: string }>(
       `/api/agent/workflows/${workflowId}/execute`,
       {
         method: "POST",

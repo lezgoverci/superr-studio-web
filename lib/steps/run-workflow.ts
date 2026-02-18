@@ -275,6 +275,13 @@ async function executeChildWorkflow(input: {
       },
     ]);
 
+    await db
+      .update(workflowExecutions)
+      .set({
+        workflowRunId: childRun.runId,
+      })
+      .where(eq(workflowExecutions.id, childExecution.id));
+
     await childRun.returnValue;
 
     const completedChildExecution = await db.query.workflowExecutions.findFirst(

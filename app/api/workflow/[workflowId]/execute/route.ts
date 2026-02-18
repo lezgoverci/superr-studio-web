@@ -15,7 +15,7 @@ async function executeWorkflowBackground(
   nodes: WorkflowNode[],
   edges: WorkflowEdge[],
   input: Record<string, unknown>
-) {
+): Promise<string> {
   try {
     console.log("[Workflow Execute] Starting execution:", executionId);
 
@@ -30,7 +30,7 @@ async function executeWorkflowBackground(
     });
 
     // Use start() from workflow/api to properly execute the workflow
-    start(executeWorkflow, [
+    const run = await start(executeWorkflow, [
       {
         nodes,
         edges,
@@ -40,7 +40,15 @@ async function executeWorkflowBackground(
       },
     ]);
 
+    await db
+      .update(workflowExecutions)
+      .set({
+        workflowRunId: run.runId,
+      })
+      .where(eq(workflowExecutions.id, executionId));
+
     console.log("[Workflow Execute] Workflow started successfully");
+    return run.runId;
   } catch (error) {
     console.error("[Workflow Execute] Error during execution:", error);
     console.error(
@@ -57,6 +65,7 @@ async function executeWorkflowBackground(
         completedAt: new Date(),
       })
       .where(eq(workflowExecutions.id, executionId));
+    throw error;
   }
 }
 
@@ -125,8 +134,8 @@ export async function POST(
 
     console.log("[API] Created execution:", execution.id);
 
-    // Execute the workflow in the background (don't await)
-    executeWorkflowBackground(
+    // Execute the workflow and capture the SDK run ID for live stream subscriptions.
+    const workflowRunId = await executeWorkflowBackground(
       execution.id,
       workflowId,
       workflow.nodes as WorkflowNode[],
@@ -137,6 +146,7 @@ export async function POST(
     // Return immediately with the execution ID
     return NextResponse.json({
       executionId: execution.id,
+      workflowRunId,
       status: "running",
     });
   } catch (error) {

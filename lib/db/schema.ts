@@ -114,28 +114,37 @@ export const integrations = pgTable("integrations", {
 });
 
 // Workflow executions table to track workflow runs
-export const workflowExecutions = pgTable("workflow_executions", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => generateId()),
-  workflowId: text("workflow_id")
-    .notNull()
-    .references(() => workflows.id),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id),
-  status: text("status")
-    .notNull()
-    .$type<"pending" | "running" | "success" | "error" | "cancelled">(),
-  // biome-ignore lint/suspicious/noExplicitAny: JSONB type - structure validated at application level
-  input: jsonb("input").$type<Record<string, any>>(),
-  // biome-ignore lint/suspicious/noExplicitAny: JSONB type - structure validated at application level
-  output: jsonb("output").$type<any>(),
-  error: text("error"),
-  startedAt: timestamp("started_at").notNull().defaultNow(),
-  completedAt: timestamp("completed_at"),
-  duration: text("duration"), // Duration in milliseconds
-});
+export const workflowExecutions = pgTable(
+  "workflow_executions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    workflowId: text("workflow_id")
+      .notNull()
+      .references(() => workflows.id),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    workflowRunId: text("workflow_run_id"),
+    status: text("status")
+      .notNull()
+      .$type<"pending" | "running" | "success" | "error" | "cancelled">(),
+    // biome-ignore lint/suspicious/noExplicitAny: JSONB type - structure validated at application level
+    input: jsonb("input").$type<Record<string, any>>(),
+    // biome-ignore lint/suspicious/noExplicitAny: JSONB type - structure validated at application level
+    output: jsonb("output").$type<any>(),
+    error: text("error"),
+    startedAt: timestamp("started_at").notNull().defaultNow(),
+    completedAt: timestamp("completed_at"),
+    duration: text("duration"), // Duration in milliseconds
+  },
+  (table) => ({
+    workflowRunIdIdx: index("workflow_executions_workflow_run_id_idx").on(
+      table.workflowRunId
+    ),
+  })
+);
 
 // Workflow execution logs to track individual node executions
 export const workflowExecutionLogs = pgTable("workflow_execution_logs", {

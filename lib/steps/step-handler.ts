@@ -5,12 +5,18 @@
  */
 import "server-only";
 
+import { getWritable } from "workflow";
 import { redactSensitiveData } from "../utils/redact";
 import {
   logStepCompleteDb,
   logStepStartDb,
   logWorkflowCompleteDb,
 } from "../workflow-logging";
+import {
+  EXECUTION_STATUS_STREAM_NAMESPACE,
+  type NodeExecutionStatus,
+  type WorkflowStatusStreamEvent,
+} from "../workflow-status-stream";
 
 export type StepContext = {
   executionId?: string;
@@ -32,6 +38,53 @@ type LogInfo = {
   logId: string;
   startTime: number;
 };
+
+async function writeStatusStreamEvent(
+  event: WorkflowStatusStreamEvent,
+  closeStream = false
+): Promise<void> {
+  try {
+    const writable = getWritable<WorkflowStatusStreamEvent>({
+      namespace: EXECUTION_STATUS_STREAM_NAMESPACE,
+    });
+    const writer = writable.getWriter();
+
+    try {
+      await writer.write(event);
+      if (closeStream) {
+        await writer.close();
+      }
+    } finally {
+      writer.releaseLock();
+    }
+  } catch (error) {
+    console.error("[stepHandler] Failed to write status stream event:", error);
+  }
+}
+
+async function emitNodeStatusEvent(options: {
+  context: StepContext | undefined;
+  status: NodeExecutionStatus;
+  output?: unknown;
+  error?: string;
+}): Promise<void> {
+  const { context, status, output, error } = options;
+  if (!context?.executionId) {
+    return;
+  }
+
+  await writeStatusStreamEvent({
+    type: "node_status",
+    executionId: context.executionId,
+    nodeId: context.nodeId,
+    nodeName: context.nodeName,
+    nodeType: context.nodeType,
+    status,
+    timestamp: new Date().toISOString(),
+    output,
+    error,
+  });
+}
 
 /**
  * Log the start of a step execution
@@ -55,9 +108,18 @@ async function logStepStart(
       input: redactedInput,
     });
 
+    await emitNodeStatusEvent({
+      context,
+      status: "running",
+    });
+
     return result;
   } catch (error) {
     console.error("[stepHandler] Failed to log start:", error);
+    await emitNodeStatusEvent({
+      context,
+      status: "running",
+    });
     return { logId: "", startTime: Date.now() };
   }
 }
@@ -65,29 +127,36 @@ async function logStepStart(
 /**
  * Log the completion of a step execution
  */
-async function logStepComplete(
-  logInfo: LogInfo,
-  status: "success" | "error",
-  output?: unknown,
-  error?: string
-): Promise<void> {
-  if (!logInfo.logId) {
-    return;
-  }
+async function logStepComplete(options: {
+  context: StepContext | undefined;
+  logInfo: LogInfo;
+  status: "success" | "error";
+  output?: unknown;
+  error?: string;
+}): Promise<void> {
+  const { context, logInfo, status, output, error } = options;
+  const redactedOutput = redactSensitiveData(output);
 
   try {
-    const redactedOutput = redactSensitiveData(output);
-
-    await logStepCompleteDb({
-      logId: logInfo.logId,
-      startTime: logInfo.startTime,
-      status,
-      output: redactedOutput,
-      error,
-    });
+    if (logInfo.logId) {
+      await logStepCompleteDb({
+        logId: logInfo.logId,
+        startTime: logInfo.startTime,
+        status,
+        output: redactedOutput,
+        error,
+      });
+    }
   } catch (err) {
     console.error("[stepHandler] Failed to log completion:", err);
   }
+
+  await emitNodeStatusEvent({
+    context,
+    status,
+    output: redactedOutput,
+    error,
+  });
 }
 
 /**
@@ -119,9 +188,9 @@ export async function logWorkflowComplete(options: {
   error?: string;
   startTime: number;
 }): Promise<void> {
-  try {
-    const redactedOutput = redactSensitiveData(options.output);
+  const redactedOutput = redactSensitiveData(options.output);
 
+  try {
     await logWorkflowCompleteDb({
       executionId: options.executionId,
       status: options.status,
@@ -132,6 +201,18 @@ export async function logWorkflowComplete(options: {
   } catch (err) {
     console.error("[stepHandler] Failed to log workflow completion:", err);
   }
+
+  await writeStatusStreamEvent(
+    {
+      type: "execution_status",
+      executionId: options.executionId,
+      status: options.status,
+      timestamp: new Date().toISOString(),
+      output: redactedOutput,
+      error: options.error,
+    },
+    true
+  );
 }
 
 /**
@@ -203,14 +284,30 @@ export async function withStepLogging<TInput extends StepInput, TOutput>(
           : errorResult.error?.message || "Step execution failed";
       // Log just the error object, not the full result
       const loggedOutput = errorResult.error ?? { message: errorMessage };
-      await logStepComplete(logInfo, "error", loggedOutput, errorMessage);
+      await logStepComplete({
+        context,
+        logInfo,
+        status: "error",
+        output: loggedOutput,
+        error: errorMessage,
+      });
     } else if (isStandardizedResult) {
       // For standardized success results, log just the data
       const successResult = result as { success: true; data?: unknown };
-      await logStepComplete(logInfo, "success", successResult.data ?? result);
+      await logStepComplete({
+        context,
+        logInfo,
+        status: "success",
+        output: successResult.data ?? result,
+      });
     } else {
       // For non-standardized results, log as-is
-      await logStepComplete(logInfo, "success", result);
+      await logStepComplete({
+        context,
+        logInfo,
+        status: "success",
+        output: result,
+      });
     }
 
     // If this step should also log workflow completion, do it now
@@ -225,7 +322,12 @@ export async function withStepLogging<TInput extends StepInput, TOutput>(
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
-    await logStepComplete(logInfo, "error", undefined, errorMessage);
+    await logStepComplete({
+      context,
+      logInfo,
+      status: "error",
+      error: errorMessage,
+    });
     throw error;
   }
 }

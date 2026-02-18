@@ -1,0 +1,2 @@
+ALTER TABLE "workflow_executions" ADD COLUMN "workflow_run_id" text;--> statement-breakpoint
+CREATE INDEX "workflow_executions_workflow_run_id_idx" ON "workflow_executions" USING btree ("workflow_run_id");

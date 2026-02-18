@@ -15,9 +15,9 @@ async function executeWorkflowBackground(
   nodes: WorkflowNode[],
   edges: WorkflowEdge[],
   input: Record<string, unknown>
-) {
+): Promise<string> {
   try {
-    start(executeWorkflow, [
+    const run = await start(executeWorkflow, [
       {
         nodes,
         edges,
@@ -26,6 +26,15 @@ async function executeWorkflowBackground(
         workflowId,
       },
     ]);
+
+    await db
+      .update(workflowExecutions)
+      .set({
+        workflowRunId: run.runId,
+      })
+      .where(eq(workflowExecutions.id, executionId));
+
+    return run.runId;
   } catch (error) {
     console.error("[Agent Workflow Execute] Error during execution:", error);
 
@@ -37,6 +46,7 @@ async function executeWorkflowBackground(
         completedAt: new Date(),
       })
       .where(eq(workflowExecutions.id, executionId));
+    throw error;
   }
 }
 
@@ -100,7 +110,7 @@ export async function POST(
       })
       .returning();
 
-    executeWorkflowBackground(
+    const workflowRunId = await executeWorkflowBackground(
       execution.id,
       workflowId,
       workflow.nodes as WorkflowNode[],
@@ -110,6 +120,7 @@ export async function POST(
 
     return NextResponse.json({
       executionId: execution.id,
+      workflowRunId,
       status: "running",
     });
   } catch (error) {

@@ -17,7 +17,6 @@ import { useRouter } from "next/navigation";
 import type { JSX } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { usePolling } from "@/hooks/use-polling";
 import { api } from "@/lib/api-client";
 import {
   OUTPUT_DISPLAY_CONFIGS,
@@ -735,68 +734,6 @@ export function WorkflowRuns({
       });
     }
   }, [currentWorkflowId, executions, router]);
-
-  // Helper to refresh logs for a single execution
-  const refreshExecutionLogs = useCallback(
-    async (executionId: string) => {
-      try {
-        const logsData = await api.workflow.getExecutionLogs(executionId);
-        const mappedLogs = mapNodeLabels(
-          logsData.logs,
-          logsData.execution.workflow
-        );
-        setLogs((prev) => ({
-          ...prev,
-          [executionId]: mappedLogs,
-        }));
-
-        // Update global execution logs atom if this is the selected execution
-        if (executionId === selectedExecutionId) {
-          setExecutionLogs(createExecutionLogsMap(mappedLogs));
-        }
-      } catch (error) {
-        console.error(`Failed to refresh logs for ${executionId}:`, error);
-      }
-    },
-    [mapNodeLabels, selectedExecutionId, setExecutionLogs]
-  );
-
-  // Poll for new executions when tab is active
-  usePolling(
-    async () => {
-      try {
-        if (!currentWorkflowId) {
-          return;
-        }
-
-        const data = await api.workflow.getExecutions(currentWorkflowId);
-        const workflowExecutions = data as WorkflowExecution[];
-        setExecutions(workflowExecutions);
-
-        // Refresh logs only for expanded runs that are still active.
-        // Completed runs are immutable and don't need periodic refreshes.
-        const activeExecutionIds = new Set(
-          workflowExecutions
-            .filter(
-              (execution) =>
-                execution.status === "running" || execution.status === "pending"
-            )
-            .map((execution) => execution.id)
-        );
-
-        for (const executionId of expandedRuns) {
-          if (!activeExecutionIds.has(executionId)) {
-            continue;
-          }
-          await refreshExecutionLogs(executionId);
-        }
-      } catch (error) {
-        console.error("Failed to poll executions:", error);
-      }
-    },
-    5000, // Poll every 5 seconds (increased from 2000ms)
-    isActive && !!currentWorkflowId
-  );
 
   const toggleRun = async (executionId: string) => {
     const newExpanded = new Set(expandedRuns);

@@ -601,7 +601,7 @@ function useWorkflowHandlers({
       setIsExecuting,
       setSelectedExecutionId,
     });
-    // Don't set executing to false here - page-level polling handles completion.
+    // Don't set executing to false here - page-level stream events handle completion.
   };
 
   const handleGoToStep = (nodeId: string, fieldKey?: string) => {
