@@ -3,6 +3,11 @@
  * Replaces server actions with API endpoints
  */
 
+import type {
+  ArtifactPublicationRecord,
+  ArtifactRecord,
+  ArtifactWithPublicationRecord,
+} from "./artifacts/types";
 import type { IntegrationConfig, IntegrationType } from "./types/integration";
 import type { WorkflowEdge, WorkflowNode } from "./workflow-store";
 
@@ -517,6 +522,7 @@ export const workflowApi = {
         workflowId: string;
         userId: string;
         status: string;
+        artifactCount?: number;
         input: unknown;
         output: unknown;
         error: string | null;
@@ -653,6 +659,126 @@ export const workflowApi = {
   })(),
 };
 
+type ArtifactKind =
+  | "file"
+  | "image"
+  | "video"
+  | "audio"
+  | "web_page"
+  | "url"
+  | "json"
+  | "text"
+  | "unknown";
+
+type ArtifactPublicationVisibility = "unlisted" | "public";
+
+export const artifactApi = {
+  list: (params?: {
+    workflowId?: string;
+    executionId?: string;
+    kind?: ArtifactKind;
+    q?: string;
+    cursor?: string;
+    limit?: number;
+  }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.workflowId) {
+      searchParams.set("workflowId", params.workflowId);
+    }
+    if (params?.executionId) {
+      searchParams.set("executionId", params.executionId);
+    }
+    if (params?.kind) {
+      searchParams.set("kind", params.kind);
+    }
+    if (params?.q) {
+      searchParams.set("q", params.q);
+    }
+    if (params?.cursor) {
+      searchParams.set("cursor", params.cursor);
+    }
+    if (typeof params?.limit === "number") {
+      searchParams.set("limit", String(params.limit));
+    }
+
+    const queryString = searchParams.toString();
+    const endpoint = queryString
+      ? `/api/artifacts?${queryString}`
+      : "/api/artifacts";
+
+    return apiCall<{
+      items: ArtifactWithPublicationRecord[];
+      nextCursor: string | null;
+    }>(endpoint);
+  },
+
+  getById: (artifactId: string) =>
+    apiCall<ArtifactWithPublicationRecord>(`/api/artifacts/${artifactId}`),
+
+  update: (
+    artifactId: string,
+    payload: {
+      title?: string;
+      pinned?: boolean;
+      visibility?: "private" | "public";
+      metadata?: Record<string, unknown> | null;
+    }
+  ) =>
+    apiCall<ArtifactWithPublicationRecord>(`/api/artifacts/${artifactId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+
+  delete: (artifactId: string) =>
+    apiCall<{ success: boolean }>(`/api/artifacts/${artifactId}`, {
+      method: "DELETE",
+    }),
+
+  publish: (
+    artifactId: string,
+    payload?: {
+      slug?: string;
+      title?: string;
+      description?: string;
+      visibility?: ArtifactPublicationVisibility;
+    }
+  ) =>
+    apiCall<{
+      publication: ArtifactPublicationRecord;
+      publicUrl: string;
+    }>(`/api/artifacts/${artifactId}/publish`, {
+      method: "POST",
+      body: JSON.stringify(payload || {}),
+    }),
+
+  composeUiSpec: (
+    artifactId: string,
+    payload?: {
+      prompt?: string;
+      model?: string;
+      slug?: string;
+      title?: string;
+      description?: string;
+      visibility?: ArtifactPublicationVisibility;
+    }
+  ) =>
+    apiCall<{
+      spec: Record<string, unknown>;
+      modelUsed: string;
+      publication: ArtifactPublicationRecord;
+      publicUrl: string;
+    }>(`/api/artifacts/${artifactId}/ui-spec/compose`, {
+      method: "POST",
+      body: JSON.stringify(payload || {}),
+    }),
+
+  getPublic: (slug: string) =>
+    apiCall<{
+      artifact: ArtifactRecord;
+      publication: ArtifactPublicationRecord;
+    }>(`/api/artifacts/public/${slug}`),
+};
+
 export const agentWorkflowApi = {
   compose: (
     apiKey: string,
@@ -761,6 +887,7 @@ export const aiGatewayApi = {
 
 // Export all APIs as a single object
 export const api = {
+  artifact: artifactApi,
   ai: aiApi,
   aiGateway: aiGatewayApi,
   agentWorkflow: agentWorkflowApi,

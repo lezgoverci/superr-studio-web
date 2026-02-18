@@ -13,8 +13,10 @@ import {
   X,
 } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import type { JSX } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { usePolling } from "@/hooks/use-polling";
 import { api } from "@/lib/api-client";
 import {
@@ -50,6 +52,7 @@ type WorkflowExecution = {
   id: string;
   workflowId: string;
   status: "pending" | "running" | "success" | "error" | "cancelled";
+  artifactCount?: number;
   startedAt: Date;
   completedAt: Date | null;
   duration: string | null;
@@ -521,6 +524,7 @@ export function WorkflowRuns({
   onRefreshRef,
   onStartRun,
 }: WorkflowRunsProps) {
+  const router = useRouter();
   const [currentWorkflowId] = useAtom(currentWorkflowIdAtom);
   const [selectedExecutionId, setSelectedExecutionId] = useAtom(
     selectedExecutionIdAtom
@@ -532,6 +536,7 @@ export function WorkflowRuns({
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const runsListRef = useRef<HTMLDivElement | null>(null);
+  const announcedArtifactExecutionsRef = useRef<Set<string>>(new Set());
 
   // Track which execution we've already auto-expanded to prevent loops
   const autoExpandedExecutionRef = useRef<string | null>(null);
@@ -695,6 +700,42 @@ export function WorkflowRuns({
     }
   }, [executions, setSelectedExecutionId, loadExecutionLogs, onStartRun]);
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Toast gate checks across run statuses and dedupe state.
+  useEffect(() => {
+    if (!currentWorkflowId) {
+      return;
+    }
+
+    for (const execution of executions) {
+      if (
+        execution.status === "pending" ||
+        execution.status === "running" ||
+        (execution.artifactCount ?? 0) <= 0
+      ) {
+        continue;
+      }
+
+      if (announcedArtifactExecutionsRef.current.has(execution.id)) {
+        continue;
+      }
+
+      announcedArtifactExecutionsRef.current.add(execution.id);
+      const artifactCount = execution.artifactCount ?? 0;
+      const noun = artifactCount === 1 ? "artifact" : "artifacts";
+
+      toast.success(`${artifactCount} ${noun} captured`, {
+        action: {
+          label: "View Artifacts",
+          onClick: () => {
+            router.push(
+              `/artifacts?workflowId=${currentWorkflowId}&executionId=${execution.id}`
+            );
+          },
+        },
+      });
+    }
+  }, [currentWorkflowId, executions, router]);
+
   // Helper to refresh logs for a single execution
   const refreshExecutionLogs = useCallback(
     async (executionId: string) => {
@@ -845,6 +886,7 @@ export function WorkflowRuns({
 
   return (
     <div className="space-y-3" ref={runsListRef}>
+      {/* biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Run cards compose status, metadata, and expandable logs/actions. */}
       {executions.map((execution, index) => {
         const isExpanded = expandedRuns.has(execution.id);
         const isSelected = selectedExecutionId === execution.id;
@@ -889,6 +931,12 @@ export function WorkflowRuns({
                   <span className="font-semibold text-sm">
                     Run #{executions.length - index}
                   </span>
+                  {(execution.artifactCount ?? 0) > 0 && (
+                    <span className="rounded-full border bg-muted px-2 py-0.5 font-medium text-[10px] uppercase tracking-wide">
+                      {execution.artifactCount}{" "}
+                      {execution.artifactCount === 1 ? "artifact" : "artifacts"}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 font-mono text-muted-foreground text-xs">
                   <span>{getRelativeTime(execution.startedAt)}</span>

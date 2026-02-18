@@ -71,6 +71,15 @@ const aiAgentPlugin: IntegrationPlugin = {
           description:
             "Non-fatal warnings encountered while composing or attaching run UI specs",
         },
+        {
+          field: "artifacts",
+          description: "Artifacts captured from the agent run and persisted",
+        },
+        {
+          field: "artifactWarnings",
+          description:
+            "Non-fatal warnings encountered while parsing or storing artifacts",
+        },
       ],
       configFields: [
         {

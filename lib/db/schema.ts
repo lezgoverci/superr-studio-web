@@ -1,5 +1,14 @@
 import { relations } from "drizzle-orm";
-import { boolean, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 import type { IntegrationType } from "../types/integration";
 import { generateId } from "../utils/id";
 
@@ -170,6 +179,108 @@ export const apiKeys = pgTable("api_keys", {
   lastUsedAt: timestamp("last_used_at"),
 });
 
+export type ArtifactSource = "agent_manifest" | "agent_inferred";
+export type ArtifactKind =
+  | "file"
+  | "image"
+  | "video"
+  | "audio"
+  | "web_page"
+  | "url"
+  | "json"
+  | "text"
+  | "unknown";
+export type ArtifactStorageProvider = "blob" | "external" | "inline";
+export type ArtifactStatus = "ready" | "processing" | "failed";
+export type ArtifactVisibility = "private" | "public";
+
+export const artifacts = pgTable(
+  "artifacts",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    workflowId: text("workflow_id")
+      .notNull()
+      .references(() => workflows.id),
+    executionId: text("execution_id").references(() => workflowExecutions.id),
+    executionLogId: text("execution_log_id").references(
+      () => workflowExecutionLogs.id
+    ),
+    nodeId: text("node_id").notNull(),
+    nodeType: text("node_type").notNull(),
+    actionType: text("action_type"),
+    source: text("source").notNull().$type<ArtifactSource>(),
+    kind: text("kind").notNull().$type<ArtifactKind>(),
+    title: text("title").notNull(),
+    mimeType: text("mime_type"),
+    extension: text("extension"),
+    sizeBytes: integer("size_bytes").notNull().default(0),
+    storageProvider: text("storage_provider")
+      .notNull()
+      .$type<ArtifactStorageProvider>(),
+    storageKey: text("storage_key"),
+    blobUrl: text("blob_url"),
+    inlineContent: text("inline_content"),
+    // biome-ignore lint/suspicious/noExplicitAny: JSONB type - structure validated at application level
+    preview: jsonb("preview").$type<Record<string, any> | null>(),
+    // biome-ignore lint/suspicious/noExplicitAny: JSONB type - structure validated at application level
+    metadata: jsonb("metadata").$type<Record<string, any> | null>(),
+    status: text("status").notNull().$type<ArtifactStatus>(),
+    visibility: text("visibility").notNull().$type<ArtifactVisibility>(),
+    pinned: boolean("pinned").notNull().default(false),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index("artifacts_user_id_idx").on(table.userId),
+    workflowIdIdx: index("artifacts_workflow_id_idx").on(table.workflowId),
+    executionIdIdx: index("artifacts_execution_id_idx").on(table.executionId),
+    createdAtIdx: index("artifacts_created_at_idx").on(table.createdAt),
+  })
+);
+
+export type ArtifactPublicationVisibility = "unlisted" | "public";
+
+export const artifactPublications = pgTable(
+  "artifact_publications",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    artifactId: text("artifact_id")
+      .notNull()
+      .references(() => artifacts.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    slug: text("slug").notNull(),
+    title: text("title").notNull(),
+    description: text("description"),
+    // biome-ignore lint/suspicious/noExplicitAny: JSONB type - structure validated at application level
+    uiSpec: jsonb("ui_spec").$type<Record<string, any> | null>(),
+    uiSpecVersion: text("ui_spec_version"),
+    // biome-ignore lint/suspicious/noExplicitAny: JSONB type - structure validated at application level
+    uiMetadata: jsonb("ui_metadata").$type<Record<string, any> | null>(),
+    visibility: text("visibility")
+      .notNull()
+      .$type<ArtifactPublicationVisibility>(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    publishedAt: timestamp("published_at"),
+  },
+  (table) => ({
+    artifactIdUnique: uniqueIndex(
+      "artifact_publications_artifact_id_unique"
+    ).on(table.artifactId),
+    slugUnique: uniqueIndex("artifact_publications_slug_unique").on(table.slug),
+    userIdIdx: index("artifact_publications_user_id_idx").on(table.userId),
+  })
+);
+
 // Relations
 export const workflowExecutionsRelations = relations(
   workflowExecutions,
@@ -177,6 +288,43 @@ export const workflowExecutionsRelations = relations(
     workflow: one(workflows, {
       fields: [workflowExecutions.workflowId],
       references: [workflows.id],
+    }),
+  })
+);
+
+export const artifactsRelations = relations(artifacts, ({ one }) => ({
+  user: one(users, {
+    fields: [artifacts.userId],
+    references: [users.id],
+  }),
+  workflow: one(workflows, {
+    fields: [artifacts.workflowId],
+    references: [workflows.id],
+  }),
+  execution: one(workflowExecutions, {
+    fields: [artifacts.executionId],
+    references: [workflowExecutions.id],
+  }),
+  executionLog: one(workflowExecutionLogs, {
+    fields: [artifacts.executionLogId],
+    references: [workflowExecutionLogs.id],
+  }),
+  publication: one(artifactPublications, {
+    fields: [artifacts.id],
+    references: [artifactPublications.artifactId],
+  }),
+}));
+
+export const artifactPublicationsRelations = relations(
+  artifactPublications,
+  ({ one }) => ({
+    artifact: one(artifacts, {
+      fields: [artifactPublications.artifactId],
+      references: [artifacts.id],
+    }),
+    user: one(users, {
+      fields: [artifactPublications.userId],
+      references: [users.id],
     }),
   })
 );
@@ -193,3 +341,7 @@ export type WorkflowExecutionLog = typeof workflowExecutionLogs.$inferSelect;
 export type NewWorkflowExecutionLog = typeof workflowExecutionLogs.$inferInsert;
 export type ApiKey = typeof apiKeys.$inferSelect;
 export type NewApiKey = typeof apiKeys.$inferInsert;
+export type Artifact = typeof artifacts.$inferSelect;
+export type NewArtifact = typeof artifacts.$inferInsert;
+export type ArtifactPublication = typeof artifactPublications.$inferSelect;
+export type NewArtifactPublication = typeof artifactPublications.$inferInsert;

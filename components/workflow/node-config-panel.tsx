@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { ArtifactPanel } from "@/components/artifacts/artifact-panel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,6 +41,7 @@ import {
   isWorkflowOwnerAtom,
   newlyCreatedNodeIdAtom,
   nodesAtom,
+  type PropertiesPanelTab,
   pendingIntegrationNodesAtom,
   propertiesPanelActiveTabAtom,
   selectedEdgeAtom,
@@ -178,6 +180,20 @@ export const PanelInner = () => {
   const selectedNode = nodes.find((node) => node.id === selectedNodeId);
   const selectedEdge = edges.find((edge) => edge.id === selectedEdgeId);
 
+  const handleTabChange = useCallback(
+    (value: string) => {
+      if (
+        value === "properties" ||
+        value === "code" ||
+        value === "runs" ||
+        value === "artifacts"
+      ) {
+        setActiveTab(value as PropertiesPanelTab);
+      }
+    },
+    [setActiveTab]
+  );
+
   // Count multiple selections
   const selectedNodes = nodes.filter((node) => node.selected);
   const selectedEdges = edges.filter((edge) => edge.selected);
@@ -199,6 +215,23 @@ export const PanelInner = () => {
       setActiveTab("properties");
     }
   }, [selectedNode, activeTab, setActiveTab]);
+
+  useEffect(() => {
+    if (isOwner) {
+      return;
+    }
+
+    if (activeTab === "runs" || activeTab === "artifacts") {
+      setActiveTab("properties");
+    }
+  }, [activeTab, isOwner, setActiveTab]);
+
+  useEffect(() => {
+    if (currentWorkflowId || activeTab !== "artifacts") {
+      return;
+    }
+    setActiveTab("properties");
+  }, [activeTab, currentWorkflowId, setActiveTab]);
 
   // Auto-fix invalid integration references when a node is selected
   const globalIntegrations = useAtomValue(integrationsAtom);
@@ -558,7 +591,7 @@ export const PanelInner = () => {
         <Tabs
           className="size-full"
           defaultValue="properties"
-          onValueChange={setActiveTab}
+          onValueChange={handleTabChange}
           value={activeTab}
         >
           <TabsList className="h-14 w-full shrink-0 rounded-none border-b bg-transparent px-4 py-2.5">
@@ -580,6 +613,15 @@ export const PanelInner = () => {
                 value="runs"
               >
                 Runs
+              </TabsTrigger>
+            )}
+            {isOwner && (
+              <TabsTrigger
+                className="bg-transparent text-muted-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                disabled={!currentWorkflowId}
+                value="artifacts"
+              >
+                Artifacts
               </TabsTrigger>
             )}
           </TabsList>
@@ -675,6 +717,16 @@ export const PanelInner = () => {
               </div>
             </TabsContent>
           )}
+          {isOwner && currentWorkflowId ? (
+            <TabsContent
+              className="flex flex-col overflow-hidden"
+              value="artifacts"
+            >
+              <div className="flex-1 overflow-y-auto p-4">
+                <ArtifactPanel embedded workflowId={currentWorkflowId} />
+              </div>
+            </TabsContent>
+          ) : null}
           <TabsContent
             className="flex flex-col overflow-hidden data-[state=inactive]:hidden"
             forceMount
@@ -752,7 +804,7 @@ export const PanelInner = () => {
         className="size-full"
         data-testid="properties-panel"
         defaultValue="properties"
-        onValueChange={setActiveTab}
+        onValueChange={handleTabChange}
         value={activeTab}
       >
         <TabsList className="h-14 w-full shrink-0 rounded-none border-b bg-transparent px-4 py-2.5">
@@ -778,6 +830,15 @@ export const PanelInner = () => {
               value="runs"
             >
               Runs
+            </TabsTrigger>
+          )}
+          {isOwner && (
+            <TabsTrigger
+              className="bg-transparent text-muted-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none"
+              disabled={!currentWorkflowId}
+              value="artifacts"
+            >
+              Artifacts
             </TabsTrigger>
           )}
         </TabsList>
@@ -1022,6 +1083,20 @@ export const PanelInner = () => {
             </div>
           </TabsContent>
         )}
+        {isOwner && currentWorkflowId ? (
+          <TabsContent
+            className="flex flex-col overflow-hidden"
+            value="artifacts"
+          >
+            <div className="flex-1 overflow-y-auto p-4">
+              <ArtifactPanel
+                embedded
+                initialNodeFilter={selectedNode.id}
+                workflowId={currentWorkflowId}
+              />
+            </div>
+          </TabsContent>
+        ) : null}
       </Tabs>
 
       <AlertDialog

@@ -55,6 +55,7 @@ import {
   isSavingAtom,
   isWorkflowOwnerAtom,
   nodesAtom,
+  type PropertiesPanelTab,
   propertiesPanelActiveTabAtom,
   redoAtom,
   selectedEdgeAtom,
@@ -535,7 +536,7 @@ type WorkflowHandlerParams = {
   setIsExecuting: (value: boolean) => void;
   setIsSaving: (value: boolean) => void;
   setHasUnsavedChanges: (value: boolean) => void;
-  setActiveTab: (value: string) => void;
+  setActiveTab: (value: PropertiesPanelTab) => void;
   setNodes: (nodes: WorkflowNode[]) => void;
   setEdges: (edges: WorkflowEdge[]) => void;
   setSelectedNodeId: (id: string | null) => void;

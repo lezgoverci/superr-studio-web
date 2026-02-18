@@ -8,6 +8,7 @@ import {
   Eye,
   EyeOff,
   FileCode,
+  FolderArchive,
   Play,
   RefreshCw,
   Settings2,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { ArtifactPanel } from "@/components/artifacts/artifact-panel";
 import { ConfirmOverlay } from "@/components/overlays/confirm-overlay";
 import { SmartOverlayHeader } from "@/components/overlays/overlay-header";
 import { useOverlay } from "@/components/overlays/overlay-provider";
@@ -266,6 +268,17 @@ export function ConfigurationOverlay({ overlayId }: ConfigurationOverlayProps) {
       (selectedNode.data.config?.triggerType as string) !== "Manual") &&
     selectedNode.data.config?.actionType !== "Condition";
 
+  useEffect(() => {
+    if (!isOwner && (activeTab === "runs" || activeTab === "artifacts")) {
+      setActiveTab("properties");
+      return;
+    }
+
+    if (!currentWorkflowId && activeTab === "artifacts") {
+      setActiveTab("properties");
+    }
+  }, [activeTab, currentWorkflowId, isOwner, setActiveTab]);
+
   // Get current tab title
   const getTabTitle = () => {
     if (!selectedNode) {
@@ -273,7 +286,8 @@ export function ConfigurationOverlay({ overlayId }: ConfigurationOverlayProps) {
       const validTab =
         activeTab === "properties" ||
         activeTab === "code" ||
-        (activeTab === "runs" && isOwner)
+        (activeTab === "runs" && isOwner) ||
+        (activeTab === "artifacts" && isOwner && Boolean(currentWorkflowId))
           ? activeTab
           : "properties";
       switch (validTab) {
@@ -283,6 +297,8 @@ export function ConfigurationOverlay({ overlayId }: ConfigurationOverlayProps) {
           return "Code";
         case "runs":
           return "Runs";
+        case "artifacts":
+          return "Artifacts";
         default:
           return "Workflow";
       }
@@ -294,6 +310,8 @@ export function ConfigurationOverlay({ overlayId }: ConfigurationOverlayProps) {
         return "Code";
       case "runs":
         return "Runs";
+      case "artifacts":
+        return "Artifacts";
       default:
         return "Properties";
     }
@@ -425,11 +443,12 @@ export function ConfigurationOverlay({ overlayId }: ConfigurationOverlayProps) {
 
   // If no node is selected, show workflow-level configuration
   if (!selectedNode) {
-    // For workflow view, only properties, code, and runs (if owner) are valid tabs
+    // For workflow view, only properties, code, runs, and artifacts (if owner) are valid tabs
     const validWorkflowTab =
       activeTab === "properties" ||
       activeTab === "code" ||
-      (activeTab === "runs" && isOwner)
+      (activeTab === "runs" && isOwner) ||
+      (activeTab === "artifacts" && isOwner && Boolean(currentWorkflowId))
         ? activeTab
         : "properties";
 
@@ -548,6 +567,12 @@ export function ConfigurationOverlay({ overlayId }: ConfigurationOverlayProps) {
               </div>
             </div>
           )}
+
+          {validWorkflowTab === "artifacts" && isOwner && currentWorkflowId && (
+            <div className="h-full p-4">
+              <ArtifactPanel embedded workflowId={currentWorkflowId} />
+            </div>
+          )}
         </div>
 
         {/* Bottom tab navigation */}
@@ -588,6 +613,21 @@ export function ConfigurationOverlay({ overlayId }: ConfigurationOverlayProps) {
             >
               <Play className="size-5" />
               Runs
+            </button>
+          )}
+          {isOwner && (
+            <button
+              className={`flex flex-1 flex-col items-center gap-1 py-3 font-medium text-xs transition-colors ${
+                validWorkflowTab === "artifacts"
+                  ? "text-foreground"
+                  : "text-muted-foreground"
+              }`}
+              disabled={!currentWorkflowId}
+              onClick={() => setActiveTab("artifacts")}
+              type="button"
+            >
+              <FolderArchive className="size-5" />
+              Artifacts
             </button>
           )}
         </div>
@@ -783,6 +823,16 @@ export function ConfigurationOverlay({ overlayId }: ConfigurationOverlayProps) {
             </div>
           </div>
         )}
+
+        {activeTab === "artifacts" && isOwner && currentWorkflowId && (
+          <div className="h-full p-4">
+            <ArtifactPanel
+              embedded
+              initialNodeFilter={selectedNode.id}
+              workflowId={currentWorkflowId}
+            />
+          </div>
+        )}
       </div>
 
       {/* Bottom tab navigation */}
@@ -821,6 +871,21 @@ export function ConfigurationOverlay({ overlayId }: ConfigurationOverlayProps) {
           >
             <Play className="size-5" />
             Runs
+          </button>
+        )}
+        {isOwner && (
+          <button
+            className={`flex flex-1 flex-col items-center gap-1 py-3 font-medium text-xs transition-colors ${
+              activeTab === "artifacts"
+                ? "text-foreground"
+                : "text-muted-foreground"
+            }`}
+            disabled={!currentWorkflowId}
+            onClick={() => setActiveTab("artifacts")}
+            type="button"
+          >
+            <FolderArchive className="size-5" />
+            Artifacts
           </button>
         )}
       </div>

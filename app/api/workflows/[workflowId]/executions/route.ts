@@ -1,5 +1,9 @@
 import { and, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import {
+  countArtifactsForExecutionIds,
+  detachArtifactsForWorkflowExecutions,
+} from "@/lib/artifacts/service";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { workflowExecutions, workflows } from "@/lib/db/schema";
@@ -40,7 +44,18 @@ export async function GET(
       limit: 50,
     });
 
-    return NextResponse.json(executions);
+    const artifactCounts = await countArtifactsForExecutionIds({
+      userId: session.user.id,
+      workflowId,
+      executionIds: executions.map((execution) => execution.id),
+    });
+
+    return NextResponse.json(
+      executions.map((execution) => ({
+        ...execution,
+        artifactCount: artifactCounts[execution.id] ?? 0,
+      }))
+    );
   } catch (error) {
     console.error("Failed to get executions:", error);
     return NextResponse.json(
@@ -89,6 +104,11 @@ export async function DELETE(
     });
 
     const executionIds = executions.map((e) => e.id);
+
+    await detachArtifactsForWorkflowExecutions({
+      workflowId,
+      userId: session.user.id,
+    });
 
     // Delete logs first (if there are any executions)
     if (executionIds.length > 0) {

@@ -10,6 +10,7 @@ import { and, eq } from "drizzle-orm";
 import { Sandbox as VercelSandbox } from "@vercel/sandbox";
 import { createGateway, stepCountIs, ToolLoopAgent } from "ai";
 import { createBashTool, experimental_createSkillTool } from "bash-tool";
+import { captureAgentArtifacts } from "@/lib/artifacts/agent-capture";
 import { createSkillPolicyHooks } from "@/lib/skills/policy";
 import { resolveSkills, sanitizeSkillsDestination } from "@/lib/skills/resolve";
 import type { SkillSourceConfig } from "@/lib/skills/types";
@@ -41,6 +42,17 @@ type RunAgentResult =
       uiSpecAttached: string[];
       uiSpecWarnings: Array<{
         workflowId?: string;
+        message: string;
+      }>;
+      artifacts: Array<{
+        id: string;
+        title: string;
+        kind: string;
+        storageProvider: string;
+        url?: string | null;
+      }>;
+      artifactWarnings: Array<{
+        path?: string;
         message: string;
       }>;
     }
@@ -232,15 +244,16 @@ function buildUiTrackingInstructions(workflowUiPrompt: string): string {
 
 function buildAgentInstructions(input: RunAgentCoreInput): string {
   const baseInstructions = input.agentInstructions || DEFAULT_INSTRUCTIONS;
+  const instructionsWithArtifacts = `${baseInstructions}\n\n${ARTIFACT_MANIFEST_INSTRUCTIONS}`;
   if (!shouldIncludeWorkflowUi(input)) {
-    return baseInstructions;
+    return instructionsWithArtifacts;
   }
 
   const uiPrompt = typeof input.workflowUiPrompt === "string"
     ? input.workflowUiPrompt.trim()
     : "";
 
-  return `${baseInstructions}\n\n${buildUiTrackingInstructions(uiPrompt)}`;
+  return `${instructionsWithArtifacts}\n\n${buildUiTrackingInstructions(uiPrompt)}`;
 }
 
 async function resolveOwnerUserId(
@@ -458,6 +471,7 @@ type VercelSandboxCredentials = {
 };
 
 type SandboxTools = Awaited<ReturnType<typeof createBashTool>>["tools"];
+type BashSandbox = Awaited<ReturnType<typeof createBashTool>>["sandbox"];
 type SkillTool = Awaited<
   ReturnType<typeof experimental_createSkillTool>
 >["skill"];
@@ -687,6 +701,8 @@ async function createSandboxTools(
   skillToolkit: PreparedSkillToolkit | null
 ): Promise<{
   tools: AgentTools;
+  sandbox: BashSandbox;
+  workingDirectory: string;
   sandboxType: SandboxType;
   cleanup: () => Promise<void>;
 }> {
@@ -701,15 +717,23 @@ async function createSandboxTools(
   const policyHooks = createSkillPolicyHooks();
 
   if (requestedSandboxType === "just-bash") {
-    const { tools } = await createBashTool({
+    const { tools, sandbox } = await createBashTool({
       files: skillToolkit?.files,
       extraInstructions: skillToolkit?.instructions,
       onBeforeBashCall: policyHooks.onBeforeBashCall,
       onAfterBashCall: policyHooks.onAfterBashCall,
     });
 
+    const workingDirectoryResult = await sandbox.executeCommand("pwd");
+    const workingDirectory =
+      workingDirectoryResult.exitCode === 0
+        ? workingDirectoryResult.stdout.trim() || "/workspace"
+        : "/workspace";
+
     return {
       tools: skillToolkit ? { ...tools, skill: skillToolkit.skill } : tools,
+      sandbox,
+      workingDirectory,
       sandboxType: requestedSandboxType,
       cleanup: async () => {},
     };
@@ -729,7 +753,7 @@ async function createSandboxTools(
   const sandbox = await VercelSandbox.create(credentials);
   const destination = await resolveVercelSandboxDestination(sandbox);
 
-  const { tools } = await createBashTool({
+  const { tools, sandbox: wrappedSandbox } = await createBashTool({
     sandbox,
     destination,
     files: skillToolkit?.files,
@@ -740,6 +764,8 @@ async function createSandboxTools(
 
   return {
     tools: skillToolkit ? { ...tools, skill: skillToolkit.skill } : tools,
+    sandbox: wrappedSandbox,
+    workingDirectory: destination,
     sandboxType: requestedSandboxType,
     cleanup: async () => {
       await sandbox.stop();
@@ -758,6 +784,17 @@ When processing data:
 - Output your final result clearly
 
 Always explain what you're doing briefly before executing commands.`;
+
+const ARTIFACT_MANIFEST_INSTRUCTIONS = `When you generate outputs that should be saved as deliverables, write them under the "artifacts/" directory.
+Also write a manifest file at "artifacts/manifest.json" containing a JSON array.
+Each manifest item supports:
+- "path" (required): relative file or directory path (for example "artifacts/report.json")
+- "kind" (optional): "file", "image", "video", "audio", "web_page", "url", "json", or "text"
+- "title" (optional): human-readable label
+- "mimeType" (optional): MIME type if known
+- "description" (optional)
+- "publishHint" (optional): "public" or "private"
+If no artifacts were produced, write an empty array in "artifacts/manifest.json".`;
 
 /**
  * Core agent logic
@@ -800,6 +837,8 @@ async function stepHandler(
   let skillCleanup = async () => {};
   let sandboxTypeResolved = getSandboxType(input.sandboxType);
   let skillToolkit: PreparedSkillToolkit | null = null;
+  let sandboxRuntime: Awaited<ReturnType<typeof createSandboxTools>> | null =
+    null;
 
   try {
     const gateway = createGateway({ apiKey });
@@ -809,7 +848,7 @@ async function stepHandler(
       skillCleanup = skillToolkit.cleanup;
     }
 
-    const sandboxRuntime = await createSandboxTools(input, skillToolkit);
+    sandboxRuntime = await createSandboxTools(input, skillToolkit);
     sandboxCleanup = sandboxRuntime.cleanup;
     sandboxTypeResolved = sandboxRuntime.sandboxType;
 
@@ -835,6 +874,59 @@ async function stepHandler(
       text: result.text,
       data,
     });
+    const artifactWarnings: Array<{ path?: string; message: string }> = [];
+    const artifacts: Array<{
+      id: string;
+      title: string;
+      kind: string;
+      storageProvider: string;
+      url?: string | null;
+    }> = [];
+
+    const ownerUserId = await resolveOwnerUserId(input.integrationId);
+    const workflowId = input._context?.workflowId;
+
+    if (ownerUserId && workflowId && sandboxRuntime) {
+      try {
+        const captureResult = await captureAgentArtifacts({
+          runtime: {
+            sandbox: sandboxRuntime.sandbox,
+            workingDirectory: sandboxRuntime.workingDirectory,
+          },
+          userId: ownerUserId,
+          workflowId,
+          executionId: input._context?.executionId,
+          nodeId: input._context?.nodeId || "unknown-node",
+          nodeType: input._context?.nodeType || "ai-agent/run-agent",
+          actionType: input._context?.nodeType || "ai-agent/run-agent",
+          text: result.text,
+          data,
+        });
+
+        artifacts.push(...captureResult.artifacts);
+        artifactWarnings.push(...captureResult.warnings);
+      } catch (captureError) {
+        const message =
+          captureError instanceof Error
+            ? captureError.message
+            : "Unknown artifact capture failure";
+        artifactWarnings.push({
+          message: `Artifact capture failed: ${message}`,
+        });
+      }
+    } else {
+      if (!ownerUserId) {
+        artifactWarnings.push({
+          message:
+            "Artifact capture skipped: integration owner could not be resolved.",
+        });
+      }
+      if (!workflowId) {
+        artifactWarnings.push({
+          message: "Artifact capture skipped: workflow context is unavailable.",
+        });
+      }
+    }
 
     return {
       success: true,
@@ -846,6 +938,8 @@ async function stepHandler(
       skillsUsed: skillToolkit ? extractSkillsUsed(steps) : [],
       uiSpecAttached: uiSpecOutcome.attachedWorkflowIds,
       uiSpecWarnings: uiSpecOutcome.warnings,
+      artifacts,
+      artifactWarnings,
     };
   } catch (error) {
     const message = await getErrorMessageAsync(error);

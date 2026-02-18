@@ -5,6 +5,8 @@ import { resolveDatabaseUrlWithFallback } from "./resolve-database-url";
 import {
   accounts,
   apiKeys,
+  artifactPublications,
+  artifacts,
   integrations,
   sessions,
   users,
@@ -25,6 +27,8 @@ const schema = {
   workflowExecutions,
   workflowExecutionLogs,
   workflowExecutionsRelations,
+  artifacts,
+  artifactPublications,
   apiKeys,
   integrations,
 };
