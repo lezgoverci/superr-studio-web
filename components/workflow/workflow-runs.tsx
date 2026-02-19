@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import type { JSX } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { usePolling } from "@/hooks/use-polling";
 import { api } from "@/lib/api-client";
 import {
   OUTPUT_DISPLAY_CONFIGS,
@@ -68,6 +69,8 @@ type WorkflowRunsProps = {
   onRefreshRef?: React.MutableRefObject<(() => Promise<void>) | null>;
   onStartRun?: (executionId: string) => void;
 };
+
+const RUNS_AUTO_REFRESH_INTERVAL_MS = 1000;
 
 // Helper to get the output display config for a node type
 function getOutputConfig(nodeType: string): OutputDisplayConfig | undefined {
@@ -635,6 +638,7 @@ export function WorkflowRuns({
   const [loading, setLoading] = useState(true);
   const runsListRef = useRef<HTMLDivElement | null>(null);
   const announcedArtifactExecutionsRef = useRef<Set<string>>(new Set());
+  const isLoadingExecutionsRef = useRef(false);
 
   // Track which execution we've already auto-expanded to prevent loops
   const autoExpandedExecutionRef = useRef<string | null>(null);
@@ -646,6 +650,11 @@ export function WorkflowRuns({
         return;
       }
 
+      if (isLoadingExecutionsRef.current) {
+        return;
+      }
+
+      isLoadingExecutionsRef.current = true;
       try {
         if (showLoading) {
           setLoading(true);
@@ -654,8 +663,11 @@ export function WorkflowRuns({
         setExecutions(data as WorkflowExecution[]);
       } catch (error) {
         console.error("Failed to load executions:", error);
-        setExecutions([]);
+        if (showLoading) {
+          setExecutions([]);
+        }
       } finally {
+        isLoadingExecutionsRef.current = false;
         if (showLoading) {
           setLoading(false);
         }
@@ -674,6 +686,25 @@ export function WorkflowRuns({
   useEffect(() => {
     loadExecutions();
   }, [loadExecutions]);
+
+  usePolling(
+    () => loadExecutions(false),
+    RUNS_AUTO_REFRESH_INTERVAL_MS,
+    Boolean(isActive && currentWorkflowId)
+  );
+
+  useEffect(() => {
+    if (!selectedExecutionId) {
+      return;
+    }
+
+    const hasSelectedExecution = executions.some(
+      (execution) => execution.id === selectedExecutionId
+    );
+    if (!hasSelectedExecution) {
+      void loadExecutions(false);
+    }
+  }, [executions, loadExecutions, selectedExecutionId]);
 
   useEffect(() => {
     const runIdByExecutionId: Record<string, string | null> = {};
