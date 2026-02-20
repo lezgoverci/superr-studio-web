@@ -45,6 +45,14 @@ const SYSTEM_INTEGRATION_TYPES = ["database"] as const;
 
 // Regex patterns for codegen template generation
 const LEADING_WHITESPACE_PATTERN = /^\s*/;
+const SAFE_INTERNAL_EXPORT_IMPORTS = new Set([
+  "@/lib/credential-fetcher",
+  "@/lib/steps/step-handler",
+  "@/lib/utils",
+]);
+const SAFE_RELATIVE_EXPORT_IMPORTS = new Set(["../credentials"]);
+const TYPE_DECLARATION_NAME_REGEX = /type\s+([A-Za-z0-9_]+)/;
+const INPUT_SUFFIX_REGEX = /Input$/;
 
 /**
  * Format TypeScript code using Prettier
@@ -263,6 +271,8 @@ type StepFileAnalysis = {
   } | null;
   inputTypes: string[];
   imports: string[];
+  helperDeclarations: string[];
+  unsupportedImports: string[];
 };
 
 /** Create empty analysis result */
@@ -273,6 +283,8 @@ function createEmptyAnalysis(): StepFileAnalysis {
     coreFunction: null,
     inputTypes: [],
     imports: [],
+    helperDeclarations: [],
+    unsupportedImports: [],
   };
 }
 
@@ -302,6 +314,15 @@ function shouldIncludeType(typeName: string): boolean {
   );
 }
 
+/** Check if a declaration node is exported */
+function isExportedDeclaration(node: ts.Node): boolean {
+  const modifiers = (node as { modifiers?: ts.NodeArray<ts.Modifier> })
+    .modifiers;
+  return Boolean(
+    modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
+  );
+}
+
 /** Check if an import should be included in exports */
 function shouldIncludeImport(moduleSpec: string, importText: string): boolean {
   // Skip internal imports
@@ -313,6 +334,19 @@ function shouldIncludeImport(moduleSpec: string, importText: string): boolean {
     return false;
   }
   return true;
+}
+
+/** Check if an import makes standalone export unsupported */
+function isUnsupportedExportImport(moduleSpec: string): boolean {
+  if (moduleSpec.startsWith("@/")) {
+    return !SAFE_INTERNAL_EXPORT_IMPORTS.has(moduleSpec);
+  }
+
+  if (moduleSpec.startsWith(".")) {
+    return !SAFE_RELATIVE_EXPORT_IMPORTS.has(moduleSpec);
+  }
+
+  return false;
 }
 
 /** Extract function info from a function declaration */
@@ -345,12 +379,13 @@ function extractFunctionInfo(
 /** Process variable statement node */
 function processVariableStatement(
   node: ts.VariableStatement,
+  sourceCode: string,
   result: StepFileAnalysis
 ): void {
-  const isExported = node.modifiers?.some(
-    (m) => m.kind === ts.SyntaxKind.ExportKeyword
-  );
+  const isExported = isExportedDeclaration(node);
+
   if (!isExported) {
+    result.helperDeclarations.push(sourceCode.slice(node.pos, node.end).trim());
     return;
   }
 
@@ -365,9 +400,32 @@ function processTypeAlias(
   sourceCode: string,
   result: StepFileAnalysis
 ): void {
-  if (shouldIncludeType(node.name.text)) {
+  if (!isExportedDeclaration(node) || shouldIncludeType(node.name.text)) {
     result.inputTypes.push(sourceCode.slice(node.pos, node.end).trim());
   }
+}
+
+/** Process function declaration node */
+function processFunctionDeclaration(
+  node: ts.FunctionDeclaration,
+  sourceCode: string,
+  result: StepFileAnalysis
+): void {
+  if (!node.name) {
+    return;
+  }
+
+  if (node.name.text === "stepHandler") {
+    result.hasExportCore = true;
+    result.coreFunction = extractFunctionInfo(node, sourceCode);
+    return;
+  }
+
+  if (isExportedDeclaration(node)) {
+    return;
+  }
+
+  result.helperDeclarations.push(sourceCode.slice(node.pos, node.end).trim());
 }
 
 /** Process import declaration node */
@@ -383,6 +441,8 @@ function processImportDeclaration(
   const importText = sourceCode.slice(node.pos, node.end).trim();
   if (shouldIncludeImport(spec.text, importText)) {
     result.imports.push(importText);
+  } else if (isUnsupportedExportImport(spec.text)) {
+    result.unsupportedImports.push(spec.text);
   }
 }
 
@@ -393,7 +453,7 @@ function processNode(
   result: StepFileAnalysis
 ): void {
   if (ts.isVariableStatement(node)) {
-    processVariableStatement(node, result);
+    processVariableStatement(node, sourceCode, result);
     return;
   }
 
@@ -407,10 +467,9 @@ function processNode(
     return;
   }
 
-  // Check for stepHandler function (doesn't need to be exported)
-  if (ts.isFunctionDeclaration(node) && node.name?.text === "stepHandler") {
-    result.hasExportCore = true;
-    result.coreFunction = extractFunctionInfo(node, sourceCode);
+  if (ts.isFunctionDeclaration(node)) {
+    processFunctionDeclaration(node, sourceCode, result);
+    return;
   }
 }
 
@@ -449,11 +508,20 @@ async function generateCodegenTemplate(
 ): Promise<string | null> {
   const analysis = analyzeStepFile(stepFilePath);
 
-  if (!(analysis.hasExportCore && analysis.coreFunction)) {
+  if (
+    !(analysis.hasExportCore && analysis.coreFunction) ||
+    analysis.unsupportedImports.length > 0
+  ) {
     return null;
   }
 
-  const { coreFunction, integrationType, inputTypes, imports } = analysis;
+  const {
+    coreFunction,
+    integrationType,
+    inputTypes,
+    imports,
+    helperDeclarations,
+  } = analysis;
 
   // Extract the inner body (remove outer braces)
   let innerBody = coreFunction.body.trim();
@@ -466,12 +534,30 @@ async function generateCodegenTemplate(
   innerBody = innerBody.trim();
 
   // Extract input type from first parameter
-  const inputType =
-    coreFunction.params
-      .split(",")[0]
-      .replace(LEADING_WHITESPACE_PATTERN, "")
-      .split(":")[1]
-      ?.trim() || "unknown";
+  const firstParam = coreFunction.params
+    .split(",")[0]
+    ?.replace(LEADING_WHITESPACE_PATTERN, "");
+  const rawInputType = firstParam?.split(":")[1]?.trim() || "unknown";
+  const availableTypeNames = new Set(
+    inputTypes.map((typeText) => {
+      const match = typeText.match(TYPE_DECLARATION_NAME_REGEX);
+      return match?.[1] || "";
+    })
+  );
+  const inputType = (() => {
+    if (rawInputType.endsWith("CoreInput")) {
+      return rawInputType;
+    }
+
+    if (rawInputType.endsWith("Input")) {
+      const candidate = rawInputType.replace(INPUT_SUFFIX_REGEX, "CoreInput");
+      if (availableTypeNames.has(candidate)) {
+        return candidate;
+      }
+    }
+
+    return "Record<string, unknown>";
+  })();
 
   // Build the raw template (formatter will fix indentation)
   const rawTemplate = `${imports.join("\n")}
@@ -482,7 +568,13 @@ function getErrorMessage(error: unknown): string {
   return String(error);
 }
 
+async function getErrorMessageAsync(error: unknown): Promise<string> {
+  return getErrorMessage(error);
+}
+
 ${inputTypes.join("\n\n")}
+
+${helperDeclarations.join("\n\n")}
 
 export async function ${stepFunctionName}(input: ${inputType}): ${coreFunction.returnType} {
   "use step";

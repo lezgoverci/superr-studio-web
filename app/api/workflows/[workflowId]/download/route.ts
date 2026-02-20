@@ -1,4 +1,5 @@
 import { readdir, readFile } from "node:fs/promises";
+import { builtinModules } from "node:module";
 import { join } from "node:path";
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
@@ -6,12 +7,13 @@ import { auth } from "@/lib/auth";
 import { AUTO_GENERATED_TEMPLATES } from "@/lib/codegen-registry";
 import { db } from "@/lib/db";
 import { workflows } from "@/lib/db/schema";
+import type { IntegrationType } from "@/lib/types/integration";
 import { generateWorkflowModule } from "@/lib/workflow-codegen";
 import type { WorkflowEdge, WorkflowNode } from "@/lib/workflow-store";
 import {
   findActionById,
-  getAllEnvVars,
   getDependenciesForActions,
+  getIntegration,
 } from "@/plugins";
 
 // Path to the Next.js boilerplate directory
@@ -24,7 +26,27 @@ const CODEGEN_TEMPLATES_PATH = join(process.cwd(), "lib", "codegen-templates");
 const NON_ALPHANUMERIC_REGEX = /[^a-zA-Z0-9\s]/g;
 const WHITESPACE_SPLIT_REGEX = /\s+/;
 const TEMPLATE_EXPORT_REGEX = /export default `([\s\S]*)`/;
+const TYPESCRIPT_EXTENSION_REGEX = /\.ts$/;
+const INTEGRATION_ENV_VARS_REGEX =
+  /export const INTEGRATION_ENV_VARS: Record<string, Record<string, string>> = \{[\s\S]*?\};/;
+const ESCAPED_TEMPLATE_BACKTICK_REGEX = /\\`/g;
+const ESCAPED_TEMPLATE_INTERPOLATION_REGEX = /\\\$\{/g;
+const WORKFLOW_FUNCTION_SIGNATURE_REGEX =
+  /export async function\s+([A-Za-z0-9_]+)(?:<[^>]+>)?\(([^)]*)\)/;
+const IMPORT_FROM_REGEX = /\bfrom\s+["']([^"']+)["']/g;
+const SIDE_EFFECT_IMPORT_REGEX = /\bimport\s+["']([^"']+)["']/g;
+const DYNAMIC_IMPORT_REGEX = /\bimport\(\s*["']([^"']+)["']\s*\)/g;
+const CODE_FILE_EXTENSION_REGEX = /\.(?:[mc]?[jt]sx?)$/;
 const DEFAULT_WORKFLOW_VERSION = "4.0.1-beta.17";
+const RUN_WORKFLOW_ACTION = "Run Workflow";
+const DATABASE_QUERY_ACTION = "Database Query";
+const SUPPORTED_SYSTEM_ACTIONS = new Set([
+  DATABASE_QUERY_ACTION,
+  "HTTP Request",
+  RUN_WORKFLOW_ACTION,
+  "Condition",
+]);
+const EXPLICITLY_UNSUPPORTED_PLUGIN_ACTIONS = new Set(["ai-agent/run-agent"]);
 
 const BINARY_EXTENSIONS = new Set([
   ".ico",
@@ -37,6 +59,20 @@ const BINARY_EXTENSIONS = new Set([
   ".ttf",
   ".eot",
 ]);
+
+type ExportDiagnostics = {
+  warnings: string[];
+  unsupportedActions: string[];
+  missingTemplates: string[];
+};
+
+const NODE_BUILTINS = new Set(
+  builtinModules.flatMap((moduleName) =>
+    moduleName.startsWith("node:")
+      ? [moduleName, moduleName.slice(5)]
+      : [moduleName, `node:${moduleName}`]
+  )
+);
 
 /**
  * Recursively read all files from a directory
@@ -73,6 +109,180 @@ async function readDirectoryRecursive(
 }
 
 /**
+ * Convert system template filename to generated step filename
+ * e.g. database-query.ts -> database-query-step.ts
+ */
+function toSystemStepFilePath(templatePath: string): string {
+  if (templatePath.endsWith(".ts")) {
+    return `lib/steps/${templatePath.replace(TYPESCRIPT_EXTENSION_REGEX, "-step.ts")}`;
+  }
+
+  return `lib/steps/${templatePath}`;
+}
+
+/**
+ * Build integration->env var map for credential helper in exported project
+ */
+function buildIntegrationEnvVarMap(
+  integrationTypes: Set<IntegrationType>
+): Record<string, Record<string, string>> {
+  const integrationEnvVars: Record<string, Record<string, string>> = {};
+  const sortedIntegrationTypes = Array.from(integrationTypes).sort();
+
+  for (const integrationType of sortedIntegrationTypes) {
+    const plugin = getIntegration(integrationType);
+    if (!plugin) {
+      continue;
+    }
+
+    const envVarMap: Record<string, string> = {};
+    for (const field of plugin.formFields) {
+      if (field.envVar) {
+        // Preserve fetchCredentials contract: credential key maps to env var name.
+        envVarMap[field.envVar] = field.envVar;
+      }
+    }
+
+    if (Object.keys(envVarMap).length > 0) {
+      integrationEnvVars[integrationType] = envVarMap;
+    }
+  }
+
+  return integrationEnvVars;
+}
+
+/**
+ * Inject generated integration env vars into exported credential helper
+ */
+function injectCredentialHelperMapping(
+  helperContent: string,
+  integrationEnvVars: Record<string, Record<string, string>>
+): string {
+  const mappingLiteral = JSON.stringify(integrationEnvVars, null, 2);
+
+  return helperContent.replace(
+    INTEGRATION_ENV_VARS_REGEX,
+    `export const INTEGRATION_ENV_VARS: Record<string, Record<string, string>> = ${mappingLiteral};`
+  );
+}
+
+function normalizePackageName(specifier: string): string | null {
+  if (!specifier) {
+    return null;
+  }
+  if (
+    specifier.startsWith(".") ||
+    specifier.startsWith("/") ||
+    specifier.startsWith("@/")
+  ) {
+    return null;
+  }
+  if (NODE_BUILTINS.has(specifier)) {
+    return null;
+  }
+
+  const segments = specifier.split("/");
+  if (specifier.startsWith("@")) {
+    if (segments.length < 2) {
+      return null;
+    }
+    return `${segments[0]}/${segments[1]}`;
+  }
+
+  return segments[0];
+}
+
+function findAllPackageSpecifiers(content: string): Set<string> {
+  const packages = new Set<string>();
+
+  const collectWithPattern = (pattern: RegExp) => {
+    pattern.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    // biome-ignore lint/suspicious/noAssignInExpressions: standard regex iteration pattern
+    while ((match = pattern.exec(content)) !== null) {
+      const packageName = normalizePackageName(match[1]);
+      if (packageName) {
+        packages.add(packageName);
+      }
+    }
+  };
+
+  collectWithPattern(IMPORT_FROM_REGEX);
+  collectWithPattern(SIDE_EFFECT_IMPORT_REGEX);
+  collectWithPattern(DYNAMIC_IMPORT_REGEX);
+
+  return packages;
+}
+
+function resolveGeneratedDependencyVersions(params: {
+  files: Record<string, string>;
+  existingDependencies: Record<string, string>;
+  sourceVersions: Record<string, string>;
+}): {
+  dependencies: Record<string, string>;
+  missingPackages: string[];
+} {
+  const { files, existingDependencies, sourceVersions } = params;
+  const dependencies: Record<string, string> = {};
+  const missingPackages = new Set<string>();
+
+  for (const [filePath, content] of Object.entries(files)) {
+    if (!CODE_FILE_EXTENSION_REGEX.test(filePath)) {
+      continue;
+    }
+    const packageNames = findAllPackageSpecifiers(content);
+    for (const packageName of packageNames) {
+      if (existingDependencies[packageName] || dependencies[packageName]) {
+        continue;
+      }
+
+      const version = sourceVersions[packageName];
+      if (version) {
+        dependencies[packageName] = version;
+      } else {
+        missingPackages.add(packageName);
+      }
+    }
+  }
+
+  return {
+    dependencies,
+    missingPackages: Array.from(missingPackages).sort(),
+  };
+}
+
+function extractTemplateBody(content: string): string | null {
+  const templateMatch = content.match(TEMPLATE_EXPORT_REGEX);
+  if (!templateMatch) {
+    return null;
+  }
+
+  // Template files are source code; decode escaped template syntax
+  // so generated step files contain executable TypeScript.
+  return templateMatch[1]
+    .replace(ESCAPED_TEMPLATE_BACKTICK_REGEX, "`")
+    .replace(ESCAPED_TEMPLATE_INTERPOLATION_REGEX, "${");
+}
+
+function buildUnsupportedPluginStepTemplate(params: {
+  stepFunctionName: string;
+  actionId: string;
+  actionLabel: string;
+}): string {
+  const message = `${params.actionLabel} (${params.actionId}) is not supported in standalone export.`;
+  return `export async function ${params.stepFunctionName}(_input: Record<string, unknown>) {
+  "use step";
+
+  return {
+    success: false,
+    error: {
+      message: ${JSON.stringify(message)},
+    },
+  };
+}`;
+}
+
+/**
  * Generate workflow-specific files
  */
 function generateWorkflowFiles(workflow: {
@@ -104,6 +314,18 @@ function generateWorkflowFiles(workflow: {
     workflow.edges,
     { functionName }
   );
+  const signatureMatch = workflowCode.match(WORKFLOW_FUNCTION_SIGNATURE_REGEX);
+  const paramsText =
+    signatureMatch && signatureMatch[1] === functionName
+      ? signatureMatch[2].trim()
+      : "";
+  const hasWorkflowInput = paramsText.length > 0;
+  const parseRequestBodyLine = hasWorkflowInput
+    ? "const body = await request.json();"
+    : "";
+  const startCall = hasWorkflowInput
+    ? `await start(${functionName}, [body]);`
+    : `await start(${functionName});`;
   const fileName = sanitizeFileName(workflow.name);
 
   // Add workflow file
@@ -117,10 +339,10 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    ${parseRequestBodyLine}
     
     // Start the workflow execution
-    await start(${functionName}, [body]);
+    ${startCall}
     
     return NextResponse.json({
       success: true,
@@ -177,37 +399,33 @@ function getIntegrationDependencies(
 }
 
 /**
- * Generate .env.example content based on registered integrations
+ * Generate .env.example content from credential map used in exported project
  */
-function generateEnvExample(): string {
+function generateEnvExample(params: {
+  includeDatabase: boolean;
+  integrationEnvVars: Record<string, Record<string, string>>;
+}): string {
+  const { includeDatabase, integrationEnvVars } = params;
   const lines = ["# Add your environment variables here"];
 
-  // Add system integration env vars
-  lines.push("");
-  lines.push("# For database integrations");
-  lines.push("DATABASE_URL=your_database_url");
-
-  // Add plugin env vars from registry
-  const envVars = getAllEnvVars();
-  const groupedByPrefix: Record<
-    string,
-    Array<{ name: string; description: string }>
-  > = {};
-
-  for (const envVar of envVars) {
-    const prefix = envVar.name.split("_")[0];
-    if (!groupedByPrefix[prefix]) {
-      groupedByPrefix[prefix] = [];
-    }
-    groupedByPrefix[prefix].push(envVar);
+  if (includeDatabase) {
+    lines.push("");
+    lines.push("# For Database integration");
+    lines.push("DATABASE_URL=your_database_url");
   }
 
-  for (const [prefix, vars] of Object.entries(groupedByPrefix)) {
-    lines.push(
-      `# For ${prefix.charAt(0) + prefix.slice(1).toLowerCase()} integration`
-    );
-    for (const v of vars) {
-      lines.push(`${v.name}=your_${v.name.toLowerCase()}`);
+  const sortedIntegrationTypes = Object.keys(integrationEnvVars).sort();
+  for (const integrationType of sortedIntegrationTypes) {
+    const plugin = getIntegration(integrationType as IntegrationType);
+    const envVars = Object.values(integrationEnvVars[integrationType]);
+    if (!plugin || envVars.length === 0) {
+      continue;
+    }
+
+    lines.push("");
+    lines.push(`# For ${plugin.label} integration`);
+    for (const envVar of envVars) {
+      lines.push(`${envVar}=your_${envVar.toLowerCase()}`);
     }
     lines.push("");
   }
@@ -224,6 +442,309 @@ function sanitizeFileName(name: string): string {
     .replace(/[^a-z0-9]/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+type WorkflowForExport = {
+  name: string;
+  nodes: WorkflowNode[];
+  edges: WorkflowEdge[];
+};
+
+type StepFileGenerationResult = {
+  stepFiles: Record<string, string>;
+  usedIntegrationTypes: Set<IntegrationType>;
+  diagnostics: ExportDiagnostics;
+};
+type ResolvedAction = NonNullable<ReturnType<typeof findActionById>>;
+
+function collectUsedActionTypes(nodes: WorkflowNode[]): Set<string> {
+  return new Set(
+    nodes
+      .filter((node) => node.data.type === "action")
+      .map((node) => node.data.config?.actionType as string)
+      .filter(Boolean)
+  );
+}
+
+function finalizeDiagnostics(
+  diagnostics: ExportDiagnostics,
+  unknownActionTypes: Set<string>
+) {
+  diagnostics.unsupportedActions = Array.from(
+    new Set(diagnostics.unsupportedActions)
+  ).sort();
+  diagnostics.missingTemplates = Array.from(
+    new Set(diagnostics.missingTemplates)
+  ).sort();
+
+  if (diagnostics.unsupportedActions.includes(RUN_WORKFLOW_ACTION)) {
+    diagnostics.warnings.push(
+      "Run Workflow actions are not supported in standalone exports and will return an error at runtime."
+    );
+  }
+
+  if (diagnostics.missingTemplates.length > 0) {
+    diagnostics.warnings.push(
+      `Missing code templates for actions: ${diagnostics.missingTemplates.join(", ")}.`
+    );
+  }
+
+  const unsupportedPluginActions = diagnostics.unsupportedActions
+    .filter((action) => action !== RUN_WORKFLOW_ACTION)
+    .sort();
+  if (unsupportedPluginActions.length > 0) {
+    diagnostics.warnings.push(
+      `Standalone export generated fallback stubs for unsupported actions: ${unsupportedPluginActions.join(", ")}.`
+    );
+  }
+
+  if (unknownActionTypes.size > 0) {
+    diagnostics.warnings.push(
+      `Unknown action types in workflow: ${Array.from(unknownActionTypes).sort().join(", ")}.`
+    );
+  }
+}
+
+function buildPluginStepFilePath(stepImportPath: string): string {
+  return `lib/steps/${stepImportPath}-step.ts`;
+}
+
+function resolvePluginStepTemplate(action: ResolvedAction): string | null {
+  return AUTO_GENERATED_TEMPLATES[action.id] || action.codegenTemplate || null;
+}
+
+function writeUnsupportedPluginStep(params: {
+  stepFiles: Record<string, string>;
+  diagnostics: ExportDiagnostics;
+  action: ResolvedAction;
+  missingTemplate?: boolean;
+}) {
+  const { stepFiles, diagnostics, action, missingTemplate = false } = params;
+  if (missingTemplate) {
+    diagnostics.missingTemplates.push(action.id);
+  }
+  diagnostics.unsupportedActions.push(action.id);
+  stepFiles[buildPluginStepFilePath(action.stepImportPath)] =
+    buildUnsupportedPluginStepTemplate({
+      stepFunctionName: action.stepFunction,
+      actionId: action.id,
+      actionLabel: action.label,
+    });
+}
+
+function generateStepFilesAndDiagnostics(
+  templateFiles: Record<string, string>,
+  usedActionTypes: Set<string>
+): StepFileGenerationResult {
+  const stepFiles: Record<string, string> = {};
+  const diagnostics: ExportDiagnostics = {
+    warnings: [],
+    unsupportedActions: [],
+    missingTemplates: [],
+  };
+  const unknownActionTypes = new Set<string>();
+  const usedIntegrationTypes = new Set<IntegrationType>();
+
+  for (const [path, content] of Object.entries(templateFiles)) {
+    const templateBody = extractTemplateBody(content);
+    if (templateBody) {
+      stepFiles[toSystemStepFilePath(path)] = templateBody;
+    }
+  }
+
+  for (const actionType of usedActionTypes) {
+    if (actionType === RUN_WORKFLOW_ACTION) {
+      diagnostics.unsupportedActions.push(RUN_WORKFLOW_ACTION);
+    }
+
+    const action = findActionById(actionType);
+    if (!action) {
+      if (!SUPPORTED_SYSTEM_ACTIONS.has(actionType)) {
+        unknownActionTypes.add(actionType);
+      }
+      continue;
+    }
+
+    if (EXPLICITLY_UNSUPPORTED_PLUGIN_ACTIONS.has(action.id)) {
+      writeUnsupportedPluginStep({ stepFiles, diagnostics, action });
+      continue;
+    }
+
+    usedIntegrationTypes.add(action.integration);
+
+    const template = resolvePluginStepTemplate(action);
+    if (!template) {
+      writeUnsupportedPluginStep({
+        stepFiles,
+        diagnostics,
+        action,
+        missingTemplate: true,
+      });
+      continue;
+    }
+
+    stepFiles[buildPluginStepFilePath(action.stepImportPath)] = template;
+  }
+
+  finalizeDiagnostics(diagnostics, unknownActionTypes);
+
+  return { stepFiles, usedIntegrationTypes, diagnostics };
+}
+
+function buildReadme(
+  workflowName: string,
+  includesRunWorkflowAction: boolean
+): string {
+  const workflowFileName = sanitizeFileName(workflowName);
+  const runWorkflowLimitations = includesRunWorkflowAction
+    ? `
+## Known Limitations
+
+- \`Run Workflow\` actions require Workflow Builder runtime orchestration and are not available in standalone exports.
+`
+    : "";
+
+  return `# ${workflowName}
+
+This is a Next.js workflow project generated from Workflow Builder.
+
+## Getting Started
+
+1. Install dependencies:
+\`\`\`bash
+pnpm install
+\`\`\`
+
+2. Set up environment variables:
+\`\`\`bash
+cp .env.example .env.local
+\`\`\`
+
+3. Run the development server:
+\`\`\`bash
+pnpm dev
+\`\`\`
+
+4. Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+## Workflow API
+
+Your workflow is available at \`/api/workflows/${workflowFileName}\`.
+
+Send a POST request with a JSON body to trigger the workflow:
+
+\`\`\`bash
+curl -X POST http://localhost:3000/api/workflows/${workflowFileName} \\
+  -H "Content-Type: application/json" \\
+  -d '{"key": "value"}'
+\`\`\`
+
+## Deployment
+
+Deploy your workflow to Vercel:
+
+\`\`\`bash
+vercel deploy
+\`\`\`
+
+For more information, visit the [Workflow documentation](https://workflow.is).
+${runWorkflowLimitations}`;
+}
+
+async function buildExportPayload(workflow: WorkflowForExport): Promise<{
+  files: Record<string, string>;
+  diagnostics: ExportDiagnostics;
+}> {
+  const boilerplateFiles = await readDirectoryRecursive(BOILERPLATE_PATH);
+  const templateFiles = await readDirectoryRecursive(CODEGEN_TEMPLATES_PATH);
+  const usedActionTypes = collectUsedActionTypes(workflow.nodes);
+  const { stepFiles, usedIntegrationTypes, diagnostics } =
+    generateStepFilesAndDiagnostics(templateFiles, usedActionTypes);
+
+  const workflowFiles = generateWorkflowFiles(workflow);
+  const allFiles = { ...boilerplateFiles, ...stepFiles, ...workflowFiles };
+
+  const rootPackageJson = JSON.parse(
+    await readFile(join(process.cwd(), "package.json"), "utf-8")
+  );
+  const sourceDependencyVersions: Record<string, string> = {
+    ...(rootPackageJson.dependencies ?? {}),
+    ...(rootPackageJson.devDependencies ?? {}),
+    ...(rootPackageJson.optionalDependencies ?? {}),
+    ...(rootPackageJson.peerDependencies ?? {}),
+  };
+  const workflowVersion =
+    (rootPackageJson.dependencies?.workflow as string | undefined) ||
+    DEFAULT_WORKFLOW_VERSION;
+
+  const packageJson = JSON.parse(allFiles["package.json"]);
+  const integrationDependencies = getIntegrationDependencies(workflow.nodes);
+  packageJson.dependencies = {
+    ...packageJson.dependencies,
+    workflow: workflowVersion,
+    ...integrationDependencies,
+  };
+
+  const generatedDependencyResolution = resolveGeneratedDependencyVersions({
+    files: { ...stepFiles, ...workflowFiles },
+    existingDependencies: packageJson.dependencies,
+    sourceVersions: sourceDependencyVersions,
+  });
+  packageJson.dependencies = {
+    ...packageJson.dependencies,
+    ...generatedDependencyResolution.dependencies,
+  };
+  if (generatedDependencyResolution.missingPackages.length > 0) {
+    diagnostics.warnings.push(
+      `Unable to resolve versions for generated dependencies: ${generatedDependencyResolution.missingPackages.join(", ")}.`
+    );
+  }
+
+  packageJson.scripts = {
+    ...packageJson.scripts,
+    dev: "next dev --webpack",
+    build: "next build --webpack",
+  };
+  allFiles["package.json"] = JSON.stringify(packageJson, null, 2);
+
+  const integrationEnvVars = buildIntegrationEnvVarMap(usedIntegrationTypes);
+  const credentialHelperPath = "lib/credential-helper.ts";
+  const credentialHelperContent = allFiles[credentialHelperPath];
+  if (credentialHelperContent) {
+    allFiles[credentialHelperPath] = injectCredentialHelperMapping(
+      credentialHelperContent,
+      integrationEnvVars
+    );
+  } else {
+    diagnostics.warnings.push(
+      "Credential helper file not found in boilerplate; integration credentials were not injected."
+    );
+  }
+
+  allFiles["next.config.ts"] = `import { withWorkflow } from "workflow/next";
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {};
+
+export default withWorkflow(nextConfig);
+`;
+
+  const tsConfig = JSON.parse(allFiles["tsconfig.json"]);
+  tsConfig.compilerOptions.plugins = [{ name: "next" }, { name: "workflow" }];
+  allFiles["tsconfig.json"] = JSON.stringify(tsConfig, null, 2);
+
+  allFiles["README.md"] = buildReadme(
+    workflow.name,
+    diagnostics.unsupportedActions.includes(RUN_WORKFLOW_ACTION)
+  );
+  allFiles[".env.example"] = generateEnvExample({
+    includeDatabase: usedActionTypes.has(DATABASE_QUERY_ACTION),
+    integrationEnvVars,
+  });
+
+  diagnostics.warnings = Array.from(new Set(diagnostics.warnings));
+
+  return { files: allFiles, diagnostics };
 }
 
 export async function GET(
@@ -254,148 +775,18 @@ export async function GET(
       );
     }
 
-    // Read boilerplate files
-    const boilerplateFiles = await readDirectoryRecursive(BOILERPLATE_PATH);
-
-    // Read codegen template files and convert them to actual step files
-    const templateFiles = await readDirectoryRecursive(CODEGEN_TEMPLATES_PATH);
-
-    // Convert template exports to actual step files
-    const stepFiles: Record<string, string> = {};
-    for (const [path, content] of Object.entries(templateFiles)) {
-      // Extract the template string from the export default statement
-      const templateMatch = content.match(TEMPLATE_EXPORT_REGEX);
-      if (templateMatch) {
-        stepFiles[`lib/steps/${path}`] = templateMatch[1];
-      }
-    }
-
-    // Add auto-generated templates from the registry (for plugins)
-    // This is required for plugin actions that don't have static templates in lib/codegen-templates
-    const usedActionTypes = new Set(
-      (workflow.nodes as WorkflowNode[])
-        .filter((n) => n.data.type === "action")
-        .map((n) => n.data.config?.actionType as string)
-        .filter(Boolean)
-    );
-
-    for (const actionType of usedActionTypes) {
-      const action = findActionById(actionType);
-      if (!action) {
-        continue;
-      }
-
-      // Use the action's full ID to look up the template
-      const fullActionId = action.id; // Corrected: use .id property which contains full ID
-      const template = AUTO_GENERATED_TEMPLATES[fullActionId];
-
-      if (template) {
-        // Add the file to stepFiles
-        // The import path in generated code is `./steps/${action.stepImportPath}-step`
-        // So we place the file at `lib/steps/${action.stepImportPath}-step.ts`
-        stepFiles[`lib/steps/${action.stepImportPath}-step.ts`] = template;
-      }
-    }
-
-    // Generate workflow-specific files
-    const workflowFiles = generateWorkflowFiles({
+    const exportPayload = await buildExportPayload({
       name: workflow.name,
       nodes: workflow.nodes as WorkflowNode[],
       edges: workflow.edges as WorkflowEdge[],
     });
 
-    // Merge boilerplate, step files, and workflow files
-    const allFiles = { ...boilerplateFiles, ...stepFiles, ...workflowFiles };
-
-    // Resolve workflow version from current project package.json to keep exports in sync
-    const rootPackageJson = JSON.parse(
-      await readFile(join(process.cwd(), "package.json"), "utf-8")
-    );
-    const workflowVersion =
-      (rootPackageJson.dependencies?.workflow as string | undefined) ||
-      DEFAULT_WORKFLOW_VERSION;
-
-    // Update package.json to include workflow dependencies
-    const packageJson = JSON.parse(allFiles["package.json"]);
-    packageJson.dependencies = {
-      ...packageJson.dependencies,
-      workflow: workflowVersion,
-      ...getIntegrationDependencies(workflow.nodes as WorkflowNode[]),
-    };
-    packageJson.scripts = {
-      ...packageJson.scripts,
-      dev: "next dev --webpack",
-      build: "next build --webpack",
-    };
-    allFiles["package.json"] = JSON.stringify(packageJson, null, 2);
-
-    // Update next.config.ts to include workflow plugin
-    allFiles["next.config.ts"] = `import { withWorkflow } from "workflow/next";
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {};
-
-export default withWorkflow(nextConfig);
-`;
-
-    // Update tsconfig.json to include workflow plugin
-    const tsConfig = JSON.parse(allFiles["tsconfig.json"]);
-    tsConfig.compilerOptions.plugins = [{ name: "next" }, { name: "workflow" }];
-    allFiles["tsconfig.json"] = JSON.stringify(tsConfig, null, 2);
-
-    // Add a README with instructions
-    allFiles["README.md"] = `# ${workflow.name}
-
-This is a Next.js workflow project generated from Workflow Builder.
-
-## Getting Started
-
-1. Install dependencies:
-\`\`\`bash
-pnpm install
-\`\`\`
-
-2. Set up environment variables:
-\`\`\`bash
-cp .env.example .env.local
-\`\`\`
-
-3. Run the development server:
-\`\`\`bash
-pnpm dev
-\`\`\`
-
-4. Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-## Workflow API
-
-Your workflow is available at \`/api/workflows/${sanitizeFileName(workflow.name)}\`.
-
-Send a POST request with a JSON body to trigger the workflow:
-
-\`\`\`bash
-curl -X POST http://localhost:3000/api/workflows/${sanitizeFileName(workflow.name)} \\
-  -H "Content-Type: application/json" \\
-  -d '{"key": "value"}'
-\`\`\`
-
-## Deployment
-
-Deploy your workflow to Vercel:
-
-\`\`\`bash
-vercel deploy
-\`\`\`
-
-For more information, visit the [Workflow documentation](https://workflow.is).
-`;
-
-    // Add .env.example file (dynamically generated from plugin registry)
-    allFiles[".env.example"] = generateEnvExample();
-
     return NextResponse.json({
       success: true,
-      files: allFiles,
+      files: exportPayload.files,
+      warnings: exportPayload.diagnostics.warnings,
+      unsupportedActions: exportPayload.diagnostics.unsupportedActions,
+      missingTemplates: exportPayload.diagnostics.missingTemplates,
     });
   } catch (error) {
     console.error("Failed to prepare workflow download:", error);

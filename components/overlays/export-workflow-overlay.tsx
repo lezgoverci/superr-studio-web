@@ -48,7 +48,8 @@ export function ExportWorkflowOverlay({
         This will generate a complete Next.js project containing your workflow
         code. Once exported, you can run your workflow outside of the Workflow
         Builder, deploy it to Vercel, or integrate it into your existing
-        applications.
+        applications. The standalone export currently does not support the{" "}
+        <code>Run Workflow</code> action.
       </p>
 
       <Alert className="mt-4">

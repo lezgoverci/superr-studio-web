@@ -134,6 +134,54 @@ function sanitizeWorkflowFileName(name?: string): string {
   return sanitized || fallback;
 }
 
+const ZIP_BINARY_EXTENSIONS = new Set([
+  ".ico",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".woff",
+  ".woff2",
+  ".ttf",
+  ".eot",
+]);
+
+function notifyExportWarnings(warnings?: string[]) {
+  const filteredWarnings = warnings?.filter(
+    (warning) => warning.trim().length > 0
+  );
+  if (!filteredWarnings || filteredWarnings.length === 0) {
+    return;
+  }
+
+  const warningSummary = filteredWarnings.slice(0, 2).join(" ");
+  toast.info(`Export warnings: ${warningSummary}`);
+}
+
+async function downloadWorkflowZip(
+  files: Record<string, string>,
+  workflowName: string
+) {
+  const JSZip = (await import("jszip")).default;
+  const zip = new JSZip();
+
+  for (const [path, content] of Object.entries(files)) {
+    const ext = path.substring(path.lastIndexOf(".")).toLowerCase();
+    const isBinary = ZIP_BINARY_EXTENSIONS.has(ext);
+    zip.file(path, content, { base64: isBinary });
+  }
+
+  const blob = await zip.generateAsync({ type: "blob" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `${sanitizeWorkflowFileName(workflowName)}-workflow.zip`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
+}
+
 async function parseWorkflowJsonImportFile(
   file: File
 ): Promise<WorkflowJsonFile> {
@@ -898,43 +946,8 @@ function useWorkflowActions(state: ReturnType<typeof useWorkflowState>) {
         throw new Error("No files to download");
       }
 
-      // Import JSZip dynamically
-      const JSZip = (await import("jszip")).default;
-      const zip = new JSZip();
-
-      // Binary extensions that should be treated as base64
-      const BINARY_EXTENSIONS = new Set([
-        ".ico",
-        ".png",
-        ".jpg",
-        ".jpeg",
-        ".gif",
-        ".woff",
-        ".woff2",
-        ".ttf",
-        ".eot",
-      ]);
-
-      // Add all files to the zip
-      for (const [path, content] of Object.entries(result.files)) {
-        const ext = path.substring(path.lastIndexOf(".")).toLowerCase();
-        const isBinary = BINARY_EXTENSIONS.has(ext);
-
-        zip.file(path, content, { base64: isBinary });
-      }
-
-      // Generate the zip file
-      const blob = await zip.generateAsync({ type: "blob" });
-
-      // Create download link
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${workflowName.toLowerCase().replace(/[^a-z0-9]/g, "-")}-workflow.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      notifyExportWarnings(result.warnings);
+      await downloadWorkflowZip(result.files, workflowName);
 
       toast.success("Workflow downloaded successfully!");
     } catch (error) {

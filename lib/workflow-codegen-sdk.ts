@@ -531,7 +531,12 @@ export function generateWorkflowSDKCode(
       // Execute step implementation
       ${stepImplementation}`;
     } else {
-      stepBody = "  return { success: true };";
+      stepBody = `  return {
+    success: false,
+    error: {
+      message: ${JSON.stringify(`No codegen template available for action: ${actionType || "unknown"}`)},
+    },
+  };`;
     }
 
     return `async function ${stepName}(input: Record<string, unknown> & { outputs?: Record<string, { label: string; data: unknown }> }) {

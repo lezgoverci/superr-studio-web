@@ -702,7 +702,9 @@ export function WorkflowRuns({
       (execution) => execution.id === selectedExecutionId
     );
     if (!hasSelectedExecution) {
-      void loadExecutions(false);
+      loadExecutions(false).catch((error) => {
+        console.error("Failed to refresh executions:", error);
+      });
     }
   }, [executions, loadExecutions, selectedExecutionId]);
 

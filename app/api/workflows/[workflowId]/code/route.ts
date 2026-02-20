@@ -43,6 +43,8 @@ export async function GET(
     return NextResponse.json({
       code,
       workflowName: workflow.name,
+      isDeployable: false,
+      purpose: "preview",
     });
   } catch (error) {
     console.error("Failed to get workflow code:", error);

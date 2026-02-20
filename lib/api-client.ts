@@ -512,9 +512,12 @@ export const workflowApi = {
 
   // Get workflow code
   getCode: (id: string) =>
-    apiCall<{ code: string; workflowName: string }>(
-      `/api/workflows/${id}/code`
-    ),
+    apiCall<{
+      code: string;
+      workflowName: string;
+      isDeployable: boolean;
+      purpose: "preview";
+    }>(`/api/workflows/${id}/code`),
 
   // Get executions
   getExecutions: (id: string) =>
@@ -596,6 +599,9 @@ export const workflowApi = {
     apiCall<{
       success: boolean;
       files?: Record<string, string>;
+      warnings?: string[];
+      unsupportedActions?: string[];
+      missingTemplates?: string[];
       error?: string;
     }>(`/api/workflows/${id}/download`),
 
