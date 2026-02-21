@@ -1,0 +1,2488 @@
+[
+  {
+    "id": "ai-agent/run-agent",
+    "label": "Run Agent",
+    "description": "Execute an AI agent that can write & run code, process data using bash tools",
+    "category": "AI Agent",
+    "integration": "ai-agent",
+    "configFields": [
+      {
+        "key": "aiModel",
+        "label": "Model",
+        "type": "select",
+        "required": false,
+        "defaultValue": "anthropic/claude-sonnet-4.5",
+        "options": [
+          {
+            "value": "anthropic/claude-sonnet-4.5",
+            "label": "Claude Sonnet 4.5"
+          },
+          {
+            "value": "anthropic/claude-haiku-4.5",
+            "label": "Claude Haiku 4.5"
+          },
+          {
+            "value": "openai/gpt-5.2",
+            "label": "GPT-5.2"
+          },
+          {
+            "value": "openai/gpt-5.2-pro",
+            "label": "GPT-5.2 Pro"
+          },
+          {
+            "value": "google/gemini-2.5-flash",
+            "label": "Gemini 2.5 Flash"
+          },
+          {
+            "value": "google/gemini-2.5-pro",
+            "label": "Gemini 2.5 Pro"
+          },
+          {
+            "value": "meta/llama-4-scout",
+            "label": "Llama 4 Scout"
+          },
+          {
+            "value": "meta/llama-4-maverick",
+            "label": "Llama 4 Maverick"
+          }
+        ]
+      },
+      {
+        "key": "sandboxType",
+        "label": "Sandbox",
+        "type": "select",
+        "required": false,
+        "defaultValue": "vercel",
+        "options": [
+          {
+            "value": "vercel",
+            "label": "Vercel Sandbox (full)"
+          },
+          {
+            "value": "just-bash",
+            "label": "just-bash (simulated)"
+          }
+        ]
+      },
+      {
+        "key": "vercelSandboxToken",
+        "label": "Vercel Sandbox Token",
+        "type": "text",
+        "required": false,
+        "placeholder": "OIDC token recommended. For access tokens, set VERCEL_TEAM_ID and VERCEL_PROJECT_ID in server env."
+      },
+      {
+        "key": "vercelSandboxTeamId",
+        "label": "Vercel Sandbox Team ID",
+        "type": "text",
+        "required": false,
+        "placeholder": "Required for non-OIDC tokens unless VERCEL_TEAM_ID is set on server"
+      },
+      {
+        "key": "vercelSandboxProjectId",
+        "label": "Vercel Sandbox Project ID",
+        "type": "text",
+        "required": false,
+        "placeholder": "Required for non-OIDC tokens unless VERCEL_PROJECT_ID is set on server"
+      },
+      {
+        "key": "skillsEnabled",
+        "label": "Agent Skills",
+        "type": "select",
+        "required": false,
+        "defaultValue": "off",
+        "options": [
+          {
+            "value": "off",
+            "label": "Off"
+          },
+          {
+            "value": "on",
+            "label": "On (experimental)"
+          }
+        ]
+      },
+      {
+        "key": "skillsSource",
+        "label": "Skill Source",
+        "type": "select",
+        "required": false,
+        "defaultValue": "preloaded",
+        "options": [
+          {
+            "value": "preloaded",
+            "label": "Preloaded Directory"
+          },
+          {
+            "value": "git",
+            "label": "Git Repository"
+          }
+        ]
+      },
+      {
+        "key": "skillsDirectory",
+        "label": "Preloaded Skills Directory",
+        "type": "text",
+        "required": false,
+        "placeholder": "Example: ./skills",
+        "defaultValue": "skills"
+      },
+      {
+        "key": "skillsRepoUrl",
+        "label": "Skills Repository URL",
+        "type": "text",
+        "required": false,
+        "placeholder": "https://github.com/your-org/skills-repo"
+      },
+      {
+        "key": "skillsRepoRef",
+        "label": "Skills Repository Ref",
+        "type": "text",
+        "required": false,
+        "placeholder": "main",
+        "defaultValue": "main"
+      },
+      {
+        "key": "skillsRepoSubdir",
+        "label": "Skills Repository Subdirectory",
+        "type": "text",
+        "required": false,
+        "placeholder": "skills",
+        "defaultValue": "skills"
+      },
+      {
+        "key": "skillsAllowlist",
+        "label": "Skills Allowlist",
+        "type": "template-textarea",
+        "required": false,
+        "placeholder": "Optional list of skill names (one per line or comma-separated). Empty allows all discovered skills."
+      },
+      {
+        "key": "skillsDestination",
+        "label": "Skill Path In Sandbox",
+        "type": "text",
+        "required": false,
+        "placeholder": "skills",
+        "defaultValue": "skills"
+      },
+      {
+        "key": "includeWorkflowUi",
+        "label": "Include Workflow UI",
+        "type": "select",
+        "required": false,
+        "defaultValue": "off",
+        "options": [
+          {
+            "value": "off",
+            "label": "Off"
+          },
+          {
+            "value": "on",
+            "label": "On"
+          }
+        ]
+      },
+      {
+        "key": "workflowUiPrompt",
+        "label": "Workflow UI Prompt",
+        "type": "template-textarea",
+        "required": false,
+        "placeholder": "Optional instructions for generated /run forms. Example: Ask for customerId and priority before submit."
+      },
+      {
+        "key": "agentPrompt",
+        "label": "Agent Prompt",
+        "type": "template-textarea",
+        "required": true,
+        "placeholder": "Describe what the agent should do. Use {{NodeName.field}} to reference previous outputs.",
+        "example": "Parse the data in {{Webhook.body}} and extract all email addresses. Return them as a JSON array."
+      },
+      {
+        "key": "agentInstructions",
+        "label": "System Instructions",
+        "type": "template-textarea",
+        "required": false,
+        "placeholder": "Optional: Custom system instructions for how the agent should behave"
+      },
+      {
+        "key": "maxSteps",
+        "label": "Max Steps",
+        "type": "select",
+        "required": false,
+        "defaultValue": "10",
+        "options": [
+          {
+            "value": "3",
+            "label": "3 (quick)"
+          },
+          {
+            "value": "5",
+            "label": "5 (fast)"
+          },
+          {
+            "value": "10",
+            "label": "10 (default)"
+          },
+          {
+            "value": "20",
+            "label": "20 (thorough)"
+          }
+        ]
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "text",
+        "description": "Agent's text response"
+      },
+      {
+        "field": "data",
+        "description": "Structured data from the agent"
+      },
+      {
+        "field": "stepsUsed",
+        "description": "Number of tool steps the agent took"
+      },
+      {
+        "field": "sandboxTypeResolved",
+        "description": "Sandbox runtime that executed the task"
+      },
+      {
+        "field": "skillsAvailable",
+        "description": "Skill names discovered for this run"
+      },
+      {
+        "field": "skillsUsed",
+        "description": "Skill names the agent invoked via the skill tool"
+      },
+      {
+        "field": "uiSpecAttached",
+        "description": "Workflow IDs that received generated run UI specs"
+      },
+      {
+        "field": "uiSpecWarnings",
+        "description": "Non-fatal warnings encountered while composing or attaching run UI specs"
+      },
+      {
+        "field": "artifacts",
+        "description": "Artifacts captured from the agent run and persisted"
+      },
+      {
+        "field": "artifactWarnings",
+        "description": "Non-fatal warnings encountered while parsing or storing artifacts"
+      }
+    ]
+  },
+  {
+    "id": "ai-gateway/generate-text",
+    "label": "Generate Text",
+    "description": "Generate text using AI models",
+    "category": "AI Gateway",
+    "integration": "ai-gateway",
+    "configFields": [
+      {
+        "key": "aiFormat",
+        "label": "Output Format",
+        "type": "select",
+        "required": false,
+        "defaultValue": "text",
+        "options": [
+          {
+            "value": "text",
+            "label": "Text"
+          },
+          {
+            "value": "object",
+            "label": "Object"
+          }
+        ]
+      },
+      {
+        "key": "aiModel",
+        "label": "Model",
+        "type": "select",
+        "required": false,
+        "defaultValue": "meta/llama-4-scout",
+        "options": [
+          {
+            "value": "anthropic/claude-sonnet-4.5",
+            "label": "Claude Sonnet 4.5"
+          },
+          {
+            "value": "anthropic/claude-haiku-4.5",
+            "label": "Claude Haiku 4.5"
+          },
+          {
+            "value": "anthropic/claude-opus-4.5",
+            "label": "Claude Opus 4.5"
+          },
+          {
+            "value": "meta/llama-4-scout",
+            "label": "Llama 4 Scout"
+          },
+          {
+            "value": "meta/llama-4-maverick",
+            "label": "Llama 4 Maverick"
+          },
+          {
+            "value": "openai/gpt-5.2",
+            "label": "GPT-5.2"
+          },
+          {
+            "value": "openai/gpt-5.2-pro",
+            "label": "GPT-5.2 Pro"
+          },
+          {
+            "value": "google/gemini-3-pro-preview",
+            "label": "Gemini 3 Pro Preview"
+          },
+          {
+            "value": "google/gemini-2.5-flash-lite",
+            "label": "Gemini 2.5 Flash Lite"
+          },
+          {
+            "value": "google/gemini-2.5-flash",
+            "label": "Gemini 2.5 Flash"
+          },
+          {
+            "value": "google/gemini-2.5-pro",
+            "label": "Gemini 2.5 Pro"
+          },
+          {
+            "value": "anthropic/claude-sonnet-4.0",
+            "label": "Claude Sonnet 4.0"
+          },
+          {
+            "value": "anthropic/claude-3.5-sonnet-20241022",
+            "label": "Claude 3.5 Sonnet"
+          },
+          {
+            "value": "anthropic/claude-3-7-sonnet",
+            "label": "Claude 3.7 Sonnet"
+          },
+          {
+            "value": "openai/gpt-4o",
+            "label": "GPT-4o"
+          },
+          {
+            "value": "openai/gpt-4o-mini",
+            "label": "GPT-4o Mini"
+          },
+          {
+            "value": "openai/o1",
+            "label": "o1"
+          },
+          {
+            "value": "openai/o1-mini",
+            "label": "o1 Mini"
+          },
+          {
+            "value": "openai/gpt-4-turbo",
+            "label": "GPT-4 Turbo"
+          },
+          {
+            "value": "openai/gpt-3.5-turbo",
+            "label": "GPT-3.5 Turbo"
+          },
+          {
+            "value": "google/gemini-4.0-flash",
+            "label": "Gemini 4.0 Flash"
+          },
+          {
+            "value": "google/gemini-2.0-flash",
+            "label": "Gemini 2.0 Flash"
+          },
+          {
+            "value": "google/gemini-2.0-flash-lite",
+            "label": "Gemini 2.0 Flash Lite"
+          },
+          {
+            "value": "meta/llama-4-instruct",
+            "label": "Llama 4 Instruct"
+          }
+        ]
+      },
+      {
+        "key": "aiPrompt",
+        "label": "Prompt",
+        "type": "template-textarea",
+        "required": true,
+        "placeholder": "Enter your prompt here. Use {{NodeName.field}} to reference previous outputs.",
+        "example": "Summarize the following text: {{Scrape.markdown}}"
+      },
+      {
+        "key": "aiSchema",
+        "label": "Schema",
+        "type": "schema-builder",
+        "required": false
+      }
+    ],
+    "outputFields": []
+  },
+  {
+    "id": "ai-gateway/generate-image",
+    "label": "Generate Image",
+    "description": "Generate images using AI models",
+    "category": "AI Gateway",
+    "integration": "ai-gateway",
+    "configFields": [
+      {
+        "key": "imageModel",
+        "label": "Model",
+        "type": "select",
+        "required": false,
+        "defaultValue": "google/imagen-4.0-generate-001",
+        "options": [
+          {
+            "value": "google/imagen-4.0-generate-001",
+            "label": "Imagen 4"
+          },
+          {
+            "value": "google/imagen-4.0-fast-generate-001",
+            "label": "Imagen 4 Fast"
+          },
+          {
+            "value": "google/imagen-4.0-ultra-generate-001",
+            "label": "Imagen 4 Ultra"
+          },
+          {
+            "value": "bfl/flux-kontext-pro",
+            "label": "FLUX.1 Kontext Pro"
+          },
+          {
+            "value": "bfl/flux-kontext-max",
+            "label": "FLUX.1 Kontext Max"
+          }
+        ]
+      },
+      {
+        "key": "imagePrompt",
+        "label": "Prompt",
+        "type": "template-textarea",
+        "required": true,
+        "placeholder": "Describe the image you want to generate. Use {{NodeName.field}} to reference previous outputs.",
+        "example": "A serene mountain landscape at sunset"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "base64",
+        "description": "Base64-encoded image data"
+      }
+    ]
+  },
+  {
+    "id": "bash/run-command",
+    "label": "Run Command",
+    "description": "Execute a bash command in a selected sandbox runtime",
+    "category": "Bash",
+    "integration": "bash",
+    "configFields": [
+      {
+        "key": "sandboxType",
+        "label": "Sandbox",
+        "type": "select",
+        "required": false,
+        "defaultValue": "just-bash",
+        "options": [
+          {
+            "value": "just-bash",
+            "label": "just-bash (local)"
+          },
+          {
+            "value": "vercel",
+            "label": "Vercel Sandbox (remote)"
+          }
+        ]
+      },
+      {
+        "key": "oidcToken",
+        "label": "OIDC Token",
+        "type": "text",
+        "required": false,
+        "placeholder": "OIDC token recommended. For access tokens, set VERCEL_TEAM_ID and VERCEL_PROJECT_ID in server env."
+      },
+      {
+        "key": "command",
+        "label": "Bash Command",
+        "type": "template-textarea",
+        "required": true,
+        "placeholder": "echo \"hello world\"\nls -la\ncat ./file.txt | grep \"keyword\"",
+        "example": "printf 'hello\\nworld\\n' | wc -l"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "command",
+        "description": "The executed bash command"
+      },
+      {
+        "field": "sandboxType",
+        "description": "Sandbox used for execution"
+      },
+      {
+        "field": "stdout",
+        "description": "Standard output from the command"
+      },
+      {
+        "field": "stderr",
+        "description": "Standard error from the command"
+      },
+      {
+        "field": "exitCode",
+        "description": "Process exit code"
+      }
+    ]
+  },
+  {
+    "id": "blob/put",
+    "label": "Put Blob",
+    "description": "Upload a file to Vercel Blob storage",
+    "category": "Blob",
+    "integration": "blob",
+    "configFields": [
+      {
+        "key": "pathname",
+        "label": "Path",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "folder/filename.txt or {{NodeName.path}}",
+        "example": "uploads/document.pdf"
+      },
+      {
+        "key": "body",
+        "label": "Content",
+        "type": "template-textarea",
+        "required": true,
+        "placeholder": "File content or {{NodeName.data}}",
+        "example": "Hello, world!"
+      },
+      {
+        "key": "contentType",
+        "label": "Content Type",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "text/plain",
+        "example": "text/plain"
+      },
+      {
+        "key": "access",
+        "label": "Access",
+        "type": "select",
+        "required": false,
+        "defaultValue": "public",
+        "options": [
+          {
+            "value": "public",
+            "label": "Public"
+          }
+        ]
+      },
+      {
+        "key": "addRandomSuffix",
+        "label": "Add Random Suffix",
+        "type": "select",
+        "required": false,
+        "defaultValue": "true",
+        "options": [
+          {
+            "value": "true",
+            "label": "Yes"
+          },
+          {
+            "value": "false",
+            "label": "No"
+          }
+        ]
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "url",
+        "description": "Public URL of the blob"
+      },
+      {
+        "field": "downloadUrl",
+        "description": "Direct download URL"
+      },
+      {
+        "field": "pathname",
+        "description": "Path where blob was stored"
+      }
+    ]
+  },
+  {
+    "id": "blob/list",
+    "label": "List Blobs",
+    "description": "List files stored in Vercel Blob storage",
+    "category": "Blob",
+    "integration": "blob",
+    "configFields": [
+      {
+        "key": "prefix",
+        "label": "Prefix",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "folder/ or {{NodeName.prefix}}",
+        "example": "uploads/"
+      },
+      {
+        "key": "limit",
+        "label": "Limit",
+        "type": "number",
+        "required": false,
+        "defaultValue": "1000"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "blobs",
+        "description": "Array of blob objects"
+      },
+      {
+        "field": "hasMore",
+        "description": "Whether more results exist"
+      },
+      {
+        "field": "cursor",
+        "description": "Pagination cursor"
+      }
+    ]
+  },
+  {
+    "id": "clerk/get-user",
+    "label": "Get User",
+    "description": "Fetch a user by ID from Clerk",
+    "category": "Clerk",
+    "integration": "clerk",
+    "configFields": [
+      {
+        "key": "userId",
+        "label": "User ID",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "user_... or {{NodeName.userId}}",
+        "example": "user_2abc123"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "id",
+        "description": "User ID"
+      },
+      {
+        "field": "firstName",
+        "description": "First name"
+      },
+      {
+        "field": "lastName",
+        "description": "Last name"
+      },
+      {
+        "field": "primaryEmailAddress",
+        "description": "Primary email address"
+      }
+    ]
+  },
+  {
+    "id": "clerk/create-user",
+    "label": "Create User",
+    "description": "Create a new user in Clerk",
+    "category": "Clerk",
+    "integration": "clerk",
+    "configFields": [
+      {
+        "key": "emailAddress",
+        "label": "Email Address",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "user@example.com or {{NodeName.email}}",
+        "example": "user@example.com"
+      },
+      {
+        "key": "firstName",
+        "label": "First Name",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "John or {{NodeName.firstName}}",
+        "example": "John"
+      },
+      {
+        "key": "lastName",
+        "label": "Last Name",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "Doe or {{NodeName.lastName}}",
+        "example": "Doe"
+      },
+      {
+        "key": "password",
+        "label": "Password",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "Password (min 8 chars) or leave empty",
+        "example": "securepassword123"
+      },
+      {
+        "key": "publicMetadata",
+        "label": "Public Metadata (JSON)",
+        "type": "template-textarea",
+        "required": false,
+        "placeholder": "{\"role\": \"admin\"} or {{NodeName.metadata}}"
+      },
+      {
+        "key": "privateMetadata",
+        "label": "Private Metadata (JSON)",
+        "type": "template-textarea",
+        "required": false,
+        "placeholder": "{\"internal_id\": \"123\"}"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "id",
+        "description": "User ID"
+      },
+      {
+        "field": "firstName",
+        "description": "First name"
+      },
+      {
+        "field": "lastName",
+        "description": "Last name"
+      },
+      {
+        "field": "primaryEmailAddress",
+        "description": "Primary email address"
+      }
+    ]
+  },
+  {
+    "id": "clerk/update-user",
+    "label": "Update User",
+    "description": "Update an existing user in Clerk",
+    "category": "Clerk",
+    "integration": "clerk",
+    "configFields": [
+      {
+        "key": "userId",
+        "label": "User ID",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "user_... or {{NodeName.user.id}}",
+        "example": "user_2abc123"
+      },
+      {
+        "key": "firstName",
+        "label": "First Name",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "Jane or {{NodeName.firstName}}"
+      },
+      {
+        "key": "lastName",
+        "label": "Last Name",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "Doe or {{NodeName.lastName}}"
+      },
+      {
+        "key": "publicMetadata",
+        "label": "Public Metadata (JSON)",
+        "type": "template-textarea",
+        "required": false,
+        "placeholder": "{\"role\": \"admin\"} or {{NodeName.metadata}}"
+      },
+      {
+        "key": "privateMetadata",
+        "label": "Private Metadata (JSON)",
+        "type": "template-textarea",
+        "required": false,
+        "placeholder": "{\"internal_id\": \"123\"}"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "id",
+        "description": "User ID"
+      },
+      {
+        "field": "firstName",
+        "description": "First name"
+      },
+      {
+        "field": "lastName",
+        "description": "Last name"
+      },
+      {
+        "field": "primaryEmailAddress",
+        "description": "Primary email address"
+      }
+    ]
+  },
+  {
+    "id": "clerk/delete-user",
+    "label": "Delete User",
+    "description": "Delete a user from Clerk",
+    "category": "Clerk",
+    "integration": "clerk",
+    "configFields": [
+      {
+        "key": "userId",
+        "label": "User ID",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "user_... or {{NodeName.user.id}}",
+        "example": "user_2abc123"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "deleted",
+        "description": "Deletion success"
+      }
+    ]
+  },
+  {
+    "id": "fal/generate-image",
+    "label": "Generate Image",
+    "description": "Generate images using Flux models",
+    "category": "fal.ai",
+    "integration": "fal",
+    "configFields": [
+      {
+        "key": "model",
+        "label": "Model",
+        "type": "select",
+        "required": false,
+        "defaultValue": "fal-ai/flux/schnell",
+        "options": [
+          {
+            "value": "fal-ai/flux/schnell",
+            "label": "Flux Schnell (Fast)"
+          },
+          {
+            "value": "fal-ai/flux/dev",
+            "label": "Flux Dev (Quality)"
+          },
+          {
+            "value": "fal-ai/flux-pro/v1.1",
+            "label": "Flux Pro 1.1"
+          },
+          {
+            "value": "fal-ai/flux-pro/v1.1-ultra",
+            "label": "Flux Pro 1.1 Ultra"
+          },
+          {
+            "value": "fal-ai/flux-lora",
+            "label": "Flux LoRA"
+          },
+          {
+            "value": "fal-ai/stable-diffusion-v3-medium",
+            "label": "Stable Diffusion 3 Medium"
+          },
+          {
+            "value": "fal-ai/recraft-v3",
+            "label": "Recraft V3"
+          }
+        ]
+      },
+      {
+        "key": "prompt",
+        "label": "Prompt",
+        "type": "template-textarea",
+        "required": true,
+        "placeholder": "Describe the image you want to generate. Use {{NodeName.field}} to reference previous outputs.",
+        "example": "A serene mountain landscape at sunset with dramatic clouds"
+      },
+      {
+        "key": "imageSize",
+        "label": "Image Size",
+        "type": "select",
+        "required": false,
+        "defaultValue": "landscape_16_9",
+        "options": [
+          {
+            "value": "square",
+            "label": "Square (1024x1024)"
+          },
+          {
+            "value": "square_hd",
+            "label": "Square HD (1536x1536)"
+          },
+          {
+            "value": "portrait_4_3",
+            "label": "Portrait 4:3"
+          },
+          {
+            "value": "portrait_16_9",
+            "label": "Portrait 16:9"
+          },
+          {
+            "value": "landscape_4_3",
+            "label": "Landscape 4:3"
+          },
+          {
+            "value": "landscape_16_9",
+            "label": "Landscape 16:9"
+          }
+        ]
+      },
+      {
+        "key": "numImages",
+        "label": "Number of Images",
+        "type": "number",
+        "required": false,
+        "placeholder": "1",
+        "defaultValue": "1"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "imageUrl",
+        "description": "URL of the generated image"
+      },
+      {
+        "field": "width",
+        "description": "Width of the generated image"
+      },
+      {
+        "field": "height",
+        "description": "Height of the generated image"
+      }
+    ]
+  },
+  {
+    "id": "fal/generate-video",
+    "label": "Generate Video",
+    "description": "Generate videos from text or images",
+    "category": "fal.ai",
+    "integration": "fal",
+    "configFields": [
+      {
+        "key": "model",
+        "label": "Model",
+        "type": "select",
+        "required": false,
+        "defaultValue": "fal-ai/minimax-video",
+        "options": [
+          {
+            "value": "fal-ai/minimax-video",
+            "label": "MiniMax Video"
+          },
+          {
+            "value": "fal-ai/kling-video/v1/standard/text-to-video",
+            "label": "Kling 1.0"
+          },
+          {
+            "value": "fal-ai/kling-video/v1.5/pro/text-to-video",
+            "label": "Kling 1.5 Pro"
+          },
+          {
+            "value": "fal-ai/hunyuan-video",
+            "label": "Hunyuan Video"
+          },
+          {
+            "value": "fal-ai/luma-dream-machine",
+            "label": "Luma Dream Machine"
+          },
+          {
+            "value": "fal-ai/runway-gen3/turbo/image-to-video",
+            "label": "Runway Gen3 (Image to Video)"
+          }
+        ]
+      },
+      {
+        "key": "prompt",
+        "label": "Prompt",
+        "type": "template-textarea",
+        "required": true,
+        "placeholder": "Describe the video you want to generate. Use {{NodeName.field}} to reference previous outputs.",
+        "example": "A cat walking through a garden"
+      },
+      {
+        "key": "imageUrl",
+        "label": "Image URL (Optional)",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "URL of image to animate (for image-to-video models)"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "videoUrl",
+        "description": "URL of the generated video"
+      }
+    ]
+  },
+  {
+    "id": "fal/upscale-image",
+    "label": "Upscale Image",
+    "description": "Upscale images to higher resolution",
+    "category": "fal.ai",
+    "integration": "fal",
+    "configFields": [
+      {
+        "key": "model",
+        "label": "Model",
+        "type": "select",
+        "required": false,
+        "defaultValue": "fal-ai/creative-upscaler",
+        "options": [
+          {
+            "value": "fal-ai/creative-upscaler",
+            "label": "Creative Upscaler"
+          },
+          {
+            "value": "fal-ai/clarity-upscaler",
+            "label": "Clarity Upscaler"
+          },
+          {
+            "value": "fal-ai/real-esrgan",
+            "label": "Real-ESRGAN"
+          }
+        ]
+      },
+      {
+        "key": "imageUrl",
+        "label": "Image URL",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "URL of image to upscale or {{NodeName.imageUrl}}",
+        "example": "https://example.com/image.jpg"
+      },
+      {
+        "key": "scale",
+        "label": "Scale Factor",
+        "type": "select",
+        "required": false,
+        "defaultValue": "2",
+        "options": [
+          {
+            "value": "2",
+            "label": "2x"
+          },
+          {
+            "value": "4",
+            "label": "4x"
+          }
+        ]
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "imageUrl",
+        "description": "URL of the upscaled image"
+      },
+      {
+        "field": "width",
+        "description": "Width of the upscaled image"
+      },
+      {
+        "field": "height",
+        "description": "Height of the upscaled image"
+      }
+    ]
+  },
+  {
+    "id": "fal/remove-background",
+    "label": "Remove Background",
+    "description": "Remove background from images",
+    "category": "fal.ai",
+    "integration": "fal",
+    "configFields": [
+      {
+        "key": "imageUrl",
+        "label": "Image URL",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "URL of image or {{NodeName.imageUrl}}",
+        "example": "https://example.com/image.jpg"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "imageUrl",
+        "description": "URL of the image with background removed"
+      }
+    ]
+  },
+  {
+    "id": "fal/image-to-image",
+    "label": "Image to Image",
+    "description": "Transform images with text prompts",
+    "category": "fal.ai",
+    "integration": "fal",
+    "configFields": [
+      {
+        "key": "model",
+        "label": "Model",
+        "type": "select",
+        "required": false,
+        "defaultValue": "fal-ai/flux/dev/image-to-image",
+        "options": [
+          {
+            "value": "fal-ai/flux/dev/image-to-image",
+            "label": "Flux Dev Image-to-Image"
+          },
+          {
+            "value": "fal-ai/flux-pro/v1/redux",
+            "label": "Flux Pro Redux"
+          }
+        ]
+      },
+      {
+        "key": "imageUrl",
+        "label": "Image URL",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "URL of source image or {{NodeName.imageUrl}}",
+        "example": "https://example.com/image.jpg"
+      },
+      {
+        "key": "prompt",
+        "label": "Prompt",
+        "type": "template-textarea",
+        "required": true,
+        "placeholder": "Describe how to transform the image. Use {{NodeName.field}} to reference previous outputs.",
+        "example": "Transform into a watercolor painting style"
+      },
+      {
+        "key": "strength",
+        "label": "Strength",
+        "type": "select",
+        "required": false,
+        "defaultValue": "0.75",
+        "options": [
+          {
+            "value": "0.25",
+            "label": "Subtle (0.25)"
+          },
+          {
+            "value": "0.5",
+            "label": "Moderate (0.5)"
+          },
+          {
+            "value": "0.75",
+            "label": "Strong (0.75)"
+          },
+          {
+            "value": "0.9",
+            "label": "Very Strong (0.9)"
+          }
+        ]
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "imageUrl",
+        "description": "URL of the transformed image"
+      },
+      {
+        "field": "width",
+        "description": "Width of the generated image"
+      },
+      {
+        "field": "height",
+        "description": "Height of the generated image"
+      }
+    ]
+  },
+  {
+    "id": "firecrawl/scrape",
+    "label": "Scrape URL",
+    "description": "Scrape content from a URL",
+    "category": "Firecrawl",
+    "integration": "firecrawl",
+    "configFields": [
+      {
+        "key": "url",
+        "label": "URL",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "https://example.com or {{NodeName.url}}",
+        "example": "https://example.com"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "markdown",
+        "description": "Scraped content as markdown"
+      },
+      {
+        "field": "metadata",
+        "description": "Page metadata object"
+      }
+    ]
+  },
+  {
+    "id": "firecrawl/search",
+    "label": "Search Web",
+    "description": "Search the web with Firecrawl",
+    "category": "Firecrawl",
+    "integration": "firecrawl",
+    "configFields": [
+      {
+        "key": "query",
+        "label": "Search Query",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "Search query or {{NodeName.query}}",
+        "example": "latest AI news"
+      },
+      {
+        "key": "limit",
+        "label": "Result Limit",
+        "type": "number",
+        "required": false,
+        "placeholder": "10",
+        "example": "10"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "data",
+        "description": "Array of search results"
+      }
+    ]
+  },
+  {
+    "id": "github/create-issue",
+    "label": "Create Issue",
+    "description": "Create a new issue in a GitHub repository",
+    "category": "GitHub",
+    "integration": "github",
+    "configFields": [
+      {
+        "key": "owner",
+        "label": "Repository Owner",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "octocat or {{NodeName.owner}}",
+        "example": "octocat"
+      },
+      {
+        "key": "repo",
+        "label": "Repository Name",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "hello-world or {{NodeName.repo}}",
+        "example": "hello-world"
+      },
+      {
+        "key": "title",
+        "label": "Issue Title",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "Bug report or {{NodeName.title}}",
+        "example": "Bug: Login button not working"
+      },
+      {
+        "key": "body",
+        "label": "Issue Body",
+        "type": "template-textarea",
+        "required": false,
+        "placeholder": "Describe the issue. Use {{NodeName.field}} to insert data from previous nodes.",
+        "example": "Steps to reproduce:\n1. Go to login page\n2. Click login button"
+      },
+      {
+        "key": "labels",
+        "label": "Labels (comma-separated)",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "bug, help wanted",
+        "example": "bug, help wanted"
+      },
+      {
+        "key": "assignees",
+        "label": "Assignees (comma-separated)",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "octocat, hubot",
+        "example": "octocat"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "id",
+        "description": "Unique ID of the created issue"
+      },
+      {
+        "field": "number",
+        "description": "Issue number in the repository"
+      },
+      {
+        "field": "title",
+        "description": "Title of the issue"
+      },
+      {
+        "field": "url",
+        "description": "URL to view the issue on GitHub"
+      },
+      {
+        "field": "state",
+        "description": "State of the issue (open/closed)"
+      }
+    ]
+  },
+  {
+    "id": "github/list-issues",
+    "label": "List Issues",
+    "description": "List issues in a GitHub repository",
+    "category": "GitHub",
+    "integration": "github",
+    "configFields": [
+      {
+        "key": "owner",
+        "label": "Repository Owner",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "octocat or {{NodeName.owner}}",
+        "example": "octocat"
+      },
+      {
+        "key": "repo",
+        "label": "Repository Name",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "hello-world or {{NodeName.repo}}",
+        "example": "hello-world"
+      },
+      {
+        "key": "state",
+        "label": "State",
+        "type": "select",
+        "required": false,
+        "defaultValue": "open",
+        "options": [
+          {
+            "value": "open",
+            "label": "Open"
+          },
+          {
+            "value": "closed",
+            "label": "Closed"
+          },
+          {
+            "value": "all",
+            "label": "All"
+          }
+        ]
+      },
+      {
+        "key": "labels",
+        "label": "Labels (comma-separated)",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "bug, help wanted"
+      },
+      {
+        "key": "assignee",
+        "label": "Assignee",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "octocat or {{NodeName.assignee}}"
+      },
+      {
+        "key": "perPage",
+        "label": "Results per page",
+        "type": "number",
+        "required": false,
+        "defaultValue": "30"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "issues",
+        "description": "Array of issue objects"
+      },
+      {
+        "field": "count",
+        "description": "Number of issues returned"
+      }
+    ]
+  },
+  {
+    "id": "github/get-issue",
+    "label": "Get Issue",
+    "description": "Get details of a specific issue",
+    "category": "GitHub",
+    "integration": "github",
+    "configFields": [
+      {
+        "key": "owner",
+        "label": "Repository Owner",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "octocat or {{NodeName.owner}}",
+        "example": "octocat"
+      },
+      {
+        "key": "repo",
+        "label": "Repository Name",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "hello-world or {{NodeName.repo}}",
+        "example": "hello-world"
+      },
+      {
+        "key": "issueNumber",
+        "label": "Issue Number",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "123 or {{NodeName.issueNumber}}",
+        "example": "123"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "id",
+        "description": "Unique ID of the issue"
+      },
+      {
+        "field": "number",
+        "description": "Issue number in the repository"
+      },
+      {
+        "field": "title",
+        "description": "Title of the issue"
+      },
+      {
+        "field": "url",
+        "description": "URL to view the issue on GitHub"
+      },
+      {
+        "field": "state",
+        "description": "State of the issue (open/closed)"
+      },
+      {
+        "field": "body",
+        "description": "Body content of the issue"
+      },
+      {
+        "field": "labels",
+        "description": "Array of label names"
+      },
+      {
+        "field": "assignees",
+        "description": "Array of assignee usernames"
+      },
+      {
+        "field": "author",
+        "description": "Username of the issue creator"
+      },
+      {
+        "field": "createdAt",
+        "description": "ISO timestamp when issue was created"
+      },
+      {
+        "field": "updatedAt",
+        "description": "ISO timestamp when issue was last updated"
+      },
+      {
+        "field": "closedAt",
+        "description": "ISO timestamp when issue was closed"
+      },
+      {
+        "field": "commentsCount",
+        "description": "Number of comments on the issue"
+      }
+    ]
+  },
+  {
+    "id": "github/update-issue",
+    "label": "Update Issue",
+    "description": "Update an existing issue in a GitHub repository",
+    "category": "GitHub",
+    "integration": "github",
+    "configFields": [
+      {
+        "key": "owner",
+        "label": "Repository Owner",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "octocat or {{NodeName.owner}}",
+        "example": "octocat"
+      },
+      {
+        "key": "repo",
+        "label": "Repository Name",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "hello-world or {{NodeName.repo}}",
+        "example": "hello-world"
+      },
+      {
+        "key": "issueNumber",
+        "label": "Issue Number",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "123 or {{NodeName.issueNumber}}",
+        "example": "123"
+      },
+      {
+        "key": "title",
+        "label": "New Title (optional)",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "Updated title or {{NodeName.title}}"
+      },
+      {
+        "key": "body",
+        "label": "New Body (optional)",
+        "type": "template-textarea",
+        "required": false,
+        "placeholder": "Updated description. Use {{NodeName.field}} to insert data."
+      },
+      {
+        "key": "state",
+        "label": "State",
+        "type": "select",
+        "required": false,
+        "options": [
+          {
+            "value": "",
+            "label": "No change"
+          },
+          {
+            "value": "open",
+            "label": "Open"
+          },
+          {
+            "value": "closed",
+            "label": "Closed"
+          }
+        ]
+      },
+      {
+        "key": "labels",
+        "label": "Labels (comma-separated, replaces existing)",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "bug, help wanted"
+      },
+      {
+        "key": "assignees",
+        "label": "Assignees (comma-separated, replaces existing)",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "octocat, hubot"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "id",
+        "description": "Unique ID of the updated issue"
+      },
+      {
+        "field": "number",
+        "description": "Issue number in the repository"
+      },
+      {
+        "field": "title",
+        "description": "Title of the issue"
+      },
+      {
+        "field": "url",
+        "description": "URL to view the issue on GitHub"
+      },
+      {
+        "field": "state",
+        "description": "State of the issue (open/closed)"
+      }
+    ]
+  },
+  {
+    "id": "linear/create-ticket",
+    "label": "Create Ticket",
+    "description": "Create an issue in Linear",
+    "category": "Linear",
+    "integration": "linear",
+    "configFields": [
+      {
+        "key": "ticketTitle",
+        "label": "Ticket Title",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "Bug report or {{NodeName.title}}",
+        "example": "Bug: Login button not working"
+      },
+      {
+        "key": "ticketDescription",
+        "label": "Description",
+        "type": "template-textarea",
+        "required": false,
+        "placeholder": "Description. Use {{NodeName.field}} to insert data from previous nodes.",
+        "example": "Users are unable to click the login button on mobile."
+      },
+      {
+        "key": "ticketPriority",
+        "label": "Priority",
+        "type": "select",
+        "required": false,
+        "defaultValue": "2",
+        "options": [
+          {
+            "value": "0",
+            "label": "No Priority"
+          },
+          {
+            "value": "1",
+            "label": "Urgent"
+          },
+          {
+            "value": "2",
+            "label": "High"
+          },
+          {
+            "value": "3",
+            "label": "Normal"
+          },
+          {
+            "value": "4",
+            "label": "Low"
+          }
+        ]
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "id",
+        "description": "Ticket ID"
+      },
+      {
+        "field": "url",
+        "description": "Ticket URL"
+      },
+      {
+        "field": "title",
+        "description": "Ticket title"
+      }
+    ]
+  },
+  {
+    "id": "linear/find-issues",
+    "label": "Find Issues",
+    "description": "Search for issues in Linear",
+    "category": "Linear",
+    "integration": "linear",
+    "configFields": [
+      {
+        "key": "linearAssigneeId",
+        "label": "Assignee (User ID)",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "user-id-123 or {{NodeName.userId}}"
+      },
+      {
+        "key": "linearTeamId",
+        "label": "Team ID (optional)",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "team-id-456 or {{NodeName.teamId}}"
+      },
+      {
+        "key": "linearStatus",
+        "label": "Status (optional)",
+        "type": "select",
+        "required": false,
+        "placeholder": "Any status",
+        "defaultValue": "any",
+        "options": [
+          {
+            "value": "any",
+            "label": "Any"
+          },
+          {
+            "value": "backlog",
+            "label": "Backlog"
+          },
+          {
+            "value": "todo",
+            "label": "Todo"
+          },
+          {
+            "value": "in_progress",
+            "label": "In Progress"
+          },
+          {
+            "value": "done",
+            "label": "Done"
+          },
+          {
+            "value": "canceled",
+            "label": "Canceled"
+          }
+        ]
+      },
+      {
+        "key": "linearLabel",
+        "label": "Label (optional)",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "bug, feature, etc. or {{NodeName.label}}"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "issues",
+        "description": "Array of issues found"
+      },
+      {
+        "field": "count",
+        "description": "Number of issues"
+      }
+    ]
+  },
+  {
+    "id": "perplexity/search",
+    "label": "Search Web",
+    "description": "Search the web with AI-powered answers and citations from Perplexity",
+    "category": "Perplexity",
+    "integration": "perplexity",
+    "configFields": [
+      {
+        "key": "query",
+        "label": "Search Query",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "Enter your search query or use {{NodeName.field}}",
+        "example": "What are the latest developments in AI?"
+      },
+      {
+        "key": "searchFocus",
+        "label": "Search Focus",
+        "type": "select",
+        "required": false,
+        "defaultValue": "internet",
+        "options": [
+          {
+            "value": "internet",
+            "label": "General Web"
+          },
+          {
+            "value": "academic",
+            "label": "Academic Sources"
+          },
+          {
+            "value": "news",
+            "label": "News Articles"
+          },
+          {
+            "value": "youtube",
+            "label": "YouTube"
+          },
+          {
+            "value": "reddit",
+            "label": "Reddit"
+          }
+        ]
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "answer",
+        "description": "AI-generated answer to the query"
+      },
+      {
+        "field": "citations",
+        "description": "Array of source URLs"
+      },
+      {
+        "field": "model",
+        "description": "Model used for the response"
+      }
+    ]
+  },
+  {
+    "id": "perplexity/ask",
+    "label": "Ask Question",
+    "description": "Ask a question and get an AI-powered response with web sources",
+    "category": "Perplexity",
+    "integration": "perplexity",
+    "configFields": [
+      {
+        "key": "question",
+        "label": "Question",
+        "type": "template-textarea",
+        "required": true,
+        "placeholder": "Enter your question or use {{NodeName.field}}",
+        "example": "Explain quantum computing in simple terms"
+      },
+      {
+        "key": "systemPrompt",
+        "label": "System Prompt",
+        "type": "template-textarea",
+        "required": false,
+        "placeholder": "Optional: customize how Perplexity responds"
+      },
+      {
+        "key": "model",
+        "label": "Model",
+        "type": "select",
+        "required": false,
+        "defaultValue": "sonar",
+        "options": [
+          {
+            "value": "sonar",
+            "label": "Sonar (Fast)"
+          },
+          {
+            "value": "sonar-pro",
+            "label": "Sonar Pro (Advanced)"
+          },
+          {
+            "value": "sonar-reasoning",
+            "label": "Sonar Reasoning (Complex)"
+          }
+        ]
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "answer",
+        "description": "AI-generated answer"
+      },
+      {
+        "field": "citations",
+        "description": "Array of source URLs"
+      },
+      {
+        "field": "model",
+        "description": "Model used for the response"
+      }
+    ]
+  },
+  {
+    "id": "perplexity/research",
+    "label": "Research Topic",
+    "description": "Conduct deep research on a topic with comprehensive analysis and citations",
+    "category": "Perplexity",
+    "integration": "perplexity",
+    "configFields": [
+      {
+        "key": "topic",
+        "label": "Research Topic",
+        "type": "template-textarea",
+        "required": true,
+        "placeholder": "Enter the topic to research or use {{NodeName.field}}",
+        "example": "The impact of artificial intelligence on healthcare"
+      },
+      {
+        "key": "depth",
+        "label": "Research Depth",
+        "type": "select",
+        "required": false,
+        "defaultValue": "detailed",
+        "options": [
+          {
+            "value": "brief",
+            "label": "Brief Overview"
+          },
+          {
+            "value": "detailed",
+            "label": "Detailed Analysis"
+          },
+          {
+            "value": "comprehensive",
+            "label": "Comprehensive Report"
+          }
+        ]
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "report",
+        "description": "Comprehensive research report"
+      },
+      {
+        "field": "citations",
+        "description": "Array of source URLs"
+      },
+      {
+        "field": "model",
+        "description": "Model used for the response"
+      }
+    ]
+  },
+  {
+    "id": "resend/send-email",
+    "label": "Send Email",
+    "description": "Send an email via Resend",
+    "category": "Resend",
+    "integration": "resend",
+    "configFields": [
+      {
+        "key": "emailFrom",
+        "label": "From (Sender)",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "Your Name <noreply@example.com>",
+        "example": "Support <support@example.com>"
+      },
+      {
+        "key": "emailTo",
+        "label": "To",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "recipient@example.com",
+        "example": "user@example.com"
+      },
+      {
+        "key": "emailSubject",
+        "label": "Subject",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "Subject or {{NodeName.title}}",
+        "example": "Hello from my workflow"
+      },
+      {
+        "key": "emailBody",
+        "label": "Body",
+        "type": "template-textarea",
+        "required": true,
+        "placeholder": "Email content or {{NodeName.description}}",
+        "example": "This is the email body content."
+      },
+      {
+        "key": "emailCc",
+        "label": "CC",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "cc@example.com",
+        "example": "manager@example.com"
+      },
+      {
+        "key": "emailBcc",
+        "label": "BCC",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "bcc@example.com",
+        "example": "archive@example.com"
+      },
+      {
+        "key": "emailReplyTo",
+        "label": "Reply-To",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "reply@example.com",
+        "example": "support@example.com"
+      },
+      {
+        "key": "emailScheduledAt",
+        "label": "Schedule At (ISO 8601)",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "2024-12-25T09:00:00Z",
+        "example": "2024-12-25T09:00:00Z"
+      },
+      {
+        "key": "emailTopicId",
+        "label": "Topic ID",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "topic_abc123",
+        "example": "topic_abc123"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "id",
+        "description": "Email ID"
+      }
+    ]
+  },
+  {
+    "id": "slack/send-message",
+    "label": "Send Slack Message",
+    "description": "Send a message to a Slack channel",
+    "category": "Slack",
+    "integration": "slack",
+    "configFields": [
+      {
+        "key": "slackChannel",
+        "label": "Channel",
+        "type": "text",
+        "required": true,
+        "placeholder": "#general or {{NodeName.channel}}",
+        "example": "#general"
+      },
+      {
+        "key": "slackMessage",
+        "label": "Message",
+        "type": "template-textarea",
+        "required": true,
+        "placeholder": "Your message. Use {{NodeName.field}} to insert data from previous nodes.",
+        "example": "Hello from my workflow!"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "ts",
+        "description": "Message timestamp"
+      },
+      {
+        "field": "channel",
+        "description": "Channel ID"
+      }
+    ]
+  },
+  {
+    "id": "stripe/create-customer",
+    "label": "Create Customer",
+    "description": "Create a new customer in Stripe",
+    "category": "Stripe",
+    "integration": "stripe",
+    "configFields": [
+      {
+        "key": "email",
+        "label": "Email",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "customer@example.com or {{NodeName.email}}",
+        "example": "customer@example.com"
+      },
+      {
+        "key": "name",
+        "label": "Name",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "John Doe or {{NodeName.name}}",
+        "example": "John Doe"
+      },
+      {
+        "key": "phone",
+        "label": "Phone",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "+1234567890",
+        "example": "+1234567890"
+      },
+      {
+        "key": "description",
+        "label": "Description",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "Internal notes about this customer",
+        "example": "VIP customer"
+      },
+      {
+        "key": "metadata",
+        "label": "Metadata (JSON)",
+        "type": "template-textarea",
+        "required": false,
+        "placeholder": "{\"key\": \"value\"}",
+        "example": "{\"plan\": \"enterprise\", \"source\": \"website\"}"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "id",
+        "description": "Customer ID"
+      },
+      {
+        "field": "email",
+        "description": "Customer email"
+      }
+    ]
+  },
+  {
+    "id": "stripe/get-customer",
+    "label": "Get Customer",
+    "description": "Retrieve a customer by ID or email",
+    "category": "Stripe",
+    "integration": "stripe",
+    "configFields": [
+      {
+        "key": "customerId",
+        "label": "Customer ID",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "cus_... or {{NodeName.customerId}}",
+        "example": "cus_ABC123"
+      },
+      {
+        "key": "email",
+        "label": "Email (alternative lookup)",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "customer@example.com",
+        "example": "customer@example.com"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "id",
+        "description": "Customer ID"
+      },
+      {
+        "field": "email",
+        "description": "Customer email"
+      },
+      {
+        "field": "name",
+        "description": "Customer name"
+      },
+      {
+        "field": "created",
+        "description": "Creation timestamp"
+      }
+    ]
+  },
+  {
+    "id": "stripe/create-invoice",
+    "label": "Create Invoice",
+    "description": "Create and optionally send an invoice",
+    "category": "Stripe",
+    "integration": "stripe",
+    "configFields": [
+      {
+        "key": "customerId",
+        "label": "Customer ID",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "cus_... or {{NodeName.customerId}}",
+        "example": "cus_ABC123"
+      },
+      {
+        "key": "description",
+        "label": "Description",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "Invoice description",
+        "example": "Professional services - January 2024"
+      },
+      {
+        "key": "lineItems",
+        "label": "Line Items (JSON array)",
+        "type": "template-textarea",
+        "required": true,
+        "placeholder": "[{\"description\": \"Item\", \"amount\": 1000, \"quantity\": 1}]",
+        "example": "[{\"description\": \"Consulting\", \"amount\": 15000, \"quantity\": 2}]"
+      },
+      {
+        "key": "daysUntilDue",
+        "label": "Days Until Due",
+        "type": "number",
+        "required": false,
+        "defaultValue": "30"
+      },
+      {
+        "key": "autoAdvance",
+        "label": "Auto-finalize",
+        "type": "select",
+        "required": false,
+        "defaultValue": "true",
+        "options": [
+          {
+            "value": "true",
+            "label": "Yes"
+          },
+          {
+            "value": "false",
+            "label": "No (draft)"
+          }
+        ]
+      },
+      {
+        "key": "collectionMethod",
+        "label": "Collection Method",
+        "type": "select",
+        "required": false,
+        "defaultValue": "send_invoice",
+        "options": [
+          {
+            "value": "send_invoice",
+            "label": "Send Invoice"
+          },
+          {
+            "value": "charge_automatically",
+            "label": "Charge Automatically"
+          }
+        ]
+      },
+      {
+        "key": "metadata",
+        "label": "Metadata (JSON)",
+        "type": "template-textarea",
+        "required": false,
+        "placeholder": "{\"key\": \"value\"}",
+        "example": "{\"project\": \"website-redesign\"}"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "id",
+        "description": "Invoice ID"
+      },
+      {
+        "field": "number",
+        "description": "Invoice number"
+      },
+      {
+        "field": "hostedInvoiceUrl",
+        "description": "Hosted invoice URL"
+      },
+      {
+        "field": "status",
+        "description": "Invoice status"
+      }
+    ]
+  },
+  {
+    "id": "superagent/guard",
+    "label": "Guard",
+    "description": "Detect prompt injection, system prompt extraction, or data exfiltration attempts",
+    "category": "Superagent",
+    "integration": "superagent",
+    "configFields": [
+      {
+        "key": "text",
+        "label": "Text",
+        "type": "template-textarea",
+        "required": true,
+        "placeholder": "Text to analyze or {{NodeName.text}}",
+        "example": "Analyze this user input for security threats"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "classification",
+        "description": "Threat classification"
+      },
+      {
+        "field": "violationTypes",
+        "description": "Array of violation types"
+      },
+      {
+        "field": "cweCodes",
+        "description": "Array of CWE codes"
+      },
+      {
+        "field": "reasoning",
+        "description": "Analysis reasoning"
+      }
+    ]
+  },
+  {
+    "id": "superagent/redact",
+    "label": "Redact",
+    "description": "Remove sensitive information (PII/PHI) like SSNs, emails, and phone numbers from text",
+    "category": "Superagent",
+    "integration": "superagent",
+    "configFields": [
+      {
+        "key": "text",
+        "label": "Text",
+        "type": "template-textarea",
+        "required": true,
+        "placeholder": "Text to redact or {{NodeName.text}}",
+        "example": "My email is john@example.com and SSN is 123-45-6789"
+      },
+      {
+        "key": "entities",
+        "label": "Entity Types",
+        "type": "text",
+        "required": false,
+        "placeholder": "Optional: SSN, EMAIL, PHONE (comma-separated)",
+        "example": ""
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "redactedText",
+        "description": "Text with PII redacted"
+      },
+      {
+        "field": "reasoning",
+        "description": "Redaction reasoning"
+      }
+    ]
+  },
+  {
+    "id": "v0/create-chat",
+    "label": "Create Chat",
+    "description": "Create a new chat in v0",
+    "category": "v0",
+    "integration": "v0",
+    "configFields": [
+      {
+        "key": "message",
+        "label": "Message",
+        "type": "template-textarea",
+        "required": true,
+        "placeholder": "Create a landing page for a new product",
+        "example": "Create a dashboard with a line chart showing DAU over time"
+      },
+      {
+        "key": "system",
+        "label": "System Prompt (Optional)",
+        "type": "template-textarea",
+        "required": false,
+        "placeholder": "You are an expert coder"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "chatId",
+        "description": "v0 chat ID"
+      },
+      {
+        "field": "url",
+        "description": "v0 chat URL"
+      },
+      {
+        "field": "demoUrl",
+        "description": "Demo preview URL"
+      }
+    ]
+  },
+  {
+    "id": "v0/send-message",
+    "label": "Send Message",
+    "description": "Send a message to an existing v0 chat",
+    "category": "v0",
+    "integration": "v0",
+    "configFields": [
+      {
+        "key": "chatId",
+        "label": "Chat ID",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "chat_123 or {{CreateChat.chatId}}",
+        "example": "{{CreateChat.chatId}}"
+      },
+      {
+        "key": "message",
+        "label": "Message",
+        "type": "template-textarea",
+        "required": true,
+        "placeholder": "Add dark mode",
+        "example": "Add dark mode support"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "chatId",
+        "description": "v0 chat ID"
+      },
+      {
+        "field": "demoUrl",
+        "description": "Demo preview URL"
+      }
+    ]
+  },
+  {
+    "id": "webflow/list-sites",
+    "label": "List Sites",
+    "description": "Get all sites accessible with the API token",
+    "category": "Webflow",
+    "integration": "webflow",
+    "configFields": [],
+    "outputFields": [
+      {
+        "field": "sites",
+        "description": "Array of site objects"
+      },
+      {
+        "field": "count",
+        "description": "Number of sites returned"
+      }
+    ]
+  },
+  {
+    "id": "webflow/get-site",
+    "label": "Get Site",
+    "description": "Get details of a specific Webflow site",
+    "category": "Webflow",
+    "integration": "webflow",
+    "configFields": [
+      {
+        "key": "siteId",
+        "label": "Site ID",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "site-id or {{NodeName.id}}",
+        "example": "580e63e98c9a982ac9b8b741"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "id",
+        "description": "Site ID"
+      },
+      {
+        "field": "displayName",
+        "description": "Display name of the site"
+      },
+      {
+        "field": "shortName",
+        "description": "Short name (subdomain)"
+      },
+      {
+        "field": "previewUrl",
+        "description": "Preview URL"
+      },
+      {
+        "field": "lastPublished",
+        "description": "Last published timestamp"
+      },
+      {
+        "field": "customDomains",
+        "description": "Array of custom domains"
+      }
+    ]
+  },
+  {
+    "id": "webflow/publish-site",
+    "label": "Publish Site",
+    "description": "Publish a site to one or more domains",
+    "category": "Webflow",
+    "integration": "webflow",
+    "configFields": [
+      {
+        "key": "siteId",
+        "label": "Site ID",
+        "type": "template-input",
+        "required": true,
+        "placeholder": "site-id or {{NodeName.id}}",
+        "example": "580e63e98c9a982ac9b8b741"
+      },
+      {
+        "key": "publishToWebflowSubdomain",
+        "label": "Publish to Webflow Subdomain",
+        "type": "select",
+        "required": false,
+        "defaultValue": "true",
+        "options": [
+          {
+            "value": "true",
+            "label": "Yes"
+          },
+          {
+            "value": "false",
+            "label": "No"
+          }
+        ]
+      },
+      {
+        "key": "customDomainIds",
+        "label": "Custom Domain IDs (comma-separated)",
+        "type": "template-input",
+        "required": false,
+        "placeholder": "domain-id-1, domain-id-2",
+        "example": "589a331aa51e760df7ccb89d"
+      }
+    ],
+    "outputFields": [
+      {
+        "field": "publishedDomains",
+        "description": "Array of published domain URLs"
+      },
+      {
+        "field": "publishedToSubdomain",
+        "description": "Whether published to Webflow subdomain"
+      }
+    ]
+  }
+]
