@@ -50,7 +50,15 @@ BETTER_AUTH_URL=http://localhost:3000
 
 # AI Gateway (for AI workflow generation)
 AI_GATEWAY_API_KEY=your-openai-api-key
+
+# Required for Canvas AI chat (provider/model format)
+# Example: anthropic/claude-sonnet-4-5
+OPENCODE_CHAT_MODEL=
 ```
+
+Canvas AI OpenCode URL policy:
+- Remote OpenCode servers must use `https://`.
+- `http://` is only accepted for local loopback hosts (`localhost`, `127.0.0.1`, `::1`).
 
 ### Installation
 

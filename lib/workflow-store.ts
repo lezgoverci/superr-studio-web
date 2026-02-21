@@ -58,7 +58,12 @@ export const currentWorkflowVisibilityAtom =
 export const isWorkflowOwnerAtom = atom<boolean>(true); // Whether current user owns this workflow
 
 // UI state atoms
-export type PropertiesPanelTab = "properties" | "code" | "runs" | "artifacts";
+export type PropertiesPanelTab =
+  | "properties"
+  | "code"
+  | "runs"
+  | "artifacts"
+  | "ai";
 export const propertiesPanelActiveTabAtom =
   atom<PropertiesPanelTab>("properties");
 export const showMinimapAtom = atom(false);

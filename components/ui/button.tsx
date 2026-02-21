@@ -46,10 +46,18 @@ function Button({
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
   }) {
-  const Comp = asChild ? SlotPrimitive.Slot : "button"
+  if (asChild) {
+    return (
+      <SlotPrimitive.Slot
+        data-slot="button"
+        className={cn(buttonVariants({ variant, size, className }))}
+        {...(props as Record<string, unknown>)}
+      />
+    )
+  }
 
   return (
-    <Comp
+    <button
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}

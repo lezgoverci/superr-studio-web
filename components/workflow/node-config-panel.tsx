@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { OpenCodeChat } from "@/components/ai-elements/opencode-chat";
 import { ArtifactPanel } from "@/components/artifacts/artifact-panel";
 import {
   AlertDialog,
@@ -54,7 +55,6 @@ import { findActionById } from "@/plugins";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { ActionConfig } from "./config/action-config";
 import { ActionGrid } from "./config/action-grid";
-
 import { TriggerConfig } from "./config/trigger-config";
 import { generateNodeCode } from "./utils/code-generators";
 import { WorkflowRuns } from "./workflow-runs";
@@ -186,7 +186,8 @@ export const PanelInner = () => {
         value === "properties" ||
         value === "code" ||
         value === "runs" ||
-        value === "artifacts"
+        value === "artifacts" ||
+        value === "ai"
       ) {
         setActiveTab(value as PropertiesPanelTab);
       }
@@ -624,6 +625,14 @@ export const PanelInner = () => {
                 Artifacts
               </TabsTrigger>
             )}
+            {isOwner && (
+              <TabsTrigger
+                className="bg-transparent text-muted-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                value="ai"
+              >
+                AI
+              </TabsTrigger>
+            )}
           </TabsList>
           <TabsContent
             className="flex flex-col overflow-hidden"
@@ -727,6 +736,15 @@ export const PanelInner = () => {
               </div>
             </TabsContent>
           ) : null}
+          {isOwner && (
+            <TabsContent
+              className="flex flex-col overflow-hidden"
+              style={{ height: "calc(100% - 56px)" }}
+              value="ai"
+            >
+              <OpenCodeChat className="h-full" />
+            </TabsContent>
+          )}
           <TabsContent
             className="flex flex-col overflow-hidden data-[state=inactive]:hidden"
             forceMount

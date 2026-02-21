@@ -10,13 +10,10 @@
  * Usage: pnpm skill:update-actions
  */
 
-import { writeFile, mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import "@/plugins";
-import {
-  getAllActions,
-  flattenConfigFields,
-} from "@/plugins";
+import { flattenConfigFields, getAllActions } from "@/plugins";
 
 const OUTPUT_DIR = join(
   process.cwd(),
