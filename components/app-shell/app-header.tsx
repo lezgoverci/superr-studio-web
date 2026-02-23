@@ -4,6 +4,14 @@ import { Check, ChevronDown, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Menu } from "lucide-react";
+import { useAppShellContext } from "./shell-context";
+import { NavContent } from "./app-nav";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -207,6 +215,8 @@ function WorkflowSelector({ pathname }: { pathname: string }) {
 export function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { navItems } = useAppShellContext();
   const isWorkflowSection = pathname.startsWith("/app/workflows");
   const isWorkflowEditor =
     pathname === "/app/workflows/new" || WORKFLOW_EDITOR_PATH.test(pathname);
@@ -215,14 +225,50 @@ export function AppHeader() {
     <header className="pointer-events-auto h-14 border-b bg-background/95 backdrop-blur">
       <div className="flex h-full items-center justify-between gap-3 px-3 md:px-4">
         <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3">
+          {/* Mobile Navigation */}
+          {!isWorkflowEditor && (
+            <div className="lg:hidden flex items-center">
+              <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="shrink-0 rounded-full h-8 w-8 hover:bg-muted/80 text-foreground/80">
+                    <Menu className="size-4.5" />
+                    <span className="sr-only">Toggle navigation menu</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-64 p-0 flex flex-col border-r bg-background">
+                  <div className="p-4 border-b">
+                    <Link
+                      className="flex items-center gap-2 px-2"
+                      href="/app"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <Sparkles className="size-4 text-primary" />
+                      <span className="font-semibold text-sm tracking-tight text-foreground">
+                        SuperrStudio
+                      </span>
+                    </Link>
+                  </div>
+                  <div className="flex-1 overflow-y-auto w-full p-4">
+                    <div className="mb-4 px-3">
+                      <div className="text-muted-foreground font-semibold text-xs tracking-wider uppercase">
+                        Workspace
+                      </div>
+                    </div>
+                    <NavContent items={navItems} onItemClick={() => setIsMobileMenuOpen(false)} />
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
+          )}
+
           <Link
             className="flex shrink-0 items-center gap-2 md:gap-3"
             href="/app"
           >
-            <div className="rounded-lg bg-primary/15 p-1.5 text-primary">
+            <div className="hidden lg:flex rounded-lg bg-primary/15 p-1.5 text-primary">
               <Sparkles className="size-4" />
             </div>
-            <span className="hidden font-semibold text-sm tracking-tight sm:inline md:text-base">
+            <span className="hidden font-semibold text-sm tracking-tight lg:inline md:text-base">
               SuperrStudio
             </span>
           </Link>
