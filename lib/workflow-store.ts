@@ -66,6 +66,7 @@ export type PropertiesPanelTab =
   | "ai";
 export const propertiesPanelActiveTabAtom =
   atom<PropertiesPanelTab>("properties");
+export const opencodeSessionIdAtom = atom<string | null>(null);
 export const showMinimapAtom = atom(false);
 export const selectedExecutionIdAtom = atom<string | null>(null);
 export const rightPanelWidthAtom = atom<string | null>(null);

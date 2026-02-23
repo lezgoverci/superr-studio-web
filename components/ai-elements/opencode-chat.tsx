@@ -49,6 +49,12 @@ import { ProviderSettings } from "@/components/ai-elements/provider-settings";
 import { Button } from "@/components/ui/button";
 import { getConnectionConfig, getOpenCodeClient, type OpenCodeConnectionConfig } from "@/lib/opencode-client";
 import { mapOpenCodeHistoryToUIMessages } from "@/lib/opencode-chat-adapter";
+import {
+  getOpenCodeSessionConnectionKey,
+  markSessionWorkflowMappingOpened,
+  removeSessionWorkflowMapping,
+  upsertSessionWorkflowMapping,
+} from "@/lib/opencode-session-mapping";
 import { cn } from "@/lib/utils";
 import {
   ChevronLeft,
@@ -61,6 +67,10 @@ import type { Session } from "@opencode-ai/sdk/client";
 
 type OpenCodeChatProps = {
   className?: string;
+  workflowId?: string | null;
+  workflowName?: string;
+  initialSessionId?: string | null;
+  onSessionLinked?: (sessionId: string) => void;
 };
 
 const QUICK_SUGGESTIONS = [
@@ -112,7 +122,7 @@ function SessionSidebar({
           >
             <MessageSquare className="size-3 shrink-0 text-muted-foreground" />
             <span className="flex-1 truncate text-xs">
-              {(session as { title?: string }).title || `${session.id.slice(0, 12)}…`}
+              {getSessionTitle(session)}
             </span>
             <Button
               className="size-5 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive"
@@ -290,13 +300,16 @@ function ChatMessage({ message }: { message: UIMessage }) {
   return null;
 }
 
+function getSessionTitle(session: Session): string {
+  return (session as { title?: string }).title || `${session.id.slice(0, 12)}…`;
+}
+
 type ChatSurfaceProps = {
-  activeSessionId: string | null;
+  activeSessionId: string;
   initialMessages: UIMessage[];
   isLoadingMessages: boolean;
   connection: OpenCodeConnectionConfig;
   onAbortSession: (sessionId: string) => Promise<void>;
-  onEnsureSession: () => Promise<string | null>;
 };
 
 function ChatSurface({
@@ -305,10 +318,9 @@ function ChatSurface({
   isLoadingMessages,
   connection,
   onAbortSession,
-  onEnsureSession,
 }: ChatSurfaceProps) {
   const [input, setInput] = useState("");
-  const activeSessionIdRef = useRef<string | null>(activeSessionId);
+  const activeSessionIdRef = useRef(activeSessionId);
 
   useEffect(() => {
     activeSessionIdRef.current = activeSessionId;
@@ -318,13 +330,7 @@ function ChatSurface({
     () =>
       new DefaultChatTransport({
         api: "/api/ai/chat",
-        prepareSendMessagesRequest: async ({ body, id, messages }) => {
-          const sessionId = activeSessionIdRef.current || (await onEnsureSession());
-
-          if (!sessionId) {
-            throw new Error("Failed to create OpenCode session");
-          }
-
+        prepareSendMessagesRequest: ({ body, id, messages }) => {
           return {
             body: {
               ...body,
@@ -333,16 +339,16 @@ function ChatSurface({
               opencodeToken: connection.token,
               opencodeUrl: connection.url,
               opencodeUsername: connection.username,
-              sessionId,
+              sessionId: activeSessionIdRef.current,
             },
           };
         },
       }),
-    [connection.token, connection.url, connection.username, onEnsureSession]
+    [activeSessionId, connection.token, connection.url, connection.username]
   );
 
   const { messages, sendMessage, status, stop } = useChat({
-    id: activeSessionId ?? "new-chat",
+    id: activeSessionId,
     messages: initialMessages,
     onError: (error) => {
       toast.error(error.message || "AI response failed");
@@ -367,13 +373,7 @@ function ChatSurface({
 
   const handleStop = useCallback(async () => {
     await stop();
-
-    const sessionId = activeSessionIdRef.current;
-    if (!sessionId) {
-      return;
-    }
-
-    await onAbortSession(sessionId);
+    await onAbortSession(activeSessionIdRef.current);
   }, [onAbortSession, stop]);
 
   return (
@@ -458,7 +458,13 @@ function ChatSurface({
   );
 }
 
-export function OpenCodeChat({ className }: OpenCodeChatProps) {
+export function OpenCodeChat({
+  className,
+  workflowId,
+  workflowName,
+  initialSessionId,
+  onSessionLinked,
+}: OpenCodeChatProps) {
   const [connected, setConnected] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -466,20 +472,27 @@ export function OpenCodeChat({ className }: OpenCodeChatProps) {
   const [showSidebar, setShowSidebar] = useState(false);
   const [chatSurfaceKey, setChatSurfaceKey] = useState(0);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
+  const initialSessionAppliedRef = useRef<string | null>(null);
 
-  const loadSessions = useCallback(async () => {
+  const loadSessions = useCallback(async (): Promise<Session[]> => {
     const client = getOpenCodeClient();
     if (!client) {
       setSessions([]);
-      return;
+      return [];
     }
 
     try {
       const response = await client.session.list();
       const list = response.data;
-      setSessions(Array.isArray(list) ? list : []);
+      const nextSessions = Array.isArray(list)
+        ? [...list].sort((left, right) => right.time.updated - left.time.updated)
+        : [];
+      setSessions(nextSessions);
+      return nextSessions;
     } catch {
       setSessions([]);
+      return [];
     }
   }, []);
 
@@ -506,6 +519,68 @@ export function OpenCodeChat({ className }: OpenCodeChatProps) {
     }
   }, []);
 
+  const connection = getConnectionConfig();
+  const connectionKey = useMemo(() => {
+    if (!connection) {
+      return null;
+    }
+    return getOpenCodeSessionConnectionKey(connection);
+  }, [connection?.url, connection?.username]);
+
+  const linkSessionToWorkflow = useCallback(
+    (sessionId: string, sessionTitle?: string) => {
+      if (!(workflowId && connectionKey)) {
+        return;
+      }
+
+      upsertSessionWorkflowMapping({
+        connectionKey,
+        sessionId,
+        workflowId,
+        workflowName,
+        sessionTitle,
+      });
+      onSessionLinked?.(sessionId);
+    },
+    [connectionKey, onSessionLinked, workflowId, workflowName]
+  );
+
+  const applyInitialSessionIfNeeded = useCallback(
+    async (sessionList: Session[]): Promise<boolean> => {
+      const normalizedInitialSessionId = initialSessionId?.trim();
+      if (!normalizedInitialSessionId) {
+        return false;
+      }
+
+      if (initialSessionAppliedRef.current === normalizedInitialSessionId) {
+        return false;
+      }
+
+      const targetSession = sessionList.find(
+        (session) => session.id === normalizedInitialSessionId
+      );
+      if (!targetSession) {
+        initialSessionAppliedRef.current = normalizedInitialSessionId;
+        toast.error("The requested OpenCode session is not available.");
+        return false;
+      }
+
+      initialSessionAppliedRef.current = normalizedInitialSessionId;
+      setActiveSessionId(normalizedInitialSessionId);
+      linkSessionToWorkflow(normalizedInitialSessionId, getSessionTitle(targetSession));
+      if (connectionKey) {
+        markSessionWorkflowMappingOpened(connectionKey, normalizedInitialSessionId);
+      }
+      await loadMessages(normalizedInitialSessionId);
+      return true;
+    },
+    [connectionKey, initialSessionId, linkSessionToWorkflow, loadMessages]
+  );
+
+  useEffect(() => {
+    initialSessionAppliedRef.current = null;
+  }, [initialSessionId]);
+
   const handleConnected = useCallback(
     async (isConnected: boolean) => {
       setConnected(isConnected);
@@ -518,17 +593,50 @@ export function OpenCodeChat({ className }: OpenCodeChatProps) {
         return;
       }
 
-      await loadSessions();
+      const latestSessions = await loadSessions();
+      if (await applyInitialSessionIfNeeded(latestSessions)) {
+        return;
+      }
+
+      const activeSessionStillExists =
+        activeSessionId !== null &&
+        latestSessions.some((session) => session.id === activeSessionId);
+      if (activeSessionStillExists) {
+        return;
+      }
+
+      const fallbackSessionId = latestSessions[0]?.id ?? null;
+      setActiveSessionId(fallbackSessionId);
+
+      if (!fallbackSessionId) {
+        setInitialMessages([]);
+        setChatSurfaceKey((previousKey) => previousKey + 1);
+        return;
+      }
+
+      await loadMessages(fallbackSessionId);
     },
-    [loadSessions]
+    [activeSessionId, applyInitialSessionIfNeeded, loadMessages, loadSessions]
   );
+
+  useEffect(() => {
+    if (!connected) {
+      return;
+    }
+    void applyInitialSessionIfNeeded(sessions);
+  }, [applyInitialSessionIfNeeded, connected, sessions]);
 
   const handleSelectSession = useCallback(
     async (sessionId: string) => {
       setActiveSessionId(sessionId);
+      const selectedSession = sessions.find((session) => session.id === sessionId);
+      linkSessionToWorkflow(sessionId, selectedSession ? getSessionTitle(selectedSession) : undefined);
+      if (connectionKey) {
+        markSessionWorkflowMappingOpened(connectionKey, sessionId);
+      }
       await loadMessages(sessionId);
     },
-    [loadMessages]
+    [connectionKey, linkSessionToWorkflow, loadMessages, sessions]
   );
 
   const handleNewSession = useCallback(async () => {
@@ -538,6 +646,7 @@ export function OpenCodeChat({ className }: OpenCodeChatProps) {
       return;
     }
 
+    setIsCreatingSession(true);
     try {
       const response = await client.session.create();
       const session = response.data;
@@ -549,11 +658,17 @@ export function OpenCodeChat({ className }: OpenCodeChatProps) {
       setActiveSessionId(session.id);
       setInitialMessages([]);
       setChatSurfaceKey((previous) => previous + 1);
+      linkSessionToWorkflow(session.id, getSessionTitle(session));
+      if (connectionKey) {
+        markSessionWorkflowMappingOpened(connectionKey, session.id);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to create session";
       toast.error(message);
+    } finally {
+      setIsCreatingSession(false);
     }
-  }, []);
+  }, [connectionKey, linkSessionToWorkflow]);
 
   const handleDeleteSession = useCallback(
     async (sessionId: string) => {
@@ -564,46 +679,31 @@ export function OpenCodeChat({ className }: OpenCodeChatProps) {
 
       try {
         await client.session.delete({ path: { id: sessionId } });
-        setSessions((previous) => previous.filter((session) => session.id !== sessionId));
+        const remainingSessions = sessions.filter(
+          (session) => session.id !== sessionId
+        );
+        setSessions(remainingSessions);
+        if (connectionKey) {
+          removeSessionWorkflowMapping(connectionKey, sessionId);
+        }
 
         if (activeSessionId === sessionId) {
-          setActiveSessionId(null);
-          setInitialMessages([]);
-          setChatSurfaceKey((previous) => previous + 1);
+          const fallbackSessionId = remainingSessions[0]?.id ?? null;
+          setActiveSessionId(fallbackSessionId);
+          if (fallbackSessionId) {
+            await loadMessages(fallbackSessionId);
+          } else {
+            setInitialMessages([]);
+            setChatSurfaceKey((previous) => previous + 1);
+          }
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : "Failed to delete session";
         toast.error(message);
       }
     },
-    [activeSessionId]
+    [activeSessionId, connectionKey, loadMessages, sessions]
   );
-
-  const ensureSession = useCallback(async (): Promise<string | null> => {
-    if (activeSessionId) {
-      return activeSessionId;
-    }
-
-    const client = getOpenCodeClient();
-    if (!client) {
-      return null;
-    }
-
-    try {
-      const response = await client.session.create();
-      const session = response.data;
-      if (!session) {
-        return null;
-      }
-
-      setSessions((previous) => [session, ...previous]);
-      setActiveSessionId(session.id);
-      setInitialMessages([]);
-      return session.id;
-    } catch {
-      return null;
-    }
-  }, [activeSessionId]);
 
   const abortSession = useCallback(async (sessionId: string) => {
     const client = getOpenCodeClient();
@@ -618,7 +718,12 @@ export function OpenCodeChat({ className }: OpenCodeChatProps) {
     }
   }, []);
 
-  const connection = getConnectionConfig();
+  const activeSession = useMemo(() => {
+    if (!activeSessionId) {
+      return null;
+    }
+    return sessions.find((session) => session.id === activeSessionId) ?? null;
+  }, [activeSessionId, sessions]);
 
   if (!(connected && connection)) {
     return (
@@ -659,11 +764,27 @@ export function OpenCodeChat({ className }: OpenCodeChatProps) {
         </Button>
         <span className="flex-1 truncate text-sm font-medium">
           {activeSessionId
-            ? ((sessions.find((session) => session.id === activeSessionId) as {
-                title?: string;
-              } | undefined)?.title ?? "Session")
-            : "New Chat"}
+            ? (activeSession ? getSessionTitle(activeSession) : "Session")
+            : "Session required"}
         </span>
+        {activeSessionId ? (
+          <Button
+            className="text-muted-foreground"
+            disabled={isCreatingSession}
+            onClick={() => {
+              void handleNewSession();
+            }}
+            size="sm"
+            variant="ghost"
+          >
+            {isCreatingSession ? (
+              <Loader2 className="mr-2 size-3.5 animate-spin" />
+            ) : (
+              <Plus className="mr-2 size-3.5" />
+            )}
+            New Session
+          </Button>
+        ) : null}
         <OpenCodeConnection className="ml-auto" onStatusChange={handleConnected} />
       </div>
 
@@ -681,15 +802,45 @@ export function OpenCodeChat({ className }: OpenCodeChatProps) {
         )}
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <ChatSurface
-            activeSessionId={activeSessionId}
-            connection={connection}
-            initialMessages={initialMessages}
-            isLoadingMessages={isLoadingMessages}
-            key={chatSurfaceKey}
-            onAbortSession={abortSession}
-            onEnsureSession={ensureSession}
-          />
+          {activeSessionId ? (
+            <ChatSurface
+              activeSessionId={activeSessionId}
+              connection={connection}
+              initialMessages={initialMessages}
+              isLoadingMessages={isLoadingMessages}
+              key={chatSurfaceKey}
+              onAbortSession={abortSession}
+            />
+          ) : (
+            <div
+              className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center"
+              data-testid="opencode-chat-inactive"
+            >
+              <div className="rounded-full bg-muted p-4">
+                <MessageSquare className="size-8 text-muted-foreground" />
+              </div>
+              <div className="space-y-1">
+                <p className="font-medium">No active OpenCode session</p>
+                <p className="text-muted-foreground text-sm">
+                  Start a session to begin chatting.
+                </p>
+              </div>
+              <Button
+                data-testid="opencode-start-session"
+                disabled={isCreatingSession}
+                onClick={() => {
+                  void handleNewSession();
+                }}
+              >
+                {isCreatingSession ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <Plus className="mr-2 size-4" />
+                )}
+                Start Session
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>

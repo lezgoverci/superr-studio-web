@@ -1,6 +1,7 @@
 import {
   ArrowRight,
   BookOpen,
+  MessagesSquare,
   Settings2,
   Sparkles,
   Workflow,
@@ -28,6 +29,12 @@ const QUICK_LINKS = [
     description: "Review captured artifacts and published outputs.",
     href: "/app/library",
     icon: BookOpen,
+  },
+  {
+    title: "Sessions",
+    description: "Browse local OpenCode chat sessions and reopen threads.",
+    href: "/app/sessions",
+    icon: MessagesSquare,
   },
   {
     title: "Settings",

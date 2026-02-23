@@ -1,6 +1,12 @@
 "use client";
 
-import { BookOpen, LayoutDashboard, Settings2, Workflow } from "lucide-react";
+import {
+  BookOpen,
+  LayoutDashboard,
+  MessagesSquare,
+  Settings2,
+  Workflow,
+} from "lucide-react";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
@@ -14,6 +20,7 @@ import type { ShellNavItem, ShellUser } from "./types";
 const DEFAULT_PERMISSIONS = [
   "route:dashboard:view",
   "route:workflows:view",
+  "route:sessions:view",
   "route:library:view",
   "route:settings:view",
 ] as const;
@@ -42,6 +49,14 @@ const NAV_ITEMS: ShellNavItem[] = [
     href: "/app/library",
     icon: BookOpen,
     requiredPermissions: ["route:library:view"],
+  },
+  {
+    id: "sessions",
+    label: "Sessions",
+    description: "OpenCode conversation history",
+    href: "/app/sessions",
+    icon: MessagesSquare,
+    requiredPermissions: ["route:sessions:view"],
   },
   {
     id: "settings",

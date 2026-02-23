@@ -42,6 +42,7 @@ import {
   isWorkflowOwnerAtom,
   newlyCreatedNodeIdAtom,
   nodesAtom,
+  opencodeSessionIdAtom,
   type PropertiesPanelTab,
   pendingIntegrationNodesAtom,
   propertiesPanelActiveTabAtom,
@@ -156,6 +157,7 @@ export const PanelInner = () => {
   const [currentWorkflowName, setCurrentWorkflowName] = useAtom(
     currentWorkflowNameAtom
   );
+  const opencodeSessionId = useAtomValue(opencodeSessionIdAtom);
   const isOwner = useAtomValue(isWorkflowOwnerAtom);
   const updateNodeData = useSetAtom(updateNodeDataAtom);
   const deleteNode = useSetAtom(deleteNodeAtom);
@@ -742,7 +744,12 @@ export const PanelInner = () => {
               style={{ height: "calc(100% - 56px)" }}
               value="ai"
             >
-              <OpenCodeChat className="h-full" />
+              <OpenCodeChat
+                className="h-full"
+                initialSessionId={opencodeSessionId}
+                workflowId={currentWorkflowId}
+                workflowName={currentWorkflowName}
+              />
             </TabsContent>
           )}
           <TabsContent

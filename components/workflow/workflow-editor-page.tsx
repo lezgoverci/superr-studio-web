@@ -31,6 +31,8 @@ import {
   isSidebarCollapsedAtom,
   isWorkflowOwnerAtom,
   nodesAtom,
+  opencodeSessionIdAtom,
+  propertiesPanelActiveTabAtom,
   rightPanelWidthAtom,
   selectedExecutionIdAtom,
   triggerExecuteAtom,
@@ -108,6 +110,8 @@ function checkNodeIntegration(
 function WorkflowEditor({ params }: WorkflowPageProps) {
   const { workflowId } = use(params);
   const searchParams = useSearchParams();
+  const requestedTab = searchParams?.get("tab");
+  const requestedOpenCodeSessionId = searchParams?.get("opencodeSessionId");
   const isMobile = useIsMobile();
   const [isGenerating, setIsGenerating] = useAtom(isGeneratingAtom);
   const [_isSaving, setIsSaving] = useAtom(isSavingAtom);
@@ -135,6 +139,8 @@ function WorkflowEditor({ params }: WorkflowPageProps) {
     currentWorkflowVisibilityAtom
   );
   const [isOwner, setIsWorkflowOwner] = useAtom(isWorkflowOwnerAtom);
+  const setActiveTab = useSetAtom(propertiesPanelActiveTabAtom);
+  const setOpenCodeSessionId = useSetAtom(opencodeSessionIdAtom);
   const setGlobalIntegrations = useSetAtom(integrationsAtom);
   const setIntegrationsLoaded = useSetAtom(integrationsLoadedAtom);
   const integrationsVersion = useAtomValue(integrationsVersionAtom);
@@ -151,6 +157,17 @@ function WorkflowEditor({ params }: WorkflowPageProps) {
     selectedExecutionId,
     workflowId,
   });
+
+  useEffect(() => {
+    if (requestedTab === "ai") {
+      setActiveTab("ai");
+    }
+  }, [requestedTab, setActiveTab]);
+
+  useEffect(() => {
+    const normalizedSessionId = requestedOpenCodeSessionId?.trim() || null;
+    setOpenCodeSessionId(normalizedSessionId);
+  }, [requestedOpenCodeSessionId, setOpenCodeSessionId]);
 
   // Read sidebar preferences from cookies on mount (after hydration)
   useEffect(() => {
