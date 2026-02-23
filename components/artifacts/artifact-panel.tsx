@@ -764,12 +764,12 @@ export function ArtifactPanel({
         </Select>
         {!embedded && workflowId ? (
           <Button asChild size="sm" variant="ghost">
-            <Link href={`/workflows/${workflowId}`}>Back to workflow</Link>
+            <Link href={`/app/workflows/${workflowId}`}>Back to workflow</Link>
           </Button>
         ) : null}
         {embedded && workflowId ? (
           <Button asChild size="sm" variant="ghost">
-            <Link href={`/artifacts?workflowId=${workflowId}`}>
+            <Link href={`/app/library?workflowId=${workflowId}`}>
               Open Full Manager
             </Link>
           </Button>

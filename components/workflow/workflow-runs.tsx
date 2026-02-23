@@ -907,7 +907,7 @@ export function WorkflowRuns({
           label: "View Artifacts",
           onClick: () => {
             router.push(
-              `/artifacts?workflowId=${currentWorkflowId}&executionId=${execution.id}`
+              `/app/library?workflowId=${currentWorkflowId}&executionId=${execution.id}`
             );
           },
         },

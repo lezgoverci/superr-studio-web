@@ -3,17 +3,15 @@
 import { usePathname } from "next/navigation";
 import { WorkflowCanvas } from "./workflow-canvas";
 
-const WORKFLOW_RUN_PAGE_PATTERN = /^\/workflows\/[^/]+\/run$/;
+const APP_WORKFLOW_EDITOR_PATTERN = /^\/app\/workflows\/[^/]+$/;
 
 export function PersistentCanvas() {
   const pathname = usePathname();
 
-  // Show canvas on homepage and workflow editor pages.
-  // The generated run page should render without the background canvas.
-  const isWorkflowRunPage = WORKFLOW_RUN_PAGE_PATTERN.test(pathname);
+  // Canvas is only used by builder pages inside the app shell.
   const showCanvas =
-    pathname === "/" ||
-    (pathname.startsWith("/workflows/") && !isWorkflowRunPage);
+    pathname === "/app/workflows/new" ||
+    APP_WORKFLOW_EDITOR_PATTERN.test(pathname);
 
   if (!showCanvas) {
     return null;

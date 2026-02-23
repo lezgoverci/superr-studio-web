@@ -75,8 +75,6 @@ import {
   getIntegrationLabels,
 } from "@/plugins";
 import { Panel } from "../ai-elements/panel";
-import { DeployButton } from "../deploy-button";
-import { GitHubStarsButton } from "../github-stars-button";
 import { ConfigurationOverlay } from "../overlays/configuration-overlay";
 import { ConfirmOverlay } from "../overlays/confirm-overlay";
 import { ExportWorkflowOverlay } from "../overlays/export-workflow-overlay";
@@ -84,7 +82,6 @@ import { MakePublicOverlay } from "../overlays/make-public-overlay";
 import { useOverlay } from "../overlays/overlay-provider";
 import { WorkflowIssuesOverlay } from "../overlays/workflow-issues-overlay";
 import { WorkflowIcon } from "../ui/workflow-icon";
-import { UserMenu } from "../workflows/user-menu";
 
 type WorkflowToolbarProps = {
   workflowId?: string;
@@ -1098,7 +1095,7 @@ function useWorkflowActions(state: ReturnType<typeof useWorkflowState>) {
 
       const newWorkflow = await api.workflow.duplicate(currentWorkflowId);
       toast.success("Workflow duplicated successfully");
-      router.push(`/workflows/${newWorkflow.id}`);
+      router.push(`/app/workflows/${newWorkflow.id}`);
     } catch (error) {
       console.error("Failed to duplicate workflow:", error);
       toast.error("Failed to duplicate workflow. Please try again.");
@@ -1724,7 +1721,7 @@ function WorkflowMenuComponent({
               asChild
               className="flex items-center justify-between"
             >
-              <a href="/">
+              <a href="/app/workflows/new">
                 New Workflow{" "}
                 {!workflowId && <Check className="size-4 shrink-0" />}
               </a>
@@ -1740,7 +1737,7 @@ function WorkflowMenuComponent({
                     className="flex items-center justify-between"
                     key={workflow.id}
                     onClick={() =>
-                      state.router.push(`/workflows/${workflow.id}`)
+                      state.router.push(`/app/workflows/${workflow.id}`)
                     }
                   >
                     <span className="truncate">{workflow.name}</span>
@@ -1793,21 +1790,12 @@ export const WorkflowToolbar = ({ workflowId }: WorkflowToolbarProps) => {
             state={state}
             workflowId={workflowId}
           />
-          <div className="flex items-center gap-2">
-            {!workflowId && (
-              <>
-                <GitHubStarsButton />
-                <DeployButton />
-              </>
-            )}
-            {workflowId && !state.isOwner && (
-              <DuplicateButton
-                isDuplicating={state.isDuplicating}
-                onDuplicate={actions.handleDuplicate}
-              />
-            )}
-            <UserMenu />
-          </div>
+          {workflowId && !state.isOwner ? (
+            <DuplicateButton
+              isDuplicating={state.isDuplicating}
+              onDuplicate={actions.handleDuplicate}
+            />
+          ) : null}
         </div>
       </div>
     </>
