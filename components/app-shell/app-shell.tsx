@@ -127,7 +127,7 @@ export function AppShell({ children }: AppShellProps) {
       }}
     >
       <div className="pointer-events-auto relative z-10 flex h-dvh flex-col">
-        <AppHeader items={navItems} />
+        <AppHeader />
 
         <div
           className={cn(

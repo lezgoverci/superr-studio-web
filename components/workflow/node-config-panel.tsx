@@ -164,7 +164,7 @@ export const PanelInner = () => {
   const deleteEdge = useSetAtom(deleteEdgeAtom);
   const deleteSelectedItems = useSetAtom(deleteSelectedItemsAtom);
   const setShowClearDialog = useSetAtom(showClearDialogAtom);
-  const setShowDeleteDialog = useSetAtom(showDeleteDialogAtom);
+  const [showDeleteDialog, setShowDeleteDialog] = useAtom(showDeleteDialogAtom);
   const clearNodeStatuses = useSetAtom(clearNodeStatusesAtom);
   const setPendingIntegrationNodes = useSetAtom(pendingIntegrationNodesAtom);
   const [newlyCreatedNodeId, setNewlyCreatedNodeId] = useAtom(
@@ -366,6 +366,23 @@ export const PanelInner = () => {
       const errorMessage =
         error instanceof Error ? error.message : "Failed to delete runs";
       toast.error(errorMessage);
+    }
+  };
+
+  const handleDeleteWorkflow = async () => {
+    if (!currentWorkflowId) {
+      setShowDeleteDialog(false);
+      return;
+    }
+
+    try {
+      await api.workflow.delete(currentWorkflowId);
+      setShowDeleteDialog(false);
+      toast.success("Workflow deleted successfully");
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Failed to delete workflow:", error);
+      toast.error("Failed to delete workflow. Please try again.");
     }
   };
 
@@ -815,6 +832,25 @@ export const PanelInner = () => {
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={handleDeleteAllRuns}>
                 Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog onOpenChange={setShowDeleteDialog} open={showDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Workflow</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete "{currentWorkflowName}"? This
+                will permanently delete the workflow. This action cannot be
+                undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteWorkflow}>
+                Delete Workflow
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

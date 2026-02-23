@@ -1,14 +1,19 @@
 "use client";
 
 import { useAtomValue, useSetAtom } from "jotai";
+import { Loader2 } from "lucide-react";
 import { nanoid } from "nanoid";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api-client";
 import { signInWithWhop, useSession } from "@/lib/auth-client";
 import {
+  currentWorkflowIdAtom,
   currentWorkflowNameAtom,
+  currentWorkflowVisibilityAtom,
   edgesAtom,
   hasSidebarBeenShownAtom,
   isTransitioningFromHomepageAtom,
@@ -36,16 +41,19 @@ export function NewWorkflowPage() {
   const router = useRouter();
   const { data: session } = useSession();
   const nodes = useAtomValue(nodesAtom);
-  const edges = useAtomValue(edgesAtom);
   const setNodes = useSetAtom(nodesAtom);
   const setEdges = useSetAtom(edgesAtom);
+  const setCurrentWorkflowId = useSetAtom(currentWorkflowIdAtom);
   const setCurrentWorkflowName = useSetAtom(currentWorkflowNameAtom);
+  const setCurrentWorkflowVisibility = useSetAtom(
+    currentWorkflowVisibilityAtom
+  );
   const setHasSidebarBeenShown = useSetAtom(hasSidebarBeenShownAtom);
   const setIsTransitioningFromHomepage = useSetAtom(
     isTransitioningFromHomepageAtom
   );
-  const hasCreatedWorkflowRef = useRef(false);
   const currentWorkflowName = useAtomValue(currentWorkflowNameAtom);
+  const [isCreating, setIsCreating] = useState(false);
 
   // Reset sidebar animation state when on homepage
   useEffect(() => {
@@ -65,78 +73,82 @@ export function NewWorkflowPage() {
     }
   }, [session]);
 
-  // Handler to add the first node (replaces the "add" node)
-  const handleAddNode = useCallback(() => {
-    const newNode: WorkflowNode = createDefaultTriggerNode();
-    // Replace all nodes (removes the "add" node)
-    setNodes([newNode]);
-  }, [setNodes]);
+  const handleCreateWorkflow = useCallback(async () => {
+    if (isCreating) {
+      return;
+    }
 
-  // Initialize with a temporary "add" node on mount
-  useEffect(() => {
-    const addNodePlaceholder: WorkflowNode = {
-      id: "add-node-placeholder",
-      type: "add",
-      position: { x: 0, y: 0 },
-      data: {
-        label: "",
-        type: "add",
-        onClick: handleAddNode,
-      },
-      draggable: false,
-      selectable: false,
-    };
-    setNodes([addNodePlaceholder]);
-    setEdges([]);
-    setCurrentWorkflowName("New Workflow");
-    hasCreatedWorkflowRef.current = false;
-  }, [setNodes, setEdges, setCurrentWorkflowName, handleAddNode]);
+    setIsCreating(true);
+    try {
+      await ensureSession();
 
-  // Create workflow when first real node is added
-  useEffect(() => {
-    const createWorkflowAndRedirect = async () => {
-      // Filter out the placeholder "add" node
-      const realNodes = nodes.filter((node) => node.type !== "add");
+      const initialNode: WorkflowNode = createDefaultTriggerNode();
+      const newWorkflow = await api.workflow.create({
+        name: "Untitled Workflow",
+        description: "",
+        nodes: [initialNode],
+        edges: [],
+      });
 
-      // Only create when we have at least one real node and haven't created a workflow yet
-      if (realNodes.length === 0 || hasCreatedWorkflowRef.current) {
+      sessionStorage.setItem("animate-sidebar", "true");
+      setIsTransitioningFromHomepage(true);
+      router.replace(`/app/workflows/${newWorkflow.id}`);
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message === "Authentication required"
+      ) {
         return;
       }
-      hasCreatedWorkflowRef.current = true;
+      console.error("Failed to create workflow:", error);
+      toast.error("Failed to create workflow");
+    } finally {
+      setIsCreating(false);
+    }
+  }, [ensureSession, isCreating, router, setIsTransitioningFromHomepage]);
 
-      try {
-        await ensureSession();
+  // Initialize a clean canvas state for explicit creation.
+  useLayoutEffect(() => {
+    setNodes([]);
+    setEdges([]);
+    setCurrentWorkflowId(null);
+    setCurrentWorkflowName("New Workflow");
+    setCurrentWorkflowVisibility("private");
+  }, [
+    setNodes,
+    setEdges,
+    setCurrentWorkflowId,
+    setCurrentWorkflowName,
+    setCurrentWorkflowVisibility,
+  ]);
 
-        // Create workflow with all real nodes
-        const newWorkflow = await api.workflow.create({
-          name: "Untitled Workflow",
-          description: "",
-          nodes: realNodes,
-          edges,
-        });
-
-        // Set flags to indicate we're coming from homepage (for sidebar animation)
-        sessionStorage.setItem("animate-sidebar", "true");
-        setIsTransitioningFromHomepage(true);
-
-        // Redirect to the workflow page
-        console.log("[Homepage] Navigating to workflow page");
-        router.replace(`/app/workflows/${newWorkflow.id}`);
-      } catch (error) {
-        if (
-          error instanceof Error &&
-          error.message === "Authentication required"
-        ) {
-          return;
-        }
-        console.error("Failed to create workflow:", error);
-        toast.error("Failed to create workflow");
-      }
-    };
-
-    createWorkflowAndRedirect();
-  }, [nodes, edges, router, ensureSession, setIsTransitioningFromHomepage]);
-
-  // Canvas and toolbar are rendered by PersistentCanvas in the layout
-  return null;
+  return (
+    <div className="pointer-events-none flex h-full w-full items-center justify-center p-6">
+      {nodes.length === 0 ? (
+        <div className="pointer-events-auto w-full max-w-md rounded-xl border bg-background/95 p-6 text-center shadow-lg backdrop-blur">
+          <h1 className="font-semibold text-2xl tracking-tight">
+            No workflow selected
+          </h1>
+          <p className="mt-2 text-muted-foreground text-sm">
+            Create a new workflow to start building in the canvas.
+          </p>
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            <Button
+              disabled={isCreating}
+              onClick={handleCreateWorkflow}
+              size="sm"
+            >
+              {isCreating ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : null}
+              Create New Workflow
+            </Button>
+            <Button asChild size="sm" variant="secondary">
+              <Link href="/app/workflows">All Workflows</Link>
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
 }

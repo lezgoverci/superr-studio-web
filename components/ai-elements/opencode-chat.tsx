@@ -473,6 +473,7 @@ export function OpenCodeChat({
   const [chatSurfaceKey, setChatSurfaceKey] = useState(0);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
+  const [hasLoadedSessions, setHasLoadedSessions] = useState(false);
   const initialSessionAppliedRef = useRef<string | null>(null);
 
   const loadSessions = useCallback(async (): Promise<Session[]> => {
@@ -586,6 +587,7 @@ export function OpenCodeChat({
       setConnected(isConnected);
 
       if (!isConnected) {
+        setHasLoadedSessions(false);
         setSessions([]);
         setActiveSessionId(null);
         setInitialMessages([]);
@@ -593,7 +595,9 @@ export function OpenCodeChat({
         return;
       }
 
+      setHasLoadedSessions(false);
       const latestSessions = await loadSessions();
+      setHasLoadedSessions(true);
       if (await applyInitialSessionIfNeeded(latestSessions)) {
         return;
       }
@@ -620,11 +624,11 @@ export function OpenCodeChat({
   );
 
   useEffect(() => {
-    if (!connected) {
+    if (!(connected && hasLoadedSessions)) {
       return;
     }
     void applyInitialSessionIfNeeded(sessions);
-  }, [applyInitialSessionIfNeeded, connected, sessions]);
+  }, [applyInitialSessionIfNeeded, connected, hasLoadedSessions, sessions]);
 
   const handleSelectSession = useCallback(
     async (sessionId: string) => {

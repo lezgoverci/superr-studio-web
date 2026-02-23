@@ -66,7 +66,7 @@ export default function DashboardPage() {
               <Link href="/app/workflows/new">New Workflow</Link>
             </Button>
             <Button asChild variant="secondary">
-              <Link href="/app/workflows">Open Recent Workflow</Link>
+              <Link href="/app/workflows">View Workflows</Link>
             </Button>
           </div>
         </section>

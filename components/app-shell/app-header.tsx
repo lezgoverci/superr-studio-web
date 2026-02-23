@@ -1,8 +1,9 @@
 "use client";
 
-import { ChevronDown, Sparkles } from "lucide-react";
+import { Check, ChevronDown, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { DeployButton } from "@/components/deploy-button";
 import { GitHubStarsButton } from "@/components/github-stars-button";
 import { Button } from "@/components/ui/button";
@@ -10,31 +11,204 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { api } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import { UserMenu } from "../workflows/user-menu";
-import type { ShellNavItem } from "./types";
-
-type AppHeaderProps = {
-  items: ShellNavItem[];
-};
 
 const WORKFLOW_EDITOR_PATH = /^\/app\/workflows\/[^/]+$/;
+const WORKFLOW_DETAIL_PATH = /^\/app\/workflows\/([^/]+)$/;
 
-function isItemActive(pathname: string, href: string): boolean {
-  if (href === "/app") {
-    return pathname === "/app";
+type WorkflowOption = {
+  id: string;
+  name: string;
+};
+
+type WorkflowSelectorContentProps = {
+  pathname: string;
+  currentWorkflowRouteId: string | null;
+  isLoadingWorkflows: boolean;
+  hasWorkflowLoadError: boolean;
+  workflows: WorkflowOption[];
+  onRetryLoad: () => void;
+  onSelectNewWorkflow: () => void;
+  onSelectWorkflow: (workflowId: string) => void;
+};
+
+function getWorkflowRouteId(pathname: string): string | null {
+  if (pathname === "/app/workflows" || pathname === "/app/workflows/new") {
+    return null;
   }
-  return pathname === href || pathname.startsWith(`${href}/`);
+  const match = pathname.match(WORKFLOW_DETAIL_PATH);
+  return match ? match[1] : null;
 }
 
-export function AppHeader({ items }: AppHeaderProps) {
+function getWorkflowSelectorLabel(
+  pathname: string,
+  workflows: WorkflowOption[],
+  currentWorkflowRouteId: string | null
+): string {
+  if (pathname === "/app/workflows/new") {
+    return "New Workflow";
+  }
+  if (pathname === "/app/workflows") {
+    return "Select Workflow";
+  }
+  if (!currentWorkflowRouteId) {
+    return "Workflow";
+  }
+  return (
+    workflows.find((workflow) => workflow.id === currentWorkflowRouteId)
+      ?.name || "Workflow"
+  );
+}
+
+function WorkflowSelectorContent({
+  pathname,
+  currentWorkflowRouteId,
+  isLoadingWorkflows,
+  hasWorkflowLoadError,
+  workflows,
+  onRetryLoad,
+  onSelectNewWorkflow,
+  onSelectWorkflow,
+}: WorkflowSelectorContentProps) {
+  return (
+    <>
+      <DropdownMenuItem
+        className="flex items-center justify-between"
+        onSelect={onSelectNewWorkflow}
+      >
+        <span>New Workflow</span>
+        {pathname === "/app/workflows/new" ? (
+          <Check className="size-4 shrink-0" />
+        ) : null}
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+
+      {isLoadingWorkflows ? (
+        <DropdownMenuItem disabled>Loading workflows...</DropdownMenuItem>
+      ) : null}
+
+      {!isLoadingWorkflows && hasWorkflowLoadError ? (
+        <DropdownMenuItem
+          onSelect={(event) => {
+            event.preventDefault();
+            onRetryLoad();
+          }}
+        >
+          Retry loading workflows
+        </DropdownMenuItem>
+      ) : null}
+
+      {!(isLoadingWorkflows || hasWorkflowLoadError) &&
+      workflows.length === 0 ? (
+        <DropdownMenuItem disabled>No workflows found</DropdownMenuItem>
+      ) : null}
+
+      {isLoadingWorkflows || hasWorkflowLoadError
+        ? null
+        : workflows.map((workflow) => (
+            <DropdownMenuItem
+              className="flex items-center justify-between"
+              key={workflow.id}
+              onSelect={() => onSelectWorkflow(workflow.id)}
+            >
+              <span className="truncate">{workflow.name}</span>
+              {workflow.id === currentWorkflowRouteId ? (
+                <Check className="size-4 shrink-0" />
+              ) : null}
+            </DropdownMenuItem>
+          ))}
+    </>
+  );
+}
+
+function WorkflowSelector({ pathname }: { pathname: string }) {
+  const router = useRouter();
+  const [workflows, setWorkflows] = useState<WorkflowOption[]>([]);
+  const [isLoadingWorkflows, setIsLoadingWorkflows] = useState(false);
+  const [hasWorkflowLoadError, setHasWorkflowLoadError] = useState(false);
+
+  const currentWorkflowRouteId = useMemo(
+    () => getWorkflowRouteId(pathname),
+    [pathname]
+  );
+
+  const loadWorkflows = useCallback(async () => {
+    setIsLoadingWorkflows(true);
+    setHasWorkflowLoadError(false);
+
+    try {
+      const allWorkflows = await api.workflow.getAll();
+      const workflowOptions = allWorkflows
+        .filter((workflow) => workflow.name !== "__current__")
+        .map((workflow) => ({ id: workflow.id, name: workflow.name }));
+      setWorkflows(workflowOptions);
+    } catch (error) {
+      console.error("Failed to load workflows for header selector:", error);
+      setHasWorkflowLoadError(true);
+    } finally {
+      setIsLoadingWorkflows(false);
+    }
+  }, []);
+
+  const refreshWorkflows = useCallback(() => {
+    loadWorkflows().catch(() => undefined);
+  }, [loadWorkflows]);
+
+  useEffect(() => {
+    refreshWorkflows();
+  }, [refreshWorkflows]);
+
+  const selectorLabel = useMemo(
+    () => getWorkflowSelectorLabel(pathname, workflows, currentWorkflowRouteId),
+    [pathname, workflows, currentWorkflowRouteId]
+  );
+
+  return (
+    <DropdownMenu
+      onOpenChange={(open) => {
+        if (open) {
+          refreshWorkflows();
+        }
+      }}
+    >
+      <DropdownMenuTrigger asChild>
+        <button
+          className="ml-1 flex max-w-[220px] items-center gap-2 rounded-full border px-3 py-1.5 font-medium text-sm transition-colors hover:bg-muted/60"
+          type="button"
+        >
+          <span className="truncate">{selectorLabel}</span>
+          {isLoadingWorkflows ? (
+            <Loader2 className="size-3 shrink-0 animate-spin opacity-60" />
+          ) : null}
+          <ChevronDown className="size-3 shrink-0 opacity-60" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-64">
+        <WorkflowSelectorContent
+          currentWorkflowRouteId={currentWorkflowRouteId}
+          hasWorkflowLoadError={hasWorkflowLoadError}
+          isLoadingWorkflows={isLoadingWorkflows}
+          onRetryLoad={refreshWorkflows}
+          onSelectNewWorkflow={() => router.push("/app/workflows/new")}
+          onSelectWorkflow={(workflowId) =>
+            router.push(`/app/workflows/${workflowId}`)
+          }
+          pathname={pathname}
+          workflows={workflows}
+        />
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+export function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
-
-  const activeItem =
-    items.find((item) => isItemActive(pathname, item.href)) ?? items[0];
   const isWorkflowSection = pathname.startsWith("/app/workflows");
   const isWorkflowEditor =
     pathname === "/app/workflows/new" || WORKFLOW_EDITOR_PATH.test(pathname);
@@ -55,34 +229,7 @@ export function AppHeader({ items }: AppHeaderProps) {
             </span>
           </Link>
 
-          {activeItem ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  className="ml-1 flex max-w-[220px] items-center gap-2 rounded-full border px-3 py-1.5 font-medium text-sm transition-colors hover:bg-muted/60"
-                  type="button"
-                >
-                  <span className="truncate">{activeItem.label}</span>
-                  <ChevronDown className="size-3 shrink-0 opacity-60" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-64">
-                {items.map((item) => (
-                  <DropdownMenuItem asChild key={item.id}>
-                    <Link
-                      className="flex items-center justify-between"
-                      href={item.href}
-                    >
-                      <span>{item.label}</span>
-                      {isItemActive(pathname, item.href) ? (
-                        <span className="text-primary text-xs">Current</span>
-                      ) : null}
-                    </Link>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
+          {isWorkflowSection ? <WorkflowSelector pathname={pathname} /> : null}
         </div>
 
         <div className="hidden flex-1 items-center justify-center md:flex">
@@ -108,7 +255,7 @@ export function AppHeader({ items }: AppHeaderProps) {
                 "relative z-10 flex-1 rounded-full font-medium text-xs transition-colors",
                 isWorkflowSection ? "text-foreground" : "text-muted-foreground"
               )}
-              onClick={() => router.push("/app/workflows")}
+              onClick={() => router.push("/app/workflows/new")}
               type="button"
             >
               Builder

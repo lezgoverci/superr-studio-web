@@ -4,7 +4,6 @@ import { useReactFlow } from "@xyflow/react";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
   Check,
-  ChevronDown,
   Copy,
   Download,
   FileJson,
@@ -31,7 +30,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { api } from "@/lib/api-client";
@@ -74,14 +72,12 @@ import {
   flattenConfigFields,
   getIntegrationLabels,
 } from "@/plugins";
-import { Panel } from "../ai-elements/panel";
 import { ConfigurationOverlay } from "../overlays/configuration-overlay";
 import { ConfirmOverlay } from "../overlays/confirm-overlay";
 import { ExportWorkflowOverlay } from "../overlays/export-workflow-overlay";
 import { MakePublicOverlay } from "../overlays/make-public-overlay";
 import { useOverlay } from "../overlays/overlay-provider";
 import { WorkflowIssuesOverlay } from "../overlays/workflow-issues-overlay";
-import { WorkflowIcon } from "../ui/workflow-icon";
 
 type WorkflowToolbarProps = {
   workflowId?: string;
@@ -763,26 +759,6 @@ function useWorkflowState() {
 
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
-  const [allWorkflows, setAllWorkflows] = useState<
-    Array<{
-      id: string;
-      name: string;
-      updatedAt: string;
-    }>
-  >([]);
-
-  // Load all workflows on mount
-  useEffect(() => {
-    const loadAllWorkflows = async () => {
-      try {
-        const workflows = await api.workflow.getAll();
-        setAllWorkflows(workflows);
-      } catch (error) {
-        console.error("Failed to load workflows:", error);
-      }
-    };
-    loadAllWorkflows();
-  }, []);
 
   return {
     nodes,
@@ -813,8 +789,6 @@ function useWorkflowState() {
     setIsDownloading,
     isDuplicating,
     setIsDuplicating,
-    allWorkflows,
-    setAllWorkflows,
     setActiveTab,
     setNodes,
     setEdges,
@@ -844,7 +818,6 @@ function useWorkflowActions(state: ReturnType<typeof useWorkflowState>) {
     setCurrentWorkflowName,
     workflowVisibility,
     setWorkflowVisibility,
-    setAllWorkflows,
     setIsDownloading,
     setIsDuplicating,
     setActiveTab,
@@ -1033,15 +1006,6 @@ function useWorkflowActions(state: ReturnType<typeof useWorkflowState>) {
     }
   };
 
-  const loadWorkflows = async () => {
-    try {
-      const workflows = await api.workflow.getAll();
-      setAllWorkflows(workflows);
-    } catch (error) {
-      console.error("Failed to load workflows:", error);
-    }
-  };
-
   const handleToggleVisibility = async (newVisibility: WorkflowVisibility) => {
     if (!currentWorkflowId) {
       return;
@@ -1130,7 +1094,6 @@ function useWorkflowActions(state: ReturnType<typeof useWorkflowState>) {
     handleDownload,
     handleExportJson,
     handleImportJson,
-    loadWorkflows,
     handleToggleVisibility,
     handleDuplicate,
     handleGenerateUi,
@@ -1687,116 +1650,30 @@ function DuplicateButton({
   );
 }
 
-// Workflow Menu Component
-function WorkflowMenuComponent({
-  workflowId,
-  state,
-  actions,
-}: {
-  workflowId?: string;
-  state: ReturnType<typeof useWorkflowState>;
-  actions: ReturnType<typeof useWorkflowActions>;
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <div className="flex h-9 max-w-[160px] items-center overflow-hidden rounded-md border bg-secondary text-secondary-foreground sm:max-w-none">
-        <DropdownMenu onOpenChange={(open) => open && actions.loadWorkflows()}>
-          <DropdownMenuTrigger className="flex h-full cursor-pointer items-center gap-2 px-3 font-medium text-sm transition-all hover:bg-black/5 dark:hover:bg-white/5">
-            <WorkflowIcon className="size-4 shrink-0" />
-            <p className="truncate font-medium text-sm">
-              {workflowId ? (
-                state.workflowName
-              ) : (
-                <>
-                  <span className="sm:hidden">New</span>
-                  <span className="hidden sm:inline">New Workflow</span>
-                </>
-              )}
-            </p>
-            <ChevronDown className="size-3 shrink-0 opacity-50" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-64">
-            <DropdownMenuItem
-              asChild
-              className="flex items-center justify-between"
-            >
-              <a href="/app/workflows/new">
-                New Workflow{" "}
-                {!workflowId && <Check className="size-4 shrink-0" />}
-              </a>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            {state.allWorkflows.length === 0 ? (
-              <DropdownMenuItem disabled>No workflows found</DropdownMenuItem>
-            ) : (
-              state.allWorkflows
-                .filter((w) => w.name !== "__current__")
-                .map((workflow) => (
-                  <DropdownMenuItem
-                    className="flex items-center justify-between"
-                    key={workflow.id}
-                    onClick={() =>
-                      state.router.push(`/app/workflows/${workflow.id}`)
-                    }
-                  >
-                    <span className="truncate">{workflow.name}</span>
-                    {workflow.id === state.currentWorkflowId && (
-                      <Check className="size-4 shrink-0" />
-                    )}
-                  </DropdownMenuItem>
-                ))
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-      {workflowId && !state.isOwner && (
-        <span className="text-muted-foreground text-xs uppercase lg:hidden">
-          Read-only
-        </span>
-      )}
-    </div>
-  );
-}
-
 export const WorkflowToolbar = ({ workflowId }: WorkflowToolbarProps) => {
   const state = useWorkflowState();
   const actions = useWorkflowActions(state);
 
   return (
-    <>
-      <Panel
-        className="flex flex-col gap-2 rounded-none border-none bg-transparent p-0 lg:flex-row lg:items-center"
-        position="top-left"
-      >
-        <div className="flex items-center gap-2">
-          <WorkflowMenuComponent
-            actions={actions}
-            state={state}
-            workflowId={workflowId}
+    <div className="pointer-events-auto absolute top-4 right-4 z-10">
+      <div className="flex flex-col-reverse items-end gap-2 lg:flex-row lg:items-center">
+        {workflowId && !state.isOwner ? (
+          <span className="text-muted-foreground text-xs uppercase">
+            Read-only
+          </span>
+        ) : null}
+        <ToolbarActions
+          actions={actions}
+          state={state}
+          workflowId={workflowId}
+        />
+        {workflowId && !state.isOwner ? (
+          <DuplicateButton
+            isDuplicating={state.isDuplicating}
+            onDuplicate={actions.handleDuplicate}
           />
-          {workflowId && !state.isOwner && (
-            <span className="hidden text-muted-foreground text-xs uppercase lg:inline">
-              Read-only
-            </span>
-          )}
-        </div>
-      </Panel>
-
-      <div className="pointer-events-auto absolute top-4 right-4 z-10">
-        <div className="flex flex-col-reverse items-end gap-2 lg:flex-row lg:items-center">
-          <ToolbarActions
-            actions={actions}
-            state={state}
-            workflowId={workflowId}
-          />
-          {workflowId && !state.isOwner ? (
-            <DuplicateButton
-              isDuplicating={state.isDuplicating}
-              onDuplicate={actions.handleDuplicate}
-            />
-          ) : null}
-        </div>
+        ) : null}
       </div>
-    </>
+    </div>
   );
 };
