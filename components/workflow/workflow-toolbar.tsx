@@ -1655,7 +1655,7 @@ export const WorkflowToolbar = ({ workflowId }: WorkflowToolbarProps) => {
   const actions = useWorkflowActions(state);
 
   return (
-    <div className="pointer-events-auto absolute top-4 right-4 z-10">
+    <div className="pointer-events-auto absolute top-[calc(env(safe-area-inset-top)+4.5rem)] right-4 z-10">
       <div className="flex flex-col-reverse items-end gap-2 lg:flex-row lg:items-center">
         {workflowId && !state.isOwner ? (
           <span className="text-muted-foreground text-xs uppercase">
