@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { isAiGatewayManagedKeysEnabled } from "@/lib/ai-gateway/config";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -87,10 +87,13 @@ export async function GET(request: Request) {
   }
 
   const account = await db.query.accounts.findFirst({
-    where: eq(accounts.userId, session.user.id),
+    where: and(
+      eq(accounts.userId, session.user.id),
+      eq(accounts.providerId, "vercel")
+    ),
   });
 
-  if (!account?.accessToken || account.providerId !== "vercel") {
+  if (!account?.accessToken) {
     return Response.json(
       { error: "No Vercel account linked" },
       { status: 400 }

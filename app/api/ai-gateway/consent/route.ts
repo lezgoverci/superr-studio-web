@@ -147,10 +147,13 @@ export async function POST(request: Request) {
   }
 
   const account = await db.query.accounts.findFirst({
-    where: eq(accounts.userId, session.user.id),
+    where: and(
+      eq(accounts.userId, session.user.id),
+      eq(accounts.providerId, "vercel")
+    ),
   });
 
-  if (!account?.accessToken || account.providerId !== "vercel") {
+  if (!account?.accessToken) {
     return Response.json(
       { error: "No Vercel account linked" },
       { status: 400 }
@@ -262,7 +265,10 @@ export async function DELETE(request: Request) {
 
   if (config?.managedKeyId && config?.teamId) {
     const account = await db.query.accounts.findFirst({
-      where: eq(accounts.userId, session.user.id),
+      where: and(
+        eq(accounts.userId, session.user.id),
+        eq(accounts.providerId, "vercel")
+      ),
     });
 
     if (account?.accessToken) {

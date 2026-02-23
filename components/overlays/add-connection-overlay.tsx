@@ -74,7 +74,9 @@ export function AddConnectionOverlay({
   const setTeamsLoading = useSetAtom(aiGatewayTeamsLoadingAtom);
 
   const shouldUseManagedKeys =
-    aiGatewayStatus?.enabled && aiGatewayStatus?.isVercelUser;
+    aiGatewayStatus?.enabled && aiGatewayStatus?.hasVercelConnection;
+  const shouldConnectVercel =
+    aiGatewayStatus?.enabled && !aiGatewayStatus?.hasVercelConnection;
 
   const integrationTypes = getIntegrationTypes();
 
@@ -97,7 +99,52 @@ export function AddConnectionOverlay({
     });
   }, [push, closeAll, onSuccess]);
 
+  const openManualAiGatewaySetup = useCallback(() => {
+    push(ConfigureConnectionOverlay, {
+      type: "ai-gateway" as IntegrationType,
+      onSuccess,
+    });
+  }, [push, onSuccess]);
+
+  const connectVercelAccount = useCallback(async () => {
+    try {
+      const result = await api.aiGateway.connectVercel(
+        window.location.pathname
+      );
+      window.location.href = result.url;
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to start Vercel connection flow"
+      );
+    }
+  }, []);
+
+  const promptVercelConnection = useCallback(() => {
+    push(ConfirmOverlay, {
+      title: "Connect Vercel Account",
+      message:
+        "Managed AI Gateway keys require a linked Vercel account. Connect now, or enter an API key manually.",
+      confirmLabel: "Connect Vercel",
+      cancelLabel: "Enter manually",
+      onConfirm: async () => {
+        await connectVercelAccount();
+      },
+      onCancel: () => {
+        setTimeout(() => {
+          openManualAiGatewaySetup();
+        }, 0);
+      },
+    });
+  }, [push, connectVercelAccount, openManualAiGatewaySetup]);
+
   const handleSelectType = (type: IntegrationType) => {
+    if (type === "ai-gateway" && shouldConnectVercel) {
+      promptVercelConnection();
+      return;
+    }
+
     // If selecting AI Gateway and managed keys are available, show consent modal
     if (type === "ai-gateway" && shouldUseManagedKeys) {
       showConsentModalWithCallbacks();
@@ -108,7 +155,7 @@ export function AddConnectionOverlay({
     if (type === "ai-gateway" && aiGatewayStatus === null) {
       api.aiGateway.getStatus().then((status) => {
         setAiGatewayStatus(status);
-        if (status?.enabled && status?.isVercelUser) {
+        if (status?.enabled && status?.hasVercelConnection) {
           setTeamsLoading(true);
           api.aiGateway
             .getTeams()
@@ -119,6 +166,8 @@ export function AddConnectionOverlay({
               setTeamsLoading(false);
               showConsentModalWithCallbacks();
             });
+        } else if (status?.enabled) {
+          promptVercelConnection();
         } else {
           push(ConfigureConnectionOverlay, { type, onSuccess });
         }

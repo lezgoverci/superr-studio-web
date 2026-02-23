@@ -65,7 +65,7 @@ export function WorkflowIssuesOverlay({
 
   // Check if AI Gateway managed keys should be offered
   const shouldUseManagedKeys =
-    aiGatewayStatus?.enabled && aiGatewayStatus?.isVercelUser;
+    aiGatewayStatus?.enabled && aiGatewayStatus?.hasVercelConnection;
 
   const { brokenReferences, missingRequiredFields, missingIntegrations } =
     issues;

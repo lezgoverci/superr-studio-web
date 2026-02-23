@@ -341,7 +341,7 @@ export type IntegrationWithConfig = Integration & {
 export type AiGatewayStatusResponse = {
   enabled: boolean;
   signedIn: boolean;
-  isVercelUser: boolean;
+  hasVercelConnection: boolean;
   hasManagedKey: boolean;
   managedIntegrationId?: string;
 };
@@ -363,6 +363,11 @@ export type VercelTeam = {
 
 export type AiGatewayTeamsResponse = {
   teams: VercelTeam[];
+};
+
+export type AiGatewayConnectResponse = {
+  url: string;
+  redirect: boolean;
 };
 
 // Integration API
@@ -876,6 +881,13 @@ export const agentWorkflowApi = {
 export const aiGatewayApi = {
   // Get status (whether feature is enabled, user has managed key, etc.)
   getStatus: () => apiCall<AiGatewayStatusResponse>("/api/ai-gateway/status"),
+
+  // Start OAuth account linking flow for Vercel (required for managed keys).
+  connectVercel: (callbackURL?: string) =>
+    apiCall<AiGatewayConnectResponse>("/api/ai-gateway/connect", {
+      method: "POST",
+      body: JSON.stringify({ callbackURL }),
+    }),
 
   // Get available Vercel teams
   getTeams: () => apiCall<AiGatewayTeamsResponse>("/api/ai-gateway/teams"),

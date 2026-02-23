@@ -72,6 +72,9 @@ DATABASE_URL=postgres://localhost:5432/workflow
 
 # Authentication
 BETTER_AUTH_SECRET=your-auth-secret-here  # Generate with: openssl rand -base64 32
+WHOP_CLIENT_ID=your-whop-client-id
+WHOP_CLIENT_SECRET=your-whop-client-secret
+WHOP_RESOURCE_ID=your-whop-resource-id  # Product/experience access gate
 
 # Credentials Encryption
 INTEGRATION_ENCRYPTION_KEY=your-64-character-hex-string  # Generate with: openssl rand -hex 32
@@ -80,18 +83,12 @@ INTEGRATION_ENCRYPTION_KEY=your-64-character-hex-string  # Generate with: openss
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-Optional OAuth providers (configure at least one for authentication):
+Optional OAuth providers:
 
 ```bash
-# GitHub
-GITHUB_CLIENT_ID=
-GITHUB_CLIENT_SECRET=
-NEXT_PUBLIC_GITHUB_CLIENT_ID=
-
-# Google
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-NEXT_PUBLIC_GOOGLE_CLIENT_ID=
+# Vercel (required only for AI Gateway managed keys)
+VERCEL_CLIENT_ID=
+VERCEL_CLIENT_SECRET=
 ```
 
 See `.env.example` for the complete list of available environment variables.

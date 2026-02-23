@@ -1,12 +1,25 @@
-import { anonymousClient } from "better-auth/client/plugins";
+import { genericOAuthClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
+
+export const WHOP_PROVIDER_ID = "whop";
 
 export const authClient = createAuthClient({
   baseURL:
     typeof window !== "undefined"
       ? window.location.origin
       : "http://localhost:3000",
-  plugins: [anonymousClient()],
+  plugins: [genericOAuthClient()],
 });
 
-export const { signIn, signOut, signUp, useSession } = authClient;
+export const { signIn, signOut, useSession } = authClient;
+
+export function signInWithWhop(callbackURL?: string) {
+  const nextPath =
+    callbackURL ||
+    (typeof window !== "undefined" ? window.location.pathname : "/app");
+
+  return signIn.oauth2({
+    providerId: WHOP_PROVIDER_ID,
+    callbackURL: nextPath,
+  });
+}

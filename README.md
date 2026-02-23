@@ -13,7 +13,7 @@ You can deploy your own version of the workflow builder to Vercel with one click
 **What happens during deployment:**
 
 - **Automatic Database Setup**: A Neon Postgres database is automatically created and connected to your project
-- **Environment Configuration**: You'll be prompted to provide required environment variables (Better Auth credentials and AI Gateway API key)
+- **Environment Configuration**: You'll be prompted to provide required environment variables (Whop OAuth credentials, Better Auth secret, and AI Gateway API key)
 - **Ready to Use**: After deployment, you can start building workflows immediately
 
 ## What's Included
@@ -23,7 +23,7 @@ You can deploy your own version of the workflow builder to Vercel with one click
 - **Real Integrations** - Connect to Resend (emails), Linear (tickets), Slack, PostgreSQL, and external APIs
 - **Code Generation** - Convert workflows to executable TypeScript with `"use workflow"` directive
 - **Execution Tracking** - Monitor workflow runs with detailed logs
-- **Authentication** - Secure user authentication with Better Auth
+- **Authentication** - Secure user authentication with Whop OAuth (session management via Better Auth)
 - **AI-Powered** - Generate workflows from natural language descriptions using OpenAI
 - **Database** - PostgreSQL with Drizzle ORM for type-safe database access
 - **Modern UI** - Beautiful shadcn/ui components with dark mode support
@@ -47,6 +47,15 @@ DATABASE_URL=postgresql://user:password@localhost:5432/workflow_builder
 # Better Auth
 BETTER_AUTH_SECRET=your-secret-key
 BETTER_AUTH_URL=http://localhost:3000
+
+# Whop OAuth (required)
+WHOP_CLIENT_ID=
+WHOP_CLIENT_SECRET=
+WHOP_RESOURCE_ID=  # Product/experience resource ID required for access
+
+# Optional: Vercel OAuth (for AI Gateway managed keys)
+VERCEL_CLIENT_ID=
+VERCEL_CLIENT_SECRET=
 
 # AI Gateway (for AI workflow generation)
 AI_GATEWAY_API_KEY=your-openai-api-key
@@ -287,7 +296,7 @@ const searchResult = await firecrawlSearchStep({
 - **UI**: shadcn/ui with Tailwind CSS
 - **State Management**: Jotai
 - **Database**: PostgreSQL with Drizzle ORM
-- **Authentication**: Better Auth
+- **Authentication**: Whop OAuth + Better Auth sessions
 - **Code Editor**: Monaco Editor
 - **Workflow Canvas**: React Flow
 - **AI**: OpenAI GPT-5

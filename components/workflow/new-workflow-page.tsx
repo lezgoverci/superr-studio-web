@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api-client";
-import { authClient, useSession } from "@/lib/auth-client";
+import { signInWithWhop, useSession } from "@/lib/auth-client";
 import {
   currentWorkflowNameAtom,
   edgesAtom,
@@ -57,11 +57,11 @@ export function NewWorkflowPage() {
     document.title = `${currentWorkflowName} - AI Workflow Builder`;
   }, [currentWorkflowName]);
 
-  // Helper to create anonymous session if needed
+  // Require Whop authentication before creating workflows.
   const ensureSession = useCallback(async () => {
     if (!session) {
-      await authClient.signIn.anonymous();
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await signInWithWhop(window.location.pathname);
+      throw new Error("Authentication required");
     }
   }, [session]);
 
@@ -123,6 +123,12 @@ export function NewWorkflowPage() {
         console.log("[Homepage] Navigating to workflow page");
         router.replace(`/app/workflows/${newWorkflow.id}`);
       } catch (error) {
+        if (
+          error instanceof Error &&
+          error.message === "Authentication required"
+        ) {
+          return;
+        }
         console.error("Failed to create workflow:", error);
         toast.error("Failed to create workflow");
       }

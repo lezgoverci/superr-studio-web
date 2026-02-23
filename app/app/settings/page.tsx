@@ -23,10 +23,7 @@ export default function SettingsPage() {
               concrete permission policies in this page and the shell context in
               the next pass.
             </p>
-            <p>
-              Current account preferences remain available from the user menu in
-              the header.
-            </p>
+            <p>Account identity is currently managed through Whop OAuth.</p>
           </CardContent>
         </Card>
       </div>

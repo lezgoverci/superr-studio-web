@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     return Response.json({
       enabled: false,
       signedIn: false,
-      isVercelUser: false,
+      hasVercelConnection: false,
       hasManagedKey: false,
     });
   }
@@ -29,17 +29,18 @@ export async function GET(request: Request) {
     return Response.json({
       enabled: true,
       signedIn: false,
-      isVercelUser: false,
+      hasVercelConnection: false,
       hasManagedKey: false,
     });
   }
 
-  // Check if user signed in with Vercel
-  const account = await db.query.accounts.findFirst({
-    where: eq(accounts.userId, session.user.id),
+  // Check if user has linked a Vercel account.
+  const vercelAccount = await db.query.accounts.findFirst({
+    where: and(
+      eq(accounts.userId, session.user.id),
+      eq(accounts.providerId, "vercel")
+    ),
   });
-
-  const isVercelUser = account?.providerId === "vercel";
 
   // Check if user has a managed AI Gateway integration
   const managedIntegration = await db.query.integrations.findFirst({
@@ -53,7 +54,7 @@ export async function GET(request: Request) {
   return Response.json({
     enabled: true,
     signedIn: true,
-    isVercelUser,
+    hasVercelConnection: !!vercelAccount?.accessToken,
     hasManagedKey: !!managedIntegration,
     managedIntegrationId: managedIntegration?.id,
   });

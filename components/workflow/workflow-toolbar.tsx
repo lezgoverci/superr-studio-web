@@ -35,7 +35,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { api } from "@/lib/api-client";
-import { authClient, useSession } from "@/lib/auth-client";
+import { signInWithWhop, useSession } from "@/lib/auth-client";
 import { integrationsAtom } from "@/lib/integrations-store";
 import type { IntegrationType } from "@/lib/types/integration";
 import {
@@ -1086,11 +1086,10 @@ function useWorkflowActions(state: ReturnType<typeof useWorkflowState>) {
 
     setIsDuplicating(true);
     try {
-      // Auto-sign in as anonymous if user has no session
+      // Require authentication before duplication.
       if (!session?.user) {
-        await authClient.signIn.anonymous();
-        // Wait for session to be established
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await signInWithWhop(window.location.pathname);
+        return;
       }
 
       const newWorkflow = await api.workflow.duplicate(currentWorkflowId);

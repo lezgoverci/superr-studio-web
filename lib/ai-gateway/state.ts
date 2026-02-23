@@ -11,8 +11,8 @@ export type AiGatewayStatus = {
   enabled: boolean;
   /** Whether the user is signed in */
   signedIn: boolean;
-  /** Whether the user signed in with Vercel OAuth */
-  isVercelUser: boolean;
+  /** Whether the user has a linked Vercel OAuth account */
+  hasVercelConnection: boolean;
   /** Whether the user has a managed AI Gateway integration */
   hasManagedKey: boolean;
   /** The ID of the managed integration (if exists) */

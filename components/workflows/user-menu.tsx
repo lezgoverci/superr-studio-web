@@ -1,8 +1,7 @@
 "use client";
 
-import { Key, LogOut, Moon, Plug, Settings, Sun } from "lucide-react";
+import { Key, LogOut, Moon, Plug, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
 import {
   AuthDialog,
   isSingleProviderSignInInitiated,
@@ -10,7 +9,6 @@ import {
 import { ApiKeysOverlay } from "@/components/overlays/api-keys-overlay";
 import { IntegrationsOverlay } from "@/components/overlays/integrations-overlay";
 import { useOverlay } from "@/components/overlays/overlay-provider";
-import { SettingsOverlay } from "@/components/overlays/settings-overlay";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,40 +24,22 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { api } from "@/lib/api-client";
 import { signOut, useSession } from "@/lib/auth-client";
 
 export const UserMenu = () => {
   const { data: session, isPending } = useSession();
   const { theme, setTheme } = useTheme();
   const { open: openOverlay } = useOverlay();
-  const [providerId, setProviderId] = useState<string | null>(null);
-
-  // Fetch provider info when session is available
-  useEffect(() => {
-    if (session?.user && !session.user.name?.startsWith("Anonymous")) {
-      api.user
-        .get()
-        .then((user) => setProviderId(user.providerId))
-        .catch(() => setProviderId(null));
-    }
-  }, [session?.user]);
 
   const handleLogout = async () => {
     await signOut();
   };
 
-  // OAuth users can't edit their profile
-  const isOAuthUser =
-    providerId === "vercel" ||
-    providerId === "github" ||
-    providerId === "google";
-
   const getUserInitials = () => {
     if (session?.user?.name) {
       return session.user.name
         .split(" ")
-        .map((n) => n[0])
+        .map((name) => name[0])
         .join("")
         .toUpperCase()
         .slice(0, 2);
@@ -72,23 +52,11 @@ export const UserMenu = () => {
 
   const signInInProgress = isSingleProviderSignInInitiated();
 
-  // Don't render anything while session is loading to prevent flash
-  // BUT if sign-in is in progress, keep showing the AuthDialog with loading state
   if (isPending && !signInInProgress) {
-    return (
-      <div className="h-9 w-9" /> // Placeholder to maintain layout
-    );
+    return <div className="h-9 w-9" />;
   }
 
-  // Check if user is anonymous
-  // Better Auth anonymous plugin creates users with name "Anonymous" and temp- email
-  const isAnonymous =
-    !session?.user ||
-    session.user.name === "Anonymous" ||
-    session.user.email?.startsWith("temp-");
-
-  // Show Sign In button if user is anonymous or not logged in
-  if (isAnonymous) {
+  if (!session?.user) {
     return (
       <div className="flex items-center gap-2">
         <AuthDialog>
@@ -132,12 +100,6 @@ export const UserMenu = () => {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {!isOAuthUser && (
-          <DropdownMenuItem onClick={() => openOverlay(SettingsOverlay)}>
-            <Settings className="size-4" />
-            <span>Settings</span>
-          </DropdownMenuItem>
-        )}
         <DropdownMenuItem onClick={() => openOverlay(IntegrationsOverlay)}>
           <Plug className="size-4" />
           <span>Connections</span>

@@ -10,8 +10,10 @@ import {
   Settings,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { ConfigureConnectionOverlay } from "@/components/overlays/add-connection-overlay";
 import { AiGatewayConsentOverlay } from "@/components/overlays/ai-gateway-consent-overlay";
+import { ConfirmOverlay } from "@/components/overlays/confirm-overlay";
 import { EditConnectionOverlay } from "@/components/overlays/edit-connection-overlay";
 import { useOverlay } from "@/components/overlays/overlay-provider";
 import { Button } from "@/components/ui/button";
@@ -59,7 +61,7 @@ export function IntegrationSelector({
   const [aiGatewayStatusFetched, setAiGatewayStatusFetched] = useState(false);
 
   // AI Gateway teams state (pre-loaded for consent modal)
-  const [teams, setTeams] = useAtom(aiGatewayTeamsAtom);
+  const setTeams = useSetAtom(aiGatewayTeamsAtom);
   const [teamsFetched, setTeamsFetched] = useAtom(aiGatewayTeamsFetchedAtom);
   const setTeamsLoading = useSetAtom(aiGatewayTeamsLoadingAtom);
 
@@ -103,7 +105,7 @@ export function IntegrationSelector({
     if (
       integrationType === "ai-gateway" &&
       aiGatewayStatus?.enabled &&
-      aiGatewayStatus?.isVercelUser &&
+      aiGatewayStatus?.hasVercelConnection &&
       !teamsFetched
     ) {
       setTeamsLoading(true);
@@ -137,7 +139,7 @@ export function IntegrationSelector({
     if (
       integrationType === "ai-gateway" &&
       aiGatewayStatus?.enabled &&
-      aiGatewayStatus?.isVercelUser
+      aiGatewayStatus?.hasVercelConnection
     ) {
       // Always try to refresh teams - handles token refresh after re-auth
       api.aiGateway
@@ -154,7 +156,11 @@ export function IntegrationSelector({
     }
     // Only run on mount and when status changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [integrationType, aiGatewayStatus?.enabled, aiGatewayStatus?.isVercelUser]);
+  }, [
+    integrationType,
+    aiGatewayStatus?.enabled,
+    aiGatewayStatus?.hasVercelConnection,
+  ]);
 
   useEffect(() => {
     loadIntegrations();
@@ -221,8 +227,12 @@ export function IntegrationSelector({
   const shouldUseManagedKeys =
     integrationType === "ai-gateway" &&
     aiGatewayStatus?.enabled &&
-    aiGatewayStatus?.isVercelUser &&
+    aiGatewayStatus?.hasVercelConnection &&
     !aiGatewayStatus?.hasManagedKey;
+  const shouldConnectVercel =
+    integrationType === "ai-gateway" &&
+    aiGatewayStatus?.enabled &&
+    !aiGatewayStatus?.hasVercelConnection;
 
   const handleConsentSuccess = useCallback(async (integrationId: string) => {
     await loadIntegrations();
@@ -233,9 +243,38 @@ export function IntegrationSelector({
     setAiGatewayStatus(status);
   }, [loadIntegrations, onChange, setIntegrationsVersion, setAiGatewayStatus]);
 
+  const connectVercelAccount = useCallback(async () => {
+    try {
+      const result = await api.aiGateway.connectVercel(window.location.pathname);
+      window.location.href = result.url;
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to start Vercel connection flow"
+      );
+    }
+  }, []);
+
   const handleAddConnection = useCallback(() => {
     if (onAddConnection) {
       onAddConnection();
+    } else if (shouldConnectVercel) {
+      push(ConfirmOverlay, {
+        title: "Connect Vercel Account",
+        message:
+          "Managed AI Gateway keys require a linked Vercel account. Connect now, or enter an API key manually.",
+        confirmLabel: "Connect Vercel",
+        cancelLabel: "Enter manually",
+        onConfirm: async () => {
+          await connectVercelAccount();
+        },
+        onCancel: () => {
+          setTimeout(() => {
+            openNewConnectionOverlay();
+          }, 0);
+        },
+      });
     } else if (shouldUseManagedKeys) {
       // For AI Gateway with managed keys enabled, show consent overlay
       push(AiGatewayConsentOverlay, {
@@ -245,7 +284,15 @@ export function IntegrationSelector({
     } else {
       openNewConnectionOverlay();
     }
-  }, [onAddConnection, shouldUseManagedKeys, push, handleConsentSuccess, openNewConnectionOverlay]);
+  }, [
+    onAddConnection,
+    shouldConnectVercel,
+    shouldUseManagedKeys,
+    push,
+    connectVercelAccount,
+    openNewConnectionOverlay,
+    handleConsentSuccess,
+  ]);
 
   // Only show loading skeleton if we have no cached data and haven't fetched yet
   if (!hasCachedData && !hasFetched) {

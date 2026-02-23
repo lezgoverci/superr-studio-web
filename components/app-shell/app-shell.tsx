@@ -9,8 +9,8 @@ import {
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useRef } from "react";
-import { authClient, useSession } from "@/lib/auth-client";
+import { useCallback, useMemo } from "react";
+import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { AppHeader } from "./app-header";
 import { AppNav } from "./app-nav";
@@ -70,16 +70,6 @@ const NAV_ITEMS: ShellNavItem[] = [
 
 const WORKFLOW_EDITOR_PATH = /^\/app\/workflows\/[^/]+$/;
 
-function isAnonymousUser(
-  user: { name?: string | null; email?: string | null } | undefined
-): boolean {
-  if (!user) {
-    return true;
-  }
-
-  return user.name === "Anonymous" || user.email?.startsWith("temp-") === true;
-}
-
 function isWorkflowCanvasRoute(pathname: string): boolean {
   return (
     pathname === "/app/workflows/new" || WORKFLOW_EDITOR_PATH.test(pathname)
@@ -93,26 +83,6 @@ type AppShellProps = {
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const { data: session, isPending } = useSession();
-  const isSigningInAnonymousRef = useRef(false);
-
-  useEffect(() => {
-    if (isPending || session?.user || isSigningInAnonymousRef.current) {
-      return;
-    }
-
-    const signInAnonymous = async () => {
-      isSigningInAnonymousRef.current = true;
-      try {
-        await authClient.signIn.anonymous();
-      } catch (error) {
-        console.error("Failed to create anonymous session:", error);
-      } finally {
-        isSigningInAnonymousRef.current = false;
-      }
-    };
-
-    signInAnonymous();
-  }, [isPending, session?.user]);
 
   const permissions = useMemo(
     () => new Set<string>([...DEFAULT_PERMISSIONS]),
@@ -139,7 +109,7 @@ export function AppShell({ children }: AppShellProps) {
         id: session.user.id,
         name: session.user.name ?? null,
         email: session.user.email ?? null,
-        isAnonymous: isAnonymousUser(session.user),
+        isAnonymous: false,
       }
     : null;
 

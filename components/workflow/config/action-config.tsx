@@ -531,7 +531,7 @@ export function ActionConfig({
   const shouldUseManagedKeys =
     integrationType === "ai-gateway" &&
     aiGatewayStatus?.enabled &&
-    aiGatewayStatus?.isVercelUser;
+    aiGatewayStatus?.hasVercelConnection;
 
   // Check if there are existing connections for this integration type
   const hasExistingConnections = useMemo(() => {
