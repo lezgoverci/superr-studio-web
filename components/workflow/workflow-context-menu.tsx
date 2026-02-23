@@ -160,9 +160,12 @@ export function WorkflowContextMenu({
 
   return (
     <div
-      className="fade-in-0 zoom-in-95 fixed z-50 min-w-[8rem] animate-in overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+      className="fade-in-0 zoom-in-95 fixed z-50 min-w-[8rem] animate-in overflow-hidden rounded-xl border p-1.5 text-popover-foreground backdrop-blur-md"
       ref={menuRef}
       style={{
+        background: "var(--workflow-menu-bg, var(--popover))",
+        borderColor: "var(--workflow-menu-border, var(--border))",
+        boxShadow: "var(--workflow-menu-shadow, 0 12px 20px rgb(0 0 0 / 0.12))",
         left: menuState.position.x,
         top: menuState.position.y,
       }}
@@ -215,8 +218,8 @@ function MenuItem({
   return (
     <button
       className={cn(
-        "relative flex w-full cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none",
-        "hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+        "relative flex w-full cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm outline-none transition-colors",
+        "text-[color:var(--workflow-node-muted,var(--muted-foreground))] hover:bg-[var(--workflow-control-hover-bg)] hover:text-[color:var(--workflow-node-text,var(--foreground))] focus:bg-[var(--workflow-control-hover-bg)] focus:text-[color:var(--workflow-node-text,var(--foreground))]",
         variant === "destructive" &&
           "text-destructive hover:bg-destructive/10 hover:text-destructive focus:bg-destructive/10 focus:text-destructive",
         disabled && "pointer-events-none opacity-50"

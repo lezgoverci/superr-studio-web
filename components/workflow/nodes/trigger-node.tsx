@@ -36,8 +36,9 @@ export const TriggerNode = memo(({ data, selected }: TriggerNodeProps) => {
   return (
     <Node
       className={cn(
-        "flex h-48 w-48 flex-col items-center justify-center shadow-none transition-all duration-150 ease-out",
-        selected && "border-primary"
+        "flex h-48 w-48 flex-col items-center justify-center transition-all duration-150 ease-out",
+        selected &&
+          "border-[color:var(--workflow-node-selected-border)] ring-4 ring-[color:var(--workflow-node-ring)]"
       )}
       handles={{ target: false, source: true }}
       status={status}

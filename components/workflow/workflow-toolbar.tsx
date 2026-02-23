@@ -5,8 +5,8 @@ import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
   Check,
   Copy,
-  Download,
-  FileJson,
+  FileDown,
+  FileUp,
   Globe,
   Loader2,
   Lock,
@@ -18,14 +18,13 @@ import {
   Sparkles,
   Trash2,
   Undo2,
-  Upload,
 } from "lucide-react";
 import { nanoid } from "nanoid";
 import { useRouter } from "next/navigation";
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { ButtonGroup } from "@/components/ui/button-group";
+import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -138,6 +137,19 @@ const ZIP_BINARY_EXTENSIONS = new Set([
   ".ttf",
   ".eot",
 ]);
+
+const TOOLBAR_GROUP_CLASSNAME =
+  "rounded-xl border border-[color:var(--workflow-panel-border)] bg-[var(--workflow-panel-bg)] p-1 shadow-[var(--workflow-panel-shadow)] backdrop-blur-sm";
+const TOOLBAR_BUTTON_CLASSNAME =
+  "!border-0 !bg-transparent shadow-none transition-colors hover:bg-[var(--workflow-control-hover-bg)] hover:text-[color:var(--workflow-node-text)] disabled:opacity-100 disabled:[&>svg]:text-[color:var(--workflow-node-muted)]";
+const TOOLBAR_BUTTON_CLASSNAME_BASIC =
+  "!border-0 !bg-transparent shadow-none transition-colors hover:bg-[var(--workflow-control-hover-bg)] hover:text-[color:var(--workflow-node-text)]";
+const TOOLBAR_DROPDOWN_CLASSNAME =
+  "rounded-xl border border-[color:var(--workflow-menu-border)] bg-[var(--workflow-menu-bg)] p-1.5 shadow-[var(--workflow-menu-shadow)] backdrop-blur-md";
+const TOOLBAR_SEPARATOR_CLASSNAME = "bg-[color:var(--workflow-panel-border)]";
+const TOOLBAR_BUTTON_STYLE = {
+  color: "var(--workflow-node-muted, var(--muted-foreground))",
+};
 
 function notifyExportWarnings(warnings?: string[]) {
   const filteredWarnings = warnings?.filter(
@@ -1100,6 +1112,19 @@ function useWorkflowActions(state: ReturnType<typeof useWorkflowState>) {
   };
 }
 
+function ToolbarGroupSeparator({
+  orientation = "vertical",
+}: {
+  orientation?: "horizontal" | "vertical";
+}) {
+  return (
+    <ButtonGroupSeparator
+      className={TOOLBAR_SEPARATOR_CLASSNAME}
+      orientation={orientation}
+    />
+  );
+}
+
 // Toolbar Actions Component - handles add step, undo/redo, save, and run buttons
 function ToolbarActions({
   workflowId,
@@ -1219,126 +1244,130 @@ function ToolbarActions({
 
   return (
     <>
-      {/* Add Step - Mobile Vertical */}
-      <ButtonGroup className="flex lg:hidden" orientation="vertical">
+      {/* Mobile: single vertical toolbar group */}
+      <ButtonGroup
+        className={`${TOOLBAR_GROUP_CLASSNAME} flex lg:hidden`}
+        orientation="vertical"
+      >
         <Button
-          className="border hover:bg-black/5 disabled:opacity-100 dark:hover:bg-white/5 disabled:[&>svg]:text-muted-foreground"
+          className={TOOLBAR_BUTTON_CLASSNAME}
           disabled={state.isGenerating}
           onClick={handleAddStep}
           size="icon"
+          style={TOOLBAR_BUTTON_STYLE}
           title="Add Step"
           variant="secondary"
         >
           <Plus className="size-4" />
         </Button>
-      </ButtonGroup>
-
-      {/* Properties - Mobile Vertical (always visible) */}
-      <ButtonGroup className="flex lg:hidden" orientation="vertical">
+        <ToolbarGroupSeparator orientation="horizontal" />
         <Button
-          className="border hover:bg-black/5 dark:hover:bg-white/5"
+          className={TOOLBAR_BUTTON_CLASSNAME_BASIC}
           onClick={() => openOverlay(ConfigurationOverlay, {})}
           size="icon"
+          style={TOOLBAR_BUTTON_STYLE}
           title="Configuration"
           variant="secondary"
         >
           <Settings2 className="size-4" />
         </Button>
-        {/* Delete - Show when node or edge is selected */}
         {hasSelection && (
           <Button
-            className="border hover:bg-black/5 dark:hover:bg-white/5"
+            className={TOOLBAR_BUTTON_CLASSNAME_BASIC}
             onClick={handleDeleteConfirm}
             size="icon"
+            style={TOOLBAR_BUTTON_STYLE}
             title="Delete"
             variant="secondary"
           >
             <Trash2 className="size-4" />
           </Button>
         )}
+        <ToolbarGroupSeparator orientation="horizontal" />
+        <Button
+          className={TOOLBAR_BUTTON_CLASSNAME}
+          disabled={!state.canUndo || state.isGenerating}
+          onClick={() => state.undo()}
+          size="icon"
+          style={TOOLBAR_BUTTON_STYLE}
+          title="Undo"
+          variant="secondary"
+        >
+          <Undo2 className="size-4" />
+        </Button>
+        <Button
+          className={TOOLBAR_BUTTON_CLASSNAME}
+          disabled={!state.canRedo || state.isGenerating}
+          onClick={() => state.redo()}
+          size="icon"
+          style={TOOLBAR_BUTTON_STYLE}
+          title="Redo"
+          variant="secondary"
+        >
+          <Redo2 className="size-4" />
+        </Button>
+        <ToolbarGroupSeparator orientation="horizontal" />
+        <SaveButton handleSave={actions.handleSave} state={state} />
+        <ExportButton actions={actions} state={state} />
+        <JsonImportButton actions={actions} state={state} />
+        <ToolbarGroupSeparator orientation="horizontal" />
+        <VisibilityButton actions={actions} state={state} />
+        <ToolbarGroupSeparator orientation="horizontal" />
+        <GenerateUiButton actions={actions} state={state} />
+        <ToolbarGroupSeparator orientation="horizontal" />
+        <RunButtonGroup actions={actions} state={state} />
       </ButtonGroup>
 
-      {/* Add Step - Desktop Horizontal */}
-      <ButtonGroup className="hidden lg:flex" orientation="horizontal">
+      {/* Desktop: single horizontal toolbar group */}
+      <ButtonGroup
+        className={`${TOOLBAR_GROUP_CLASSNAME} hidden lg:flex`}
+        orientation="horizontal"
+      >
         <Button
-          className="border hover:bg-black/5 disabled:opacity-100 dark:hover:bg-white/5 disabled:[&>svg]:text-muted-foreground"
+          className={TOOLBAR_BUTTON_CLASSNAME}
           disabled={state.isGenerating}
           onClick={handleAddStep}
           size="icon"
+          style={TOOLBAR_BUTTON_STYLE}
           title="Add Step"
           variant="secondary"
         >
           <Plus className="size-4" />
         </Button>
-      </ButtonGroup>
-
-      {/* Undo/Redo - Mobile Vertical */}
-      <ButtonGroup className="flex lg:hidden" orientation="vertical">
+        <ToolbarGroupSeparator />
         <Button
-          className="border hover:bg-black/5 disabled:opacity-100 dark:hover:bg-white/5 disabled:[&>svg]:text-muted-foreground"
+          className={TOOLBAR_BUTTON_CLASSNAME}
           disabled={!state.canUndo || state.isGenerating}
           onClick={() => state.undo()}
           size="icon"
+          style={TOOLBAR_BUTTON_STYLE}
           title="Undo"
           variant="secondary"
         >
           <Undo2 className="size-4" />
         </Button>
         <Button
-          className="border hover:bg-black/5 disabled:opacity-100 dark:hover:bg-white/5 disabled:[&>svg]:text-muted-foreground"
+          className={TOOLBAR_BUTTON_CLASSNAME}
           disabled={!state.canRedo || state.isGenerating}
           onClick={() => state.redo()}
           size="icon"
+          style={TOOLBAR_BUTTON_STYLE}
           title="Redo"
           variant="secondary"
         >
           <Redo2 className="size-4" />
         </Button>
-      </ButtonGroup>
-
-      {/* Undo/Redo - Desktop Horizontal */}
-      <ButtonGroup className="hidden lg:flex" orientation="horizontal">
-        <Button
-          className="border hover:bg-black/5 disabled:opacity-100 dark:hover:bg-white/5 disabled:[&>svg]:text-muted-foreground"
-          disabled={!state.canUndo || state.isGenerating}
-          onClick={() => state.undo()}
-          size="icon"
-          title="Undo"
-          variant="secondary"
-        >
-          <Undo2 className="size-4" />
-        </Button>
-        <Button
-          className="border hover:bg-black/5 disabled:opacity-100 dark:hover:bg-white/5 disabled:[&>svg]:text-muted-foreground"
-          disabled={!state.canRedo || state.isGenerating}
-          onClick={() => state.redo()}
-          size="icon"
-          title="Redo"
-          variant="secondary"
-        >
-          <Redo2 className="size-4" />
-        </Button>
-      </ButtonGroup>
-
-      {/* Save/Download - Mobile Vertical */}
-      <ButtonGroup className="flex lg:hidden" orientation="vertical">
+        <ToolbarGroupSeparator />
         <SaveButton handleSave={actions.handleSave} state={state} />
-        <DownloadButton actions={actions} state={state} />
-        <JsonTransferButton actions={actions} state={state} />
+        <ExportButton actions={actions} state={state} />
+        <JsonImportButton actions={actions} state={state} />
+        <ToolbarGroupSeparator />
+        <VisibilityButton actions={actions} state={state} />
+        <ToolbarGroupSeparator />
+        <GenerateUiButton actions={actions} state={state} />
+        <ToolbarGroupSeparator />
+        <RunButtonGroup actions={actions} state={state} />
       </ButtonGroup>
-
-      {/* Save/Download - Desktop Horizontal */}
-      <ButtonGroup className="hidden lg:flex" orientation="horizontal">
-        <SaveButton handleSave={actions.handleSave} state={state} />
-        <DownloadButton actions={actions} state={state} />
-        <JsonTransferButton actions={actions} state={state} />
-      </ButtonGroup>
-
-      {/* Visibility Toggle */}
-      <VisibilityButton actions={actions} state={state} />
-
-      <GenerateUiButton actions={actions} state={state} />
-      <RunButtonGroup actions={actions} state={state} />
     </>
   );
 }
@@ -1353,12 +1382,13 @@ function SaveButton({
 }) {
   return (
     <Button
-      className="relative border hover:bg-black/5 disabled:opacity-100 dark:hover:bg-white/5 disabled:[&>svg]:text-muted-foreground"
+      className={`relative ${TOOLBAR_BUTTON_CLASSNAME}`}
       disabled={
         !state.currentWorkflowId || state.isGenerating || state.isSaving
       }
       onClick={handleSave}
       size="icon"
+      style={TOOLBAR_BUTTON_STYLE}
       title={state.isSaving ? "Saving..." : "Save workflow"}
       variant="secondary"
     >
@@ -1374,8 +1404,8 @@ function SaveButton({
   );
 }
 
-// Download Button Component
-function DownloadButton({
+// Export Button Component
+function ExportButton({
   state,
   actions,
 }: {
@@ -1386,14 +1416,15 @@ function DownloadButton({
 
   const handleClick = () => {
     openOverlay(ExportWorkflowOverlay, {
-      onExport: actions.handleDownload,
-      isDownloading: state.isDownloading,
+      onExportCode: actions.handleDownload,
+      onExportJson: actions.handleExportJson,
+      isExportingCode: state.isDownloading,
     });
   };
 
   return (
     <Button
-      className="border hover:bg-black/5 disabled:opacity-100 dark:hover:bg-white/5 disabled:[&>svg]:text-muted-foreground"
+      className={TOOLBAR_BUTTON_CLASSNAME}
       disabled={
         state.isDownloading ||
         state.nodes.length === 0 ||
@@ -1402,24 +1433,21 @@ function DownloadButton({
       }
       onClick={handleClick}
       size="icon"
-      title={
-        state.isDownloading
-          ? "Preparing download..."
-          : "Export workflow as code"
-      }
+      style={TOOLBAR_BUTTON_STYLE}
+      title={state.isDownloading ? "Preparing export..." : "Export"}
       variant="secondary"
     >
       {state.isDownloading ? (
         <Loader2 className="size-4 animate-spin" />
       ) : (
-        <Download className="size-4" />
+        <FileDown className="size-4" />
       )}
     </Button>
   );
 }
 
-// JSON Import/Export Button Component
-function JsonTransferButton({
+// JSON Import Button Component
+function JsonImportButton({
   state,
   actions,
 }: {
@@ -1462,44 +1490,21 @@ function JsonTransferButton({
         ref={fileInputRef}
         type="file"
       />
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            className="border hover:bg-black/5 disabled:opacity-100 dark:hover:bg-white/5 disabled:[&>svg]:text-muted-foreground"
-            disabled={isWorkflowUnavailable || isImporting}
-            size="icon"
-            title={
-              isImporting
-                ? "Importing workflow JSON..."
-                : "Import or export workflow JSON"
-            }
-            variant="secondary"
-          >
-            {isImporting ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <FileJson className="size-4" />
-            )}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem
-            className="flex items-center gap-2"
-            disabled={state.nodes.length === 0}
-            onClick={() => actions.handleExportJson()}
-          >
-            <Download className="size-4" />
-            Export as JSON
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            className="flex items-center gap-2"
-            onClick={handleImportClick}
-          >
-            <Upload className="size-4" />
-            Import from JSON
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <Button
+        className={TOOLBAR_BUTTON_CLASSNAME}
+        disabled={isWorkflowUnavailable || isImporting}
+        onClick={handleImportClick}
+        size="icon"
+        style={TOOLBAR_BUTTON_STYLE}
+        title={isImporting ? "Importing JSON..." : "Import JSON"}
+        variant="secondary"
+      >
+        {isImporting ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <FileUp className="size-4" />
+        )}
+      </Button>
     </>
   );
 }
@@ -1518,9 +1523,10 @@ function VisibilityButton({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          className="border hover:bg-black/5 dark:hover:bg-white/5"
+          className={TOOLBAR_BUTTON_CLASSNAME_BASIC}
           disabled={!state.currentWorkflowId || state.isGenerating}
           size="icon"
+          style={TOOLBAR_BUTTON_STYLE}
           title={isPublic ? "Public workflow" : "Private workflow"}
           variant="secondary"
         >
@@ -1531,7 +1537,7 @@ function VisibilityButton({
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className={TOOLBAR_DROPDOWN_CLASSNAME}>
         <DropdownMenuItem
           className="flex items-center gap-2"
           onClick={() => actions.handleToggleVisibility("private")}
@@ -1563,12 +1569,13 @@ function RunButtonGroup({
 }) {
   return (
     <Button
-      className="border hover:bg-black/5 disabled:opacity-100 dark:hover:bg-white/5 disabled:[&>svg]:text-muted-foreground"
+      className={TOOLBAR_BUTTON_CLASSNAME}
       disabled={
         state.isExecuting || state.nodes.length === 0 || state.isGenerating
       }
       onClick={() => actions.handleExecute()}
       size="icon"
+      style={TOOLBAR_BUTTON_STYLE}
       title="Run Workflow"
       variant="secondary"
     >
@@ -1601,7 +1608,7 @@ function GenerateUiButton({
 
   return (
     <Button
-      className="border hover:bg-black/5 disabled:opacity-100 dark:hover:bg-white/5 disabled:[&>svg]:text-muted-foreground"
+      className={TOOLBAR_BUTTON_CLASSNAME}
       disabled={
         !state.currentWorkflowId ||
         state.isGenerating ||
@@ -1611,6 +1618,7 @@ function GenerateUiButton({
       }
       onClick={handleClick}
       size="icon"
+      style={TOOLBAR_BUTTON_STYLE}
       title={isGeneratingUi ? "Generating run form..." : "Generate run form"}
       variant="secondary"
     >
@@ -1633,10 +1641,11 @@ function DuplicateButton({
 }) {
   return (
     <Button
-      className="h-9 border hover:bg-black/5 dark:hover:bg-white/5"
+      className={`h-9 ${TOOLBAR_BUTTON_CLASSNAME_BASIC}`}
       disabled={isDuplicating}
       onClick={onDuplicate}
       size="sm"
+      style={TOOLBAR_BUTTON_STYLE}
       title="Duplicate to your workflows"
       variant="secondary"
     >
@@ -1655,10 +1664,10 @@ export const WorkflowToolbar = ({ workflowId }: WorkflowToolbarProps) => {
   const actions = useWorkflowActions(state);
 
   return (
-    <div className="pointer-events-auto absolute top-[calc(env(safe-area-inset-top)+4.5rem)] right-4 z-10">
+    <div className="workflow-toolbar pointer-events-auto absolute top-[calc(env(safe-area-inset-top)+4.5rem)] right-4 z-10">
       <div className="flex flex-col-reverse items-end gap-2 lg:flex-row lg:items-center">
         {workflowId && !state.isOwner ? (
-          <span className="text-muted-foreground text-xs uppercase">
+          <span className="text-[color:var(--workflow-node-muted,var(--muted-foreground))] text-xs uppercase">
             Read-only
           </span>
         ) : null}

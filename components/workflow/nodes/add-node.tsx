@@ -10,12 +10,12 @@ type AddNodeData = {
 
 export function AddNode({ data }: NodeProps & { data?: AddNodeData }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-8 rounded-lg border border-border border-dashed bg-background/50 p-8 backdrop-blur-sm">
+    <div className="flex flex-col items-center justify-center gap-8 rounded-2xl border border-dashed border-[color:var(--workflow-node-border,var(--border))] bg-[var(--workflow-node-bg,var(--background))] p-8 text-[color:var(--workflow-node-text,var(--foreground))] shadow-[var(--workflow-node-shadow)] backdrop-blur-xl">
       <div className="text-center">
         <h1 className="mb-2 font-bold text-3xl">
           AI Workflow Builder Template
         </h1>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-[color:var(--workflow-node-muted,var(--muted-foreground))] text-sm">
           Powered by{" "}
           <a
             className="underline underline-offset-2 transition duration-200 ease-out hover:text-foreground"

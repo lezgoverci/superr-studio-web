@@ -23,7 +23,7 @@ export type NodeProps = ComponentProps<typeof Card> & {
 export const Node = ({ handles, className, status, ...props }: NodeProps) => (
   <Card
     className={cn(
-      "node-container relative size-full h-auto w-sm gap-0 rounded-md bg-card p-0 transition-all duration-200",
+      "node-container relative size-full h-auto w-sm gap-0 rounded-2xl border border-[color:var(--workflow-node-border)] bg-[var(--workflow-node-bg)] p-0 text-[color:var(--workflow-node-text)] shadow-[var(--workflow-node-shadow)] backdrop-blur-xl transition-all duration-200",
       status === "success" && "border-green-500 border-2",
       status === "error" && "border-red-500 border-2",
       className
@@ -41,19 +41,27 @@ export type NodeHeaderProps = ComponentProps<typeof CardHeader>;
 
 export const NodeHeader = ({ className, ...props }: NodeHeaderProps) => (
   <CardHeader
-    className={cn("gap-0.5 rounded-t-md border-b bg-secondary p-3!", className)}
+    className={cn(
+      "gap-0.5 rounded-t-2xl border-b border-[color:var(--workflow-node-border)] bg-[image:var(--workflow-node-header-bg)] p-3!",
+      className
+    )}
     {...props}
   />
 );
 
 export type NodeTitleProps = ComponentProps<typeof CardTitle>;
 
-export const NodeTitle = (props: NodeTitleProps) => <CardTitle {...props} />;
+export const NodeTitle = ({ className, ...props }: NodeTitleProps) => (
+  <CardTitle className={cn("text-[color:var(--workflow-node-text)]", className)} {...props} />
+);
 
 export type NodeDescriptionProps = ComponentProps<typeof CardDescription>;
 
-export const NodeDescription = (props: NodeDescriptionProps) => (
-  <CardDescription {...props} />
+export const NodeDescription = ({ className, ...props }: NodeDescriptionProps) => (
+  <CardDescription
+    className={cn("text-[color:var(--workflow-node-muted)]", className)}
+    {...props}
+  />
 );
 
 export type NodeActionProps = ComponentProps<typeof CardAction>;
@@ -63,14 +71,20 @@ export const NodeAction = (props: NodeActionProps) => <CardAction {...props} />;
 export type NodeContentProps = ComponentProps<typeof CardContent>;
 
 export const NodeContent = ({ className, ...props }: NodeContentProps) => (
-  <CardContent className={cn("rounded-b-md bg-card p-3", className)} {...props} />
+  <CardContent
+    className={cn("rounded-b-2xl bg-transparent p-3", className)}
+    {...props}
+  />
 );
 
 export type NodeFooterProps = ComponentProps<typeof CardFooter>;
 
 export const NodeFooter = ({ className, ...props }: NodeFooterProps) => (
   <CardFooter
-    className={cn("rounded-b-md border-t bg-secondary p-3!", className)}
+    className={cn(
+      "rounded-b-2xl border-t border-[color:var(--workflow-node-border)] bg-[var(--workflow-node-bg)] p-3!",
+      className
+    )}
     {...props}
   />
 );

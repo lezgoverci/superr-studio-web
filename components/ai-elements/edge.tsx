@@ -34,7 +34,9 @@ const Temporary = ({
       id={id}
       path={edgePath}
       style={{
-        stroke: selected ? "var(--muted-foreground)" : "var(--border)",
+        stroke: selected
+          ? "var(--workflow-edge-selected, var(--muted-foreground))"
+          : "var(--workflow-edge-muted, var(--border))",
         strokeDasharray: "5, 5",
       }}
     />
@@ -127,14 +129,16 @@ const Animated = ({ id, source, target, style, selected }: EdgeProps) => {
   });
 
   return (
-    <BaseEdge 
-      id={id} 
-      path={edgePath} 
+    <BaseEdge
+      id={id}
+      path={edgePath}
       style={{
         ...style,
-        stroke: selected ? "var(--muted-foreground)" : "var(--border)",
+        stroke: selected
+          ? "var(--workflow-edge-selected, var(--muted-foreground))"
+          : "var(--workflow-edge, var(--border))",
         strokeWidth: 2,
-        animation: "dashdraw 0.5s linear infinite",
+        animation: "dashdraw 1.2s linear infinite",
         strokeDasharray: 5,
       }}
     />

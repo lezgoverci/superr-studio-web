@@ -522,7 +522,7 @@ export function WorkflowCanvas() {
 
   return (
     <div
-      className="relative h-full bg-background"
+      className="workflow-studio-theme relative h-full bg-[var(--workflow-grid-bg)]"
       data-testid="workflow-canvas"
       style={{
         opacity: isCanvasReady ? 1 : 0,
@@ -539,7 +539,7 @@ export function WorkflowCanvas() {
 
       {/* React Flow Canvas */}
       <Canvas
-        className="bg-background"
+        className="bg-[var(--workflow-grid-bg)]"
         connectionLineComponent={Connection}
         connectionMode={ConnectionMode.Strict}
         edges={edges}
@@ -562,14 +562,15 @@ export function WorkflowCanvas() {
         onPaneContextMenu={isGenerating ? undefined : onPaneContextMenu}
         onSelectionChange={isGenerating ? undefined : onSelectionChange}
       >
-        <Panel
-          className="workflow-controls-panel border-none bg-transparent p-0"
-          position="bottom-left"
-        >
+        <Panel className="workflow-controls-panel" position="bottom-left">
           <Controls />
         </Panel>
         {showMinimap && (
-          <MiniMap bgColor="var(--sidebar)" nodeStrokeColor="var(--border)" />
+          <MiniMap
+            bgColor="var(--workflow-panel-bg)"
+            className="rounded-xl border border-[color:var(--workflow-panel-border)] shadow-[var(--workflow-panel-shadow)] backdrop-blur-sm"
+            nodeStrokeColor="var(--workflow-panel-border)"
+          />
         )}
       </Canvas>
 

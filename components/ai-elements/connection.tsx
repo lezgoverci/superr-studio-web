@@ -13,15 +13,15 @@ export const Connection: ConnectionLineComponent = ({
       className="animated"
       d={`M${fromX},${fromY} C ${fromX + (toX - fromX) * HALF},${fromY} ${fromX + (toX - fromX) * HALF},${toY} ${toX},${toY}`}
       fill="none"
-      stroke="var(--color-ring)"
+      stroke="var(--workflow-connection, var(--color-ring))"
       strokeWidth={1}
     />
     <circle
       cx={toX}
       cy={toY}
-      fill="#fff"
+      fill="var(--workflow-handle-bg, #fff)"
       r={3}
-      stroke="var(--color-ring)"
+      stroke="var(--workflow-connection, var(--color-ring))"
       strokeWidth={1}
     />
   </g>

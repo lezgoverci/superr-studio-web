@@ -1,4 +1,9 @@
-import { Background, ReactFlow, type ReactFlowProps } from "@xyflow/react";
+import {
+  Background,
+  BackgroundVariant,
+  ReactFlow,
+  type ReactFlowProps,
+} from "@xyflow/react";
 import type { ReactNode } from "react";
 import "@xyflow/react/dist/style.css";
 
@@ -17,11 +22,12 @@ export const Canvas = ({ children, ...props }: CanvasProps) => {
       zoomOnPinch
       {...props}
     >
-      <Background 
-        bgColor="var(--sidebar)" 
-        color="var(--border)" 
-        gap={24} 
-        size={2}
+      <Background
+        bgColor="var(--workflow-grid-bg, var(--sidebar))"
+        color="var(--workflow-grid-color, var(--border))"
+        gap={20}
+        size={1}
+        variant={BackgroundVariant.Dots}
       />
       {children}
     </ReactFlow>

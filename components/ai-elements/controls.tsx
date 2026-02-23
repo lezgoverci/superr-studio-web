@@ -10,6 +10,12 @@ import { showMinimapAtom } from "@/lib/workflow-store";
 export const Controls = () => {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
   const [showMinimap, setShowMinimap] = useAtom(showMinimapAtom);
+  const controlButtonStyle = {
+    borderColor: "var(--workflow-panel-border, var(--border))",
+    color: "var(--workflow-node-muted, var(--muted-foreground))",
+  };
+  const controlButtonClassName =
+    "border bg-transparent shadow-none transition-colors hover:bg-[var(--workflow-control-hover-bg)] hover:text-[color:var(--workflow-node-text)] disabled:opacity-100 disabled:[&>svg]:text-muted-foreground";
 
   const handleZoomIn = () => {
     zoomIn();
@@ -30,36 +36,40 @@ export const Controls = () => {
   return (
     <ButtonGroup orientation="vertical">
       <Button
-        className="border hover:bg-black/5 disabled:opacity-100 dark:hover:bg-white/5 disabled:[&>svg]:text-muted-foreground"
+        className={controlButtonClassName}
         onClick={handleZoomIn}
         size="icon"
+        style={controlButtonStyle}
         title="Zoom in"
         variant="secondary"
       >
         <ZoomIn className="size-4" />
       </Button>
       <Button
-        className="border hover:bg-black/5 disabled:opacity-100 dark:hover:bg-white/5 disabled:[&>svg]:text-muted-foreground"
+        className={controlButtonClassName}
         onClick={handleZoomOut}
         size="icon"
+        style={controlButtonStyle}
         title="Zoom out"
         variant="secondary"
       >
         <ZoomOut className="size-4" />
       </Button>
       <Button
-        className="border hover:bg-black/5 disabled:opacity-100 dark:hover:bg-white/5 disabled:[&>svg]:text-muted-foreground"
+        className={controlButtonClassName}
         onClick={handleFitView}
         size="icon"
+        style={controlButtonStyle}
         title="Fit view"
         variant="secondary"
       >
         <Maximize2 className="size-4" />
       </Button>
       <Button
-        className="border hover:bg-black/5 disabled:opacity-100 dark:hover:bg-white/5 disabled:[&>svg]:text-muted-foreground"
+        className={controlButtonClassName}
         onClick={handleToggleMinimap}
         size="icon"
+        style={controlButtonStyle}
         title={showMinimap ? "Hide minimap" : "Show minimap"}
         variant="secondary"
       >

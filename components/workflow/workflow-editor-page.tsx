@@ -614,7 +614,7 @@ function WorkflowEditor({ params }: WorkflowPageProps) {
   }, [selectedExecutionId, setIsExecuting, updateNodeStatuses]);
 
   return (
-    <div className="pointer-events-none flex h-full w-full flex-col overflow-hidden">
+    <div className="pointer-events-none relative flex h-full w-full flex-col overflow-hidden">
       {/* Workflow not found overlay */}
       {workflowNotFound && (
         <div className="pointer-events-auto absolute inset-0 z-20 flex items-center justify-center">
