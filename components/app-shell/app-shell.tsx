@@ -126,17 +126,31 @@ export function AppShell({ children }: AppShellProps) {
         navItems,
       }}
     >
-      <div className="pointer-events-auto relative z-10 flex h-dvh flex-col">
+      <div
+        className={cn(
+          "relative z-10 flex h-dvh flex-col",
+          isWorkflowCanvas ? "pointer-events-none" : "pointer-events-auto"
+        )}
+      >
         <AppHeader />
 
         <div
           className={cn(
             "flex min-h-0 flex-1 overflow-hidden",
-            isWorkflowCanvas ? "bg-transparent" : "bg-muted/20"
+            isWorkflowCanvas
+              ? "pointer-events-none bg-transparent"
+              : "pointer-events-auto bg-muted/20"
           )}
         >
           {showSideNav ? <AppNav items={navItems} /> : null}
-          <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
+          <div
+            className={cn(
+              "min-h-0 flex-1 overflow-hidden",
+              isWorkflowCanvas ? "pointer-events-none" : "pointer-events-auto"
+            )}
+          >
+            {children}
+          </div>
         </div>
       </div>
     </AppShellProvider>
