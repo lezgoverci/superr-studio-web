@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Superr AI Agent Installer
-# Installs OpenCode and starts it as a local API server so the Superr Workflow
+# Installs OpenCode and starts it as a local API server so the SuperrStudio
 # Builder can use your own AI subscriptions (Gemini, Anthropic, OpenAI, etc.)
 # without any cloud infrastructure.
 

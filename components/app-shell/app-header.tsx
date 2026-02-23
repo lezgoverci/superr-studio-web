@@ -4,8 +4,6 @@ import { Check, ChevronDown, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { DeployButton } from "@/components/deploy-button";
-import { GitHubStarsButton } from "@/components/github-stars-button";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -225,7 +223,7 @@ export function AppHeader() {
               <Sparkles className="size-4" />
             </div>
             <span className="hidden font-semibold text-sm tracking-tight sm:inline md:text-base">
-              Superr Workflow
+              SuperrStudio
             </span>
           </Link>
 
@@ -264,13 +262,6 @@ export function AppHeader() {
         </div>
 
         <div className="flex flex-1 items-center justify-end gap-2">
-          {pathname === "/app" ? (
-            <div className="hidden items-center gap-2 lg:flex">
-              <GitHubStarsButton />
-              <DeployButton />
-            </div>
-          ) : null}
-
           {isWorkflowEditor ? (
             <Button asChild size="sm" variant="secondary">
               <Link href="/app/workflows">All Workflows</Link>

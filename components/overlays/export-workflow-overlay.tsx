@@ -51,9 +51,7 @@ export function ExportWorkflowOverlay({
     >
       <div className="flex items-center gap-2 text-muted-foreground">
         <FileDown className="size-5" />
-        <p className="text-sm">
-          Choose an export format for this workflow.
-        </p>
+        <p className="text-sm">Choose an export format for this workflow.</p>
       </div>
 
       <p className="mt-4 text-muted-foreground text-sm">

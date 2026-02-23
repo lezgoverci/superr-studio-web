@@ -10,7 +10,7 @@ type AddNodeData = {
 
 export function AddNode({ data }: NodeProps & { data?: AddNodeData }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-8 rounded-2xl border border-dashed border-[color:var(--workflow-node-border,var(--border))] bg-[var(--workflow-node-bg,var(--background))] p-8 text-[color:var(--workflow-node-text,var(--foreground))] shadow-[var(--workflow-node-shadow)] backdrop-blur-xl">
+    <div className="flex flex-col items-center justify-center gap-8 rounded-2xl border border-[color:var(--workflow-node-border,var(--border))] border-dashed bg-[var(--workflow-node-bg,var(--background))] p-8 text-[color:var(--workflow-node-text,var(--foreground))] shadow-[var(--workflow-node-shadow)] backdrop-blur-xl">
       <div className="text-center">
         <h1 className="mb-2 font-bold text-3xl">
           AI Workflow Builder Template

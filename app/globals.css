@@ -127,13 +127,11 @@
   --workflow-node-text: rgb(30 41 59);
   --workflow-node-muted: rgb(100 116 139);
   --workflow-node-shadow:
-    0 12px 30px -18px rgb(15 23 42 / 0.45),
-    0 3px 8px -4px rgb(15 23 42 / 0.2);
+    0 12px 30px -18px rgb(15 23 42 / 0.45), 0 3px 8px -4px rgb(15 23 42 / 0.2);
   --workflow-panel-bg: rgb(255 255 255 / 0.95);
   --workflow-panel-border: rgb(226 232 240 / 0.9);
   --workflow-panel-shadow:
-    0 6px 18px -8px rgb(15 23 42 / 0.28),
-    0 2px 6px -3px rgb(15 23 42 / 0.18);
+    0 6px 18px -8px rgb(15 23 42 / 0.28), 0 2px 6px -3px rgb(15 23 42 / 0.18);
   --workflow-control-hover-bg: rgb(241 245 249 / 0.92);
   --workflow-handle-bg: rgb(255 255 255 / 0.96);
   --workflow-handle-border: rgb(99 102 241 / 0.62);
@@ -145,8 +143,7 @@
   --workflow-menu-bg: rgb(255 255 255 / 0.95);
   --workflow-menu-border: rgb(226 232 240 / 0.9);
   --workflow-menu-shadow:
-    0 18px 40px -24px rgb(15 23 42 / 0.45),
-    0 8px 20px -14px rgb(15 23 42 / 0.3);
+    0 18px 40px -24px rgb(15 23 42 / 0.45), 0 8px 20px -14px rgb(15 23 42 / 0.3);
 }
 
 .dark .workflow-studio-theme {
@@ -164,13 +161,11 @@
   --workflow-node-text: rgb(244 244 245);
   --workflow-node-muted: rgb(161 161 170);
   --workflow-node-shadow:
-    0 18px 40px -24px rgb(0 0 0 / 0.95),
-    0 8px 24px -16px rgb(0 0 0 / 0.85);
+    0 18px 40px -24px rgb(0 0 0 / 0.95), 0 8px 24px -16px rgb(0 0 0 / 0.85);
   --workflow-panel-bg: rgb(24 24 27 / 0.95);
   --workflow-panel-border: rgb(113 113 122 / 0.38);
   --workflow-panel-shadow:
-    0 16px 36px -24px rgb(0 0 0 / 0.95),
-    0 8px 20px -18px rgb(0 0 0 / 0.8);
+    0 16px 36px -24px rgb(0 0 0 / 0.95), 0 8px 20px -18px rgb(0 0 0 / 0.8);
   --workflow-control-hover-bg: rgb(63 63 70 / 0.72);
   --workflow-handle-bg: rgb(24 24 27 / 0.96);
   --workflow-handle-border: rgb(129 140 248 / 0.78);
@@ -182,8 +177,7 @@
   --workflow-menu-bg: rgb(24 24 27 / 0.95);
   --workflow-menu-border: rgb(113 113 122 / 0.4);
   --workflow-menu-shadow:
-    0 18px 42px -24px rgb(0 0 0 / 0.95),
-    0 8px 24px -14px rgb(0 0 0 / 0.88);
+    0 18px 42px -24px rgb(0 0 0 / 0.95), 0 8px 24px -14px rgb(0 0 0 / 0.88);
 }
 
 @layer base {
