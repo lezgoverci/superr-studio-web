@@ -7,13 +7,12 @@ import { cn } from "@/lib/utils";
 
 type AiAgentWindowContentProps = {
   className?: string;
-  mode: "minimized" | "sidebar" | "fullpage";
+  mode: "minimized" | "fullpage";
   pageContext: AiAgentContextEnvelope | null;
   initialSessionId?: string | null;
   minimizedView?: AiAgentMinimizedView;
   onSessionLinked: (sessionId: string) => void;
   onMinimize: () => void;
-  onOpenSidebar: () => void;
   onOpenFullpage: () => void;
   onToggleMinimizedView?: () => void;
 };
@@ -26,7 +25,6 @@ export function AIAgentWindowContent({
   minimizedView = "input-only",
   onSessionLinked,
   onMinimize,
-  onOpenSidebar,
   onOpenFullpage,
   onToggleMinimizedView,
 }: AiAgentWindowContentProps) {
@@ -53,7 +51,6 @@ export function AIAgentWindowContent({
             mode,
             onMinimize,
             onOpenFullpage,
-            onOpenSidebar,
             onToggleMinimizedView,
           }}
         />

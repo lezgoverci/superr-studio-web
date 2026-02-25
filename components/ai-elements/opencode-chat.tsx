@@ -71,22 +71,21 @@ import {
 import { cn } from "@/lib/utils";
 import {
   Check,
-  ChevronLeft,
+  ChevronDown,
   Loader2,
   Maximize2,
   MessageSquare,
   Minimize2,
+  Minus,
   MoreHorizontal,
-  PanelRight,
   Plus,
   Trash2,
 } from "lucide-react";
 import type { Session } from "@opencode-ai/sdk/client";
 
 type AIAgentWindowControls = {
-  mode: "minimized" | "sidebar" | "fullpage";
+  mode: "minimized" | "fullpage";
   onMinimize: () => void;
-  onOpenSidebar: () => void;
   onOpenFullpage: () => void;
   onToggleMinimizedView?: () => void;
 };
@@ -109,57 +108,7 @@ const QUICK_SUGGESTIONS = [
   "Add an HTTP request step after the trigger",
 ] as const;
 
-type SessionSidebarProps = {
-  sessions: Session[];
-  activeId: string | null;
-  onSelect: (id: string) => void;
-  onDelete: (id: string) => void;
-};
 
-function SessionSidebar({
-  sessions,
-  activeId,
-  onSelect,
-  onDelete,
-}: SessionSidebarProps) {
-  return (
-    <div className="flex h-full flex-col border-r">
-      <div className="flex-1 overflow-y-auto py-1">
-        {sessions.length === 0 && (
-          <p className="px-3 py-4 text-center text-muted-foreground text-xs">
-            No sessions yet
-          </p>
-        )}
-        {sessions.map((session) => (
-          <div
-            className={cn(
-              "group mx-1 flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 transition-colors",
-              activeId === session.id ? "bg-muted" : "hover:bg-muted/50",
-            )}
-            key={session.id}
-            onClick={() => onSelect(session.id)}
-          >
-            <MessageSquare className="size-3 shrink-0 text-muted-foreground" />
-            <span className="flex-1 truncate text-xs">
-              {getSessionTitle(session)}
-            </span>
-            <Button
-              className="size-5 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive"
-              onClick={(event) => {
-                event.stopPropagation();
-                onDelete(session.id);
-              }}
-              size="icon"
-              variant="ghost"
-            >
-              <Trash2 className="size-3" />
-            </Button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function isToolPart(
   part: UIMessage["parts"][number],
@@ -508,7 +457,7 @@ export function AIAgentChat({
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [initialMessages, setInitialMessages] = useState<UIMessage[]>([]);
-  const [showSidebar, setShowSidebar] = useState(false);
+  const [sessionSelectorOpen, setSessionSelectorOpen] = useState(false);
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const [chatSurfaceKey, setChatSurfaceKey] = useState(0);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
@@ -521,11 +470,7 @@ export function AIAgentChat({
   const isInputOnlyMinimized =
     isMinimizedVariant && minimizedDisplayMode === "input-only";
 
-  useEffect(() => {
-    if (isInputOnlyMinimized) {
-      setShowSidebar(false);
-    }
-  }, [isInputOnlyMinimized]);
+
 
   const loadSessions = useCallback(async (): Promise<Session[]> => {
     const client = getOpenCodeClient();
@@ -840,11 +785,12 @@ export function AIAgentChat({
         ? "Session"
         : "New Session"
     : "Not Connected";
-  const canToggleSessions = hasConnection && !isInputOnlyMinimized;
-  const showMinimizedDisplayToggle =
+  const canToggleSessions = hasConnection;
+  const showThreadToggle =
     windowControls?.mode === "minimized" &&
     Boolean(windowControls.onToggleMinimizedView);
-  const hasSessionMenuSection = canToggleSessions || showMinimizedDisplayToggle;
+  const isShowingThread = minimizedDisplayMode === "thread";
+  const hasDeleteSessionOption = hasConnection && activeSessionId;
   const hasWindowModeSection = Boolean(windowControls);
 
   return (
@@ -861,47 +807,75 @@ export function AIAgentChat({
           isMinimizedVariant ? "px-2 py-1.5" : "px-3 py-2",
         )}
       >
-        {canToggleSessions ? (
+        <DropdownMenu
+          onOpenChange={setSessionSelectorOpen}
+          open={sessionSelectorOpen}
+        >
+          <DropdownMenuTrigger asChild>
+            <Button
+              className={cn(
+                "h-7 max-w-[200px] gap-1 px-2 font-medium",
+                isMinimizedVariant ? "text-xs" : "text-sm",
+              )}
+              disabled={!canToggleSessions}
+              size="sm"
+              variant="ghost"
+            >
+              <span className="truncate">{headerTitle}</span>
+              {canToggleSessions ? (
+                <ChevronDown className="size-3 shrink-0 text-muted-foreground" />
+              ) : null}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-64 max-h-72 overflow-y-auto">
+            <DropdownMenuItem
+              disabled={isCreatingSession}
+              onSelect={() => {
+                void handleNewSession();
+              }}
+            >
+              {isCreatingSession ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Plus className="size-4" />
+              )}
+              New Session
+            </DropdownMenuItem>
+            {sessions.length > 0 ? <DropdownMenuSeparator /> : null}
+            {sessions.map((session) => (
+              <DropdownMenuItem
+                key={session.id}
+                onSelect={() => {
+                  void handleSelectSession(session.id);
+                }}
+              >
+                <MessageSquare className="size-4 shrink-0" />
+                <span className="flex-1 truncate">
+                  {getSessionTitle(session)}
+                </span>
+                {activeSessionId === session.id ? (
+                  <Check className="size-4 shrink-0 ml-auto" />
+                ) : null}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <div className="flex-1" />
+        {showThreadToggle ? (
           <Button
             className="size-6"
-            onClick={() => setShowSidebar((visible) => !visible)}
+            onClick={() => windowControls?.onToggleMinimizedView?.()}
             size="icon"
             variant="ghost"
+            title={isShowingThread ? "Input Only" : "Show Thread"}
           >
-            {showSidebar ? (
-              <ChevronLeft className="size-3.5" />
+            {isShowingThread ? (
+              <Minus className="size-3.5" />
             ) : (
               <MessageSquare className="size-3.5" />
             )}
           </Button>
         ) : null}
-        <span
-          className={cn(
-            "flex-1 truncate font-medium",
-            isMinimizedVariant ? "text-xs" : "text-sm",
-          )}
-        >
-          {headerTitle}
-        </span>
-        <Button
-          className={cn(
-            "h-7 px-2 text-muted-foreground",
-            isMinimizedVariant ? "text-xs" : "text-sm",
-          )}
-          disabled={isCreatingSession}
-          onClick={() => {
-            void handleNewSession();
-          }}
-          size="sm"
-          variant="ghost"
-        >
-          {isCreatingSession ? (
-            <Loader2 className="mr-2 size-3.5 animate-spin" />
-          ) : (
-            <Plus className="mr-2 size-3.5" />
-          )}
-          New Session
-        </Button>
         <DropdownMenu
           onOpenChange={setActionsMenuOpen}
           open={actionsMenuOpen}
@@ -912,47 +886,8 @@ export function AIAgentChat({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56" forceMount>
-            {canToggleSessions ? (
-              <DropdownMenuItem
-                onSelect={() => {
-                  setShowSidebar((visible) => !visible);
-                }}
-              >
-                <MessageSquare className="size-4" />
-                {showSidebar ? "Hide Sessions" : "Show Sessions"}
-              </DropdownMenuItem>
-            ) : null}
-
-            {showMinimizedDisplayToggle ? (
-              <DropdownMenuItem
-                onSelect={() => {
-                  windowControls?.onToggleMinimizedView?.();
-                }}
-              >
-                <MessageSquare className="size-4" />
-                {isInputOnlyMinimized ? "Show Thread" : "Input Only"}
-              </DropdownMenuItem>
-            ) : null}
-
-            {hasSessionMenuSection && hasWindowModeSection ? (
-              <DropdownMenuSeparator />
-            ) : null}
-
             {windowControls ? (
               <>
-                <DropdownMenuItem
-                  disabled={windowControls.mode === "sidebar"}
-                  onSelect={() => {
-                    windowControls.onOpenSidebar();
-                  }}
-                >
-                  <PanelRight className="size-4" />
-                  Open Sidebar
-                  {windowControls.mode === "sidebar" ? (
-                    <Check className="ml-auto size-4" />
-                  ) : null}
-                </DropdownMenuItem>
-
                 <DropdownMenuItem
                   disabled={windowControls.mode === "fullpage"}
                   onSelect={() => {
@@ -981,7 +916,24 @@ export function AIAgentChat({
               </>
             ) : null}
 
-            {hasSessionMenuSection || hasWindowModeSection ? (
+            {hasDeleteSessionOption ? (
+              <>
+                {hasWindowModeSection ? <DropdownMenuSeparator /> : null}
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onSelect={() => {
+                    if (activeSessionId) {
+                      void handleDeleteSession(activeSessionId);
+                    }
+                  }}
+                >
+                  <Trash2 className="size-4" />
+                  Delete Session
+                </DropdownMenuItem>
+              </>
+            ) : null}
+
+            {(hasWindowModeSection || hasDeleteSessionOption) ? (
               <DropdownMenuSeparator />
             ) : null}
 
@@ -1002,17 +954,6 @@ export function AIAgentChat({
 
       {hasConnection ? (
         <div className="flex min-h-0 flex-1 overflow-hidden">
-          {showSidebar && !isInputOnlyMinimized && (
-            <div className={cn("shrink-0", isMinimizedVariant ? "w-40" : "w-48")}>
-              <SessionSidebar
-                activeId={activeSessionId}
-                onDelete={handleDeleteSession}
-                onSelect={handleSelectSession}
-                sessions={sessions}
-              />
-            </div>
-          )}
-
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {activeSessionId && connection ? (
               <ChatSurface

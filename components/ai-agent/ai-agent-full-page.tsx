@@ -57,15 +57,6 @@ export function AIAgentFullPage() {
     router.replace(windowState.originPath || "/app");
   }, [router, setWindowState, windowState.originPath]);
 
-  const handleOpenSidebar = useCallback(() => {
-    setWindowState((previous) => ({
-      ...previous,
-      mode: "sidebar",
-      isOpen: true,
-    }));
-    router.replace(windowState.originPath || "/app");
-  }, [router, setWindowState, windowState.originPath]);
-
   const handleOpenFullpage = useCallback(() => {
     setWindowState((previous) => ({
       ...previous,
@@ -82,7 +73,6 @@ export function AIAgentFullPage() {
         mode="fullpage"
         onMinimize={handleMinimize}
         onOpenFullpage={handleOpenFullpage}
-        onOpenSidebar={handleOpenSidebar}
         onSessionLinked={handleSessionLinked}
         pageContext={activeContext}
       />

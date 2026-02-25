@@ -151,18 +151,6 @@ export function AIAgentWindowManager() {
     }
   }, [isAgentRoute, router, setWindowState, windowState.originPath]);
 
-  const handleOpenSidebar = useCallback(() => {
-    setWindowState((previous) => ({
-      ...previous,
-      mode: "sidebar",
-      isOpen: true,
-    }));
-
-    if (isAgentRoute) {
-      router.replace(windowState.originPath || "/app");
-    }
-  }, [isAgentRoute, router, setWindowState, windowState.originPath]);
-
   const handleOpenFullpage = useCallback(() => {
     setWindowState((previous) => ({
       ...previous,
@@ -194,20 +182,6 @@ export function AIAgentWindowManager() {
 
   return (
     <>
-      {windowState.mode === "sidebar" && !isAgentRoute ? (
-        <div className="pointer-events-auto fixed inset-y-0 right-0 z-40 w-full max-w-[520px] border-l bg-background shadow-2xl md:top-14 md:bottom-0">
-          <AIAgentWindowContent
-            initialSessionId={activeSessionId}
-            mode="sidebar"
-            onMinimize={handleMinimize}
-            onOpenFullpage={handleOpenFullpage}
-            onOpenSidebar={handleOpenSidebar}
-            onSessionLinked={handleSessionLinked}
-            pageContext={activeContext}
-          />
-        </div>
-      ) : null}
-
       {windowState.mode === "minimized" && !isAgentRoute ? (
         <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] md:bottom-4 md:px-4 md:pb-0">
           <div
@@ -229,7 +203,6 @@ export function AIAgentWindowManager() {
               mode="minimized"
               onMinimize={handleMinimize}
               onOpenFullpage={handleOpenFullpage}
-              onOpenSidebar={handleOpenSidebar}
               onSessionLinked={handleSessionLinked}
               onToggleMinimizedView={handleToggleMinimizedView}
               pageContext={activeContext}

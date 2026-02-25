@@ -1,7 +1,7 @@
 import { atom } from "jotai";
 import type { AiAgentContextEnvelope } from "@/lib/ai-agent/page-context/types";
 
-export type AiAgentWindowMode = "minimized" | "sidebar" | "fullpage";
+export type AiAgentWindowMode = "minimized" | "fullpage";
 
 export type AiAgentMinimizedView = "thread" | "input-only";
 
@@ -107,9 +107,7 @@ function sanitizeWindowState(raw: unknown): AiAgentWindowState {
 
   const input = raw as Partial<AiAgentWindowState>;
   const mode: AiAgentWindowMode =
-    input.mode === "sidebar" || input.mode === "fullpage"
-      ? input.mode
-      : "minimized";
+    input.mode === "fullpage" ? input.mode : "minimized";
   const isOpen = typeof input.isOpen === "boolean" ? input.isOpen : true;
   const minimizedView: AiAgentMinimizedView =
     input.minimizedView === "thread" ? "thread" : "input-only";
