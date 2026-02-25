@@ -56,7 +56,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { AiAgentContextEnvelope } from "@/lib/ai-agent/page-context/types";
 import { useAiAgentPageContext } from "@/lib/ai-agent/page-context/use-ai-agent-page-context";
-import { getConnectionConfig, getOpenCodeClient, type OpenCodeConnectionConfig } from "@/lib/opencode-client";
+import {
+  getConnectionConfig,
+  getOpenCodeClient,
+  type OpenCodeConnectionConfig,
+} from "@/lib/opencode-client";
 import { mapOpenCodeHistoryToUIMessages } from "@/lib/opencode-chat-adapter";
 import {
   getOpenCodeSessionConnectionKey,
@@ -83,6 +87,7 @@ export type AIAgentChatProps = {
   onSessionLinked?: (sessionId: string) => void;
   pageContext?: AiAgentContextEnvelope | null;
   uiVariant?: "default" | "minimized";
+  minimizedDisplayMode?: "thread" | "input-only";
 };
 
 const QUICK_SUGGESTIONS = [
@@ -109,10 +114,17 @@ function SessionSidebar({
   return (
     <div className="flex h-full flex-col border-r">
       <div className="flex items-center justify-between border-b px-3 py-2">
-        <span className="text-muted-foreground text-xs font-medium">Sessions</span>
+        <span className="text-muted-foreground text-xs font-medium">
+          Sessions
+        </span>
         <div className="flex items-center gap-1">
           <ProviderSettings />
-          <Button className="size-6" onClick={onNew} size="icon" variant="ghost">
+          <Button
+            className="size-6"
+            onClick={onNew}
+            size="icon"
+            variant="ghost"
+          >
             <Plus className="size-3.5" />
           </Button>
         </div>
@@ -127,7 +139,7 @@ function SessionSidebar({
           <div
             className={cn(
               "group mx-1 flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 transition-colors",
-              activeId === session.id ? "bg-muted" : "hover:bg-muted/50"
+              activeId === session.id ? "bg-muted" : "hover:bg-muted/50",
             )}
             key={session.id}
             onClick={() => onSelect(session.id)}
@@ -155,18 +167,14 @@ function SessionSidebar({
 }
 
 function isToolPart(
-  part: UIMessage["parts"][number]
+  part: UIMessage["parts"][number],
 ): part is DynamicToolUIPart | ToolUIPart {
   return part.type === "dynamic-tool" || part.type.startsWith("tool-");
 }
 
 function renderUserMessagePart(part: UIMessage["parts"][number], key: string) {
   if (part.type === "text") {
-    return (
-      <MessageResponse key={key}>
-        {part.text}
-      </MessageResponse>
-    );
+    return <MessageResponse key={key}>{part.text}</MessageResponse>;
   }
 
   if (part.type === "file") {
@@ -226,13 +234,12 @@ function renderToolPart(part: DynamicToolUIPart | ToolUIPart, key: string) {
   );
 }
 
-function renderAssistantMessagePart(part: UIMessage["parts"][number], key: string) {
+function renderAssistantMessagePart(
+  part: UIMessage["parts"][number],
+  key: string,
+) {
   if (part.type === "text") {
-    return (
-      <MessageResponse key={key}>
-        {part.text}
-      </MessageResponse>
-    );
+    return <MessageResponse key={key}>{part.text}</MessageResponse>;
   }
 
   if (part.type === "reasoning") {
@@ -290,7 +297,7 @@ function ChatMessage({ message }: { message: UIMessage }) {
       <Message from="user">
         <MessageContent>
           {message.parts.map((part, index) =>
-            renderUserMessagePart(part, `${message.id}-${index}`)
+            renderUserMessagePart(part, `${message.id}-${index}`),
           )}
         </MessageContent>
       </Message>
@@ -302,7 +309,7 @@ function ChatMessage({ message }: { message: UIMessage }) {
       <Message from="assistant">
         <MessageContent>
           {message.parts.map((part, index) =>
-            renderAssistantMessagePart(part, `${message.id}-${index}`)
+            renderAssistantMessagePart(part, `${message.id}-${index}`),
           )}
         </MessageContent>
       </Message>
@@ -324,6 +331,7 @@ type ChatSurfaceProps = {
   pageContext: AiAgentContextEnvelope | null;
   onAbortSession: (sessionId: string) => Promise<void>;
   uiVariant: "default" | "minimized";
+  hideConversation?: boolean;
 };
 
 function ChatSurface({
@@ -334,6 +342,7 @@ function ChatSurface({
   pageContext,
   onAbortSession,
   uiVariant,
+  hideConversation = false,
 }: ChatSurfaceProps) {
   const [input, setInput] = useState("");
   const activeSessionIdRef = useRef(activeSessionId);
@@ -361,7 +370,13 @@ function ChatSurface({
           };
         },
       }),
-    [activeSessionId, connection.token, connection.url, connection.username, pageContext]
+    [
+      activeSessionId,
+      connection.token,
+      connection.url,
+      connection.username,
+      pageContext,
+    ],
   );
 
   const { messages, sendMessage, status, stop } = useChat({
@@ -385,7 +400,7 @@ function ChatSurface({
       await sendMessage({ text: trimmed });
       setInput("");
     },
-    [isGenerating, sendMessage]
+    [isGenerating, sendMessage],
   );
 
   const handleStop = useCallback(async () => {
@@ -394,40 +409,46 @@ function ChatSurface({
   }, [onAbortSession, stop]);
 
   const isMinimizedVariant = uiVariant === "minimized";
+  const shouldShowConversation = !hideConversation;
 
   return (
     <>
-      <Conversation className="min-h-0 flex-1">
-        <ConversationContent
-          className={cn(
-            isMinimizedVariant ? "px-3 py-3" : "px-4 py-4"
-          )}
-        >
-          {isLoadingMessages ? (
-            <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground text-sm">
-              <Loader2 className="size-4 animate-spin" />
-              Loading session...
-            </div>
-          ) : messages.length === 0 ? (
-            <ConversationEmptyState
-              description="Ask anything — the AI agent can write code, run commands, search the web, edit files, and build workflows."
-              icon={<MessageSquare className="size-8 text-muted-foreground" />}
-              title="New Chat"
-            />
-          ) : (
-            messages.map((message) => <ChatMessage key={message.id} message={message} />)
-          )}
-        </ConversationContent>
-        <ConversationScrollButton />
-      </Conversation>
+      {shouldShowConversation ? (
+        <Conversation className="min-h-0 flex-1">
+          <ConversationContent
+            className={cn(isMinimizedVariant ? "px-3 py-3" : "px-4 py-4")}
+          >
+            {isLoadingMessages ? (
+              <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground text-sm">
+                <Loader2 className="size-4 animate-spin" />
+                Loading session...
+              </div>
+            ) : messages.length === 0 ? (
+              <ConversationEmptyState
+                description="Ask anything — the AI agent can write code, run commands, search the web, edit files, and build workflows."
+                icon={
+                  <MessageSquare className="size-8 text-muted-foreground" />
+                }
+                title="New Chat"
+              />
+            ) : (
+              messages.map((message) => (
+                <ChatMessage key={message.id} message={message} />
+              ))
+            )}
+          </ConversationContent>
+          <ConversationScrollButton />
+        </Conversation>
+      ) : null}
 
       <div
         className={cn(
-          "shrink-0 border-t",
-          isMinimizedVariant ? "px-2 py-2" : "px-3 py-3"
+          "shrink-0",
+          shouldShowConversation && "border-t",
+          isMinimizedVariant ? "px-2 py-2" : "px-3 py-3",
         )}
       >
-        {messages.length === 0 && (
+        {shouldShowConversation && messages.length === 0 && (
           <div className="mb-2">
             <Suggestions>
               {QUICK_SUGGESTIONS.map((suggestion) => (
@@ -444,7 +465,7 @@ function ChatSurface({
         <PromptInput
           className={cn(
             "rounded-xl border bg-background shadow-sm",
-            isMinimizedVariant && "rounded-lg"
+            isMinimizedVariant && "rounded-lg",
           )}
           onSubmit={({ text }) => {
             void handleSubmit(text);
@@ -472,23 +493,6 @@ function ChatSurface({
             />
           </PromptInputFooter>
         </PromptInput>
-
-        <p
-          className={cn(
-            "mt-1 text-center text-[10px] text-muted-foreground",
-            isMinimizedVariant && "text-[9px]"
-          )}
-        >
-          Powered by{" "}
-          <a
-            className="underline"
-            href="https://opencode.ai"
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            OpenCode
-          </a>
-        </p>
       </div>
     </>
   );
@@ -502,6 +506,7 @@ export function AIAgentChat({
   onSessionLinked,
   pageContext: pageContextOverride,
   uiVariant = "default",
+  minimizedDisplayMode = "input-only",
 }: AIAgentChatProps) {
   const [connected, setConnected] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -517,6 +522,14 @@ export function AIAgentChat({
   const resolvedPageContext = useAiAgentPageContext();
   const pageContext = pageContextOverride ?? resolvedPageContext;
   const isMinimizedVariant = uiVariant === "minimized";
+  const isInputOnlyMinimized =
+    isMinimizedVariant && minimizedDisplayMode === "input-only";
+
+  useEffect(() => {
+    if (isInputOnlyMinimized) {
+      setShowSidebar(false);
+    }
+  }, [isInputOnlyMinimized]);
 
   const loadSessions = useCallback(async (): Promise<Session[]> => {
     const client = getOpenCodeClient();
@@ -529,7 +542,9 @@ export function AIAgentChat({
       const response = await client.session.list();
       const list = response.data;
       const nextSessions = Array.isArray(list)
-        ? [...list].sort((left, right) => right.time.updated - left.time.updated)
+        ? [...list].sort(
+            (left, right) => right.time.updated - left.time.updated,
+          )
         : [];
       setSessions(nextSessions);
       return nextSessions;
@@ -548,12 +563,17 @@ export function AIAgentChat({
 
     setIsLoadingMessages(true);
     try {
-      const response = await client.session.messages({ path: { id: sessionId } });
+      const response = await client.session.messages({
+        path: { id: sessionId },
+      });
       const list = response.data;
       const history = Array.isArray(list) ? list : [];
       setInitialMessages(mapOpenCodeHistoryToUIMessages(history));
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to load session messages";
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to load session messages";
       toast.error(message);
       setInitialMessages([]);
     } finally {
@@ -586,7 +606,7 @@ export function AIAgentChat({
         sessionTitle,
       });
     },
-    [connectionKey, onSessionLinked, workflowId, workflowName]
+    [connectionKey, onSessionLinked, workflowId, workflowName],
   );
 
   const applyInitialSessionIfNeeded = useCallback(
@@ -601,7 +621,7 @@ export function AIAgentChat({
       }
 
       const targetSession = sessionList.find(
-        (session) => session.id === normalizedInitialSessionId
+        (session) => session.id === normalizedInitialSessionId,
       );
       if (!targetSession) {
         initialSessionAppliedRef.current = normalizedInitialSessionId;
@@ -611,14 +631,20 @@ export function AIAgentChat({
 
       initialSessionAppliedRef.current = normalizedInitialSessionId;
       setActiveSessionId(normalizedInitialSessionId);
-      linkSessionToWorkflow(normalizedInitialSessionId, getSessionTitle(targetSession));
+      linkSessionToWorkflow(
+        normalizedInitialSessionId,
+        getSessionTitle(targetSession),
+      );
       if (connectionKey) {
-        markSessionWorkflowMappingOpened(connectionKey, normalizedInitialSessionId);
+        markSessionWorkflowMappingOpened(
+          connectionKey,
+          normalizedInitialSessionId,
+        );
       }
       await loadMessages(normalizedInitialSessionId);
       return true;
     },
-    [connectionKey, initialSessionId, linkSessionToWorkflow, loadMessages]
+    [connectionKey, initialSessionId, linkSessionToWorkflow, loadMessages],
   );
 
   useEffect(() => {
@@ -664,7 +690,7 @@ export function AIAgentChat({
 
       linkSessionToWorkflow(
         fallbackSessionId,
-        fallbackSession ? getSessionTitle(fallbackSession) : undefined
+        fallbackSession ? getSessionTitle(fallbackSession) : undefined,
       );
       if (connectionKey) {
         markSessionWorkflowMappingOpened(connectionKey, fallbackSessionId);
@@ -678,7 +704,7 @@ export function AIAgentChat({
       linkSessionToWorkflow,
       loadMessages,
       loadSessions,
-    ]
+    ],
   );
 
   useEffect(() => {
@@ -691,14 +717,19 @@ export function AIAgentChat({
   const handleSelectSession = useCallback(
     async (sessionId: string) => {
       setActiveSessionId(sessionId);
-      const selectedSession = sessions.find((session) => session.id === sessionId);
-      linkSessionToWorkflow(sessionId, selectedSession ? getSessionTitle(selectedSession) : undefined);
+      const selectedSession = sessions.find(
+        (session) => session.id === sessionId,
+      );
+      linkSessionToWorkflow(
+        sessionId,
+        selectedSession ? getSessionTitle(selectedSession) : undefined,
+      );
       if (connectionKey) {
         markSessionWorkflowMappingOpened(connectionKey, sessionId);
       }
       await loadMessages(sessionId);
     },
-    [connectionKey, linkSessionToWorkflow, loadMessages, sessions]
+    [connectionKey, linkSessionToWorkflow, loadMessages, sessions],
   );
 
   const handleNewSession = useCallback(async () => {
@@ -725,7 +756,8 @@ export function AIAgentChat({
         markSessionWorkflowMappingOpened(connectionKey, session.id);
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to create session";
+      const message =
+        error instanceof Error ? error.message : "Failed to create session";
       toast.error(message);
     } finally {
       setIsCreatingSession(false);
@@ -742,7 +774,7 @@ export function AIAgentChat({
       try {
         await client.session.delete({ path: { id: sessionId } });
         const remainingSessions = sessions.filter(
-          (session) => session.id !== sessionId
+          (session) => session.id !== sessionId,
         );
         setSessions(remainingSessions);
         if (connectionKey) {
@@ -756,10 +788,13 @@ export function AIAgentChat({
           if (fallbackSessionId) {
             linkSessionToWorkflow(
               fallbackSessionId,
-              fallbackSession ? getSessionTitle(fallbackSession) : undefined
+              fallbackSession ? getSessionTitle(fallbackSession) : undefined,
             );
             if (connectionKey) {
-              markSessionWorkflowMappingOpened(connectionKey, fallbackSessionId);
+              markSessionWorkflowMappingOpened(
+                connectionKey,
+                fallbackSessionId,
+              );
             }
             await loadMessages(fallbackSessionId);
           } else {
@@ -768,11 +803,18 @@ export function AIAgentChat({
           }
         }
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Failed to delete session";
+        const message =
+          error instanceof Error ? error.message : "Failed to delete session";
         toast.error(message);
       }
     },
-    [activeSessionId, connectionKey, linkSessionToWorkflow, loadMessages, sessions]
+    [
+      activeSessionId,
+      connectionKey,
+      linkSessionToWorkflow,
+      loadMessages,
+      sessions,
+    ],
   );
 
   const abortSession = useCallback(async (sessionId: string) => {
@@ -796,11 +838,22 @@ export function AIAgentChat({
   }, [activeSessionId, sessions]);
 
   if (!(connected && connection)) {
+    if (isInputOnlyMinimized) {
+      return (
+        <div className={cn("flex items-center gap-2 p-2", className)}>
+          <p className="flex-1 text-muted-foreground text-xs">
+            AI Agent not connected
+          </p>
+          <OpenCodeConnection onStatusChange={handleConnected} />
+        </div>
+      );
+    }
+
     return (
       <div
         className={cn(
           "flex flex-col items-center justify-center gap-4 p-6 text-center",
-          className
+          className,
         )}
       >
         <div className="rounded-full bg-muted p-4">
@@ -818,51 +871,70 @@ export function AIAgentChat({
   }
 
   return (
-    <div className={cn("flex h-full flex-col", className)}>
+    <div
+      className={cn(
+        "flex flex-col",
+        !isInputOnlyMinimized && "h-full",
+        className,
+      )}
+    >
       <div
         className={cn(
           "flex shrink-0 items-center gap-2 border-b",
-          isMinimizedVariant ? "px-2 py-1.5" : "px-3 py-2"
+          isInputOnlyMinimized
+            ? "px-2 py-1"
+            : isMinimizedVariant
+              ? "px-2 py-1.5"
+              : "px-3 py-2",
         )}
       >
-        <Button
-          className="size-6"
-          onClick={() => setShowSidebar((visible) => !visible)}
-          size="icon"
-          variant="ghost"
-        >
-          {showSidebar ? (
-            <ChevronLeft className="size-3.5" />
-          ) : (
-            <MessageSquare className="size-3.5" />
-          )}
-        </Button>
+        {isInputOnlyMinimized ? null : (
+          <Button
+            className="size-6"
+            onClick={() => setShowSidebar((visible) => !visible)}
+            size="icon"
+            variant="ghost"
+          >
+            {showSidebar ? (
+              <ChevronLeft className="size-3.5" />
+            ) : (
+              <MessageSquare className="size-3.5" />
+            )}
+          </Button>
+        )}
         <span
           className={cn(
             "flex-1 truncate font-medium",
-            isMinimizedVariant ? "text-xs" : "text-sm"
+            isMinimizedVariant ? "text-xs" : "text-sm",
           )}
         >
           {activeSessionId
-            ? (activeSession ? getSessionTitle(activeSession) : "Session")
+            ? activeSession
+              ? getSessionTitle(activeSession)
+              : "Session"
             : "Session required"}
         </span>
         {isMinimizedVariant ? (
-          <DropdownMenu onOpenChange={setActionsMenuOpen} open={actionsMenuOpen}>
+          <DropdownMenu
+            onOpenChange={setActionsMenuOpen}
+            open={actionsMenuOpen}
+          >
             <DropdownMenuTrigger asChild>
               <Button className="size-6" size="icon" variant="ghost">
                 <MoreHorizontal className="size-3.5" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56" forceMount>
-              <DropdownMenuItem
-                onSelect={() => {
-                  setShowSidebar((visible) => !visible);
-                }}
-              >
-                <MessageSquare className="size-4" />
-                {showSidebar ? "Hide Sessions" : "Show Sessions"}
-              </DropdownMenuItem>
+              {isInputOnlyMinimized ? null : (
+                <DropdownMenuItem
+                  onSelect={() => {
+                    setShowSidebar((visible) => !visible);
+                  }}
+                >
+                  <MessageSquare className="size-4" />
+                  {showSidebar ? "Hide Sessions" : "Show Sessions"}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 disabled={isCreatingSession}
                 onSelect={() => {
@@ -908,13 +980,16 @@ export function AIAgentChat({
                 New Session
               </Button>
             ) : null}
-            <OpenCodeConnection className="ml-auto" onStatusChange={handleConnected} />
+            <OpenCodeConnection
+              className="ml-auto"
+              onStatusChange={handleConnected}
+            />
           </>
         )}
       </div>
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        {showSidebar && (
+        {showSidebar && !isInputOnlyMinimized && (
           <div className={cn("shrink-0", isMinimizedVariant ? "w-40" : "w-48")}>
             <SessionSidebar
               activeId={activeSessionId}
@@ -936,28 +1011,43 @@ export function AIAgentChat({
               key={chatSurfaceKey}
               onAbortSession={abortSession}
               pageContext={pageContext}
+              hideConversation={isInputOnlyMinimized}
               uiVariant={uiVariant}
             />
           ) : (
             <div
-              className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center"
+              className={cn(
+                "flex h-full items-center",
+                isInputOnlyMinimized
+                  ? "gap-2 px-2 py-2"
+                  : "flex-col justify-center gap-4 p-6 text-center",
+              )}
               data-testid="opencode-chat-inactive"
             >
-              <div className="rounded-full bg-muted p-4">
-                <MessageSquare className="size-8 text-muted-foreground" />
-              </div>
-              <div className="space-y-1">
-                <p className="font-medium">No active OpenCode session</p>
-                <p className="text-muted-foreground text-sm">
-                  Start a session to begin chatting.
+              {isInputOnlyMinimized ? (
+                <p className="flex-1 text-muted-foreground text-xs">
+                  No active OpenCode session
                 </p>
-              </div>
+              ) : (
+                <>
+                  <div className="rounded-full bg-muted p-4">
+                    <MessageSquare className="size-8 text-muted-foreground" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="font-medium">No active OpenCode session</p>
+                    <p className="text-muted-foreground text-sm">
+                      Start a session to begin chatting.
+                    </p>
+                  </div>
+                </>
+              )}
               <Button
                 data-testid="opencode-start-session"
                 disabled={isCreatingSession}
                 onClick={() => {
                   void handleNewSession();
                 }}
+                size={isInputOnlyMinimized ? "sm" : "default"}
               >
                 {isCreatingSession ? (
                   <Loader2 className="mr-2 size-4 animate-spin" />

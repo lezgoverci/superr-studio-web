@@ -3,9 +3,12 @@ import type { AiAgentContextEnvelope } from "@/lib/ai-agent/page-context/types";
 
 export type AiAgentWindowMode = "minimized" | "sidebar" | "fullpage";
 
+export type AiAgentMinimizedView = "thread" | "input-only";
+
 export type AiAgentWindowState = {
   mode: AiAgentWindowMode;
   isOpen: boolean;
+  minimizedView: AiAgentMinimizedView;
   originPath: string | null;
   activeContextKey: string | null;
   activeContext: AiAgentContextEnvelope | null;
@@ -17,6 +20,7 @@ const AI_AGENT_WINDOW_STATE_STORAGE_KEY = "superr:ai-agent:window-state:v1";
 const DEFAULT_AI_AGENT_WINDOW_STATE: AiAgentWindowState = {
   mode: "minimized",
   isOpen: true,
+  minimizedView: "input-only",
   originPath: null,
   activeContextKey: null,
   activeContext: null,
@@ -107,10 +111,13 @@ function sanitizeWindowState(raw: unknown): AiAgentWindowState {
       ? input.mode
       : "minimized";
   const isOpen = typeof input.isOpen === "boolean" ? input.isOpen : true;
+  const minimizedView: AiAgentMinimizedView =
+    input.minimizedView === "thread" ? "thread" : "input-only";
 
   return {
     mode,
     isOpen,
+    minimizedView,
     originPath: sanitizePath(input.originPath),
     activeContextKey:
       typeof input.activeContextKey === "string"

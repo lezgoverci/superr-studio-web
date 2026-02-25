@@ -12,6 +12,7 @@ import {
   saveAiAgentWindowStateToStorage,
   setAiAgentSessionForContextAtom,
 } from "@/lib/ai-agent/window-state";
+import { cn } from "@/lib/utils";
 
 function areContextsEquivalent(left: unknown, right: unknown): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
@@ -178,6 +179,14 @@ export function AIAgentWindowManager() {
     }
   }, [isAgentRoute, pageContext, pathname, router, setWindowState]);
 
+  const handleToggleMinimizedView = useCallback(() => {
+    setWindowState((previous) => ({
+      ...previous,
+      minimizedView:
+        previous.minimizedView === "input-only" ? "thread" : "input-only",
+    }));
+  }, [setWindowState]);
+
   if (!(hydrated && isAppRoute && windowState.isOpen)) {
     return null;
   }
@@ -200,15 +209,28 @@ export function AIAgentWindowManager() {
 
       {windowState.mode === "minimized" && !isAgentRoute ? (
         <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] md:bottom-4 md:px-4 md:pb-0">
-          <div className="pointer-events-auto h-[68dvh] w-full max-w-none overflow-hidden rounded-2xl border bg-background shadow-2xl md:h-[560px] md:max-h-[calc(100dvh-7rem)] md:max-w-[760px]">
+          <div
+            className={cn(
+              "pointer-events-auto w-full max-w-none overflow-hidden rounded-2xl border bg-background shadow-2xl md:max-w-[760px]",
+              windowState.minimizedView === "input-only"
+                ? "h-auto"
+                : "h-[68dvh] md:h-[560px] md:max-h-[calc(100dvh-7rem)]"
+            )}
+          >
             <AIAgentWindowContent
-              className="h-full"
+              className={
+                windowState.minimizedView === "input-only"
+                  ? undefined
+                  : "h-full"
+              }
               initialSessionId={activeSessionId}
+              minimizedView={windowState.minimizedView}
               mode="minimized"
               onMinimize={handleMinimize}
               onOpenFullpage={handleOpenFullpage}
               onOpenSidebar={handleOpenSidebar}
               onSessionLinked={handleSessionLinked}
+              onToggleMinimizedView={handleToggleMinimizedView}
               pageContext={activeContext}
             />
           </div>
