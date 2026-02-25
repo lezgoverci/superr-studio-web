@@ -3,8 +3,6 @@
 import {
   BookOpen,
   Bot,
-  LayoutDashboard,
-  MessagesSquare,
   Settings2,
   Workflow,
 } from "lucide-react";
@@ -20,29 +18,19 @@ import type { ShellNavItem, ShellUser } from "./types";
 
 const DEFAULT_PERMISSIONS = [
   "route:dashboard:view",
-  "route:agent:view",
   "route:workflows:view",
-  "route:sessions:view",
   "route:library:view",
   "route:settings:view",
 ] as const;
 
 const NAV_ITEMS: ShellNavItem[] = [
   {
-    id: "dashboard",
-    label: "Home",
-    description: "Workspace overview",
+    id: "chat",
+    label: "Chat",
+    description: "AI agent assistant",
     href: "/app",
-    icon: LayoutDashboard,
-    requiredPermissions: ["route:dashboard:view"],
-  },
-  {
-    id: "agent",
-    label: "AI Agent",
-    description: "Universal chat assistant",
-    href: "/app/agent",
     icon: Bot,
-    requiredPermissions: ["route:agent:view"],
+    requiredPermissions: ["route:dashboard:view"],
   },
   {
     id: "workflows",
@@ -59,14 +47,6 @@ const NAV_ITEMS: ShellNavItem[] = [
     href: "/app/library",
     icon: BookOpen,
     requiredPermissions: ["route:library:view"],
-  },
-  {
-    id: "sessions",
-    label: "Sessions",
-    description: "OpenCode conversation history",
-    href: "/app/sessions",
-    icon: MessagesSquare,
-    requiredPermissions: ["route:sessions:view"],
   },
   {
     id: "settings",

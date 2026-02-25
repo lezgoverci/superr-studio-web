@@ -313,12 +313,6 @@ export function AppHeader() {
         </div>
 
         <div className="flex flex-1 items-center justify-end gap-2">
-          {isWorkflowEditor ? (
-            <Button asChild size="sm" variant="secondary">
-              <Link href="/app/workflows">All Workflows</Link>
-            </Button>
-          ) : null}
-
           <UserMenu />
         </div>
       </div>

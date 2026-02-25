@@ -28,7 +28,7 @@ export function AIAgentWindowManager() {
   const [hydrated, setHydrated] = useState(false);
 
   const isAppRoute = pathname.startsWith("/app");
-  const isAgentRoute = pathname === "/app/agent";
+  const isAgentRoute = pathname === "/app";
 
   useEffect(() => {
     hydrateWindowState(loadAiAgentWindowStateFromStorage());
@@ -85,7 +85,7 @@ export function AIAgentWindowManager() {
     ) {
       return;
     }
-    router.push("/app/agent");
+    router.push("/app");
   }, [
     hydrated,
     isAgentRoute,
@@ -164,7 +164,7 @@ export function AIAgentWindowManager() {
     }));
 
     if (!isAgentRoute) {
-      router.push("/app/agent");
+      router.push("/app");
     }
   }, [isAgentRoute, pageContext, pathname, router, setWindowState]);
 
