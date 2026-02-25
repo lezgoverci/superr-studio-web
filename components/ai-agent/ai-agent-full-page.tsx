@@ -1,7 +1,7 @@
 "use client";
 
 import { useAtom, useSetAtom } from "jotai";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo } from "react";
 import { AIAgentWindowContent } from "@/components/ai-agent/ai-agent-window-content";
 import { useAiAgentPageContext } from "@/lib/ai-agent/page-context/use-ai-agent-page-context";
@@ -12,9 +12,11 @@ import {
 
 export function AIAgentFullPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const routeContext = useAiAgentPageContext();
   const [windowState, setWindowState] = useAtom(aiAgentWindowStateAtom);
   const setSessionForContext = useSetAtom(setAiAgentSessionForContextAtom);
+  const shouldStartEmpty = searchParams.get("chatStart") === "empty";
 
   useEffect(() => {
     setWindowState((previous) => ({
@@ -24,15 +26,17 @@ export function AIAgentFullPage() {
     }));
   }, [setWindowState]);
 
-  const activeContext = useMemo(
-    () => windowState.activeContext ?? routeContext,
-    [routeContext, windowState.activeContext]
-  );
+  const activeContext = useMemo(() => {
+    if (shouldStartEmpty) {
+      return routeContext;
+    }
+    return windowState.activeContext ?? routeContext;
+  }, [routeContext, shouldStartEmpty, windowState.activeContext]);
   const activeContextKey = activeContext?.contextKey ?? null;
-  const activeSessionId =
-    activeContextKey && windowState.sessionByContextKey[activeContextKey]
-      ? windowState.sessionByContextKey[activeContextKey]
-      : null;
+  const persistedSessionId = activeContextKey
+    ? (windowState.sessionByContextKey[activeContextKey] ?? null)
+    : null;
+  const initialSessionId = shouldStartEmpty ? null : persistedSessionId;
 
   const handleSessionLinked = useCallback(
     (sessionId: string) => {
@@ -68,8 +72,9 @@ export function AIAgentFullPage() {
   return (
     <main className="pointer-events-auto h-full w-full overflow-hidden">
       <AIAgentWindowContent
+        autoSelectFirstSessionOnConnect={!shouldStartEmpty}
         className="h-full"
-        initialSessionId={activeSessionId}
+        initialSessionId={initialSessionId}
         mode="fullpage"
         onMinimize={handleMinimize}
         onOpenFullpage={handleOpenFullpage}

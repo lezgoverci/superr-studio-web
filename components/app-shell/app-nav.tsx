@@ -9,11 +9,20 @@ type AppNavProps = {
   items: ShellNavItem[];
 };
 
+function normalizeNavHref(href: string): string {
+  const [withoutHash] = href.split("#");
+  const [pathname] = withoutHash.split("?");
+  return pathname || "/";
+}
+
 export function isItemActive(pathname: string, href: string): boolean {
-  if (href === "/app") {
+  const normalizedHref = normalizeNavHref(href);
+  if (normalizedHref === "/app") {
     return pathname === "/app";
   }
-  return pathname === href || pathname.startsWith(`${href}/`);
+  return (
+    pathname === normalizedHref || pathname.startsWith(`${normalizedHref}/`)
+  );
 }
 
 export function NavContent({

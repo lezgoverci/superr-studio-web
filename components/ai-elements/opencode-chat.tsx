@@ -97,6 +97,7 @@ export type AIAgentChatProps = {
   workflowId?: string | null;
   workflowName?: string;
   initialSessionId?: string | null;
+  autoSelectFirstSessionOnConnect?: boolean;
   onSessionLinked?: (sessionId: string) => void;
   pageContext?: AiAgentContextEnvelope | null;
   uiVariant?: "default" | "minimized";
@@ -472,6 +473,7 @@ export function AIAgentChat({
   workflowId,
   workflowName,
   initialSessionId,
+  autoSelectFirstSessionOnConnect = true,
   onSessionLinked,
   pageContext: pageContextOverride,
   uiVariant = "default",
@@ -647,6 +649,13 @@ export function AIAgentChat({
         return;
       }
 
+      if (!autoSelectFirstSessionOnConnect) {
+        setActiveSessionId(null);
+        setInitialMessages([]);
+        setChatSurfaceKey((previousKey) => previousKey + 1);
+        return;
+      }
+
       const fallbackSession = latestSessions[0] ?? null;
       const fallbackSessionId = fallbackSession?.id ?? null;
       setActiveSessionId(fallbackSessionId);
@@ -668,6 +677,7 @@ export function AIAgentChat({
     },
     [
       activeSessionId,
+      autoSelectFirstSessionOnConnect,
       applyInitialSessionIfNeeded,
       connectionKey,
       linkSessionToWorkflow,

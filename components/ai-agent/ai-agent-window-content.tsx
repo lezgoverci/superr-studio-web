@@ -10,6 +10,7 @@ type AiAgentWindowContentProps = {
   mode: "minimized" | "fullpage";
   pageContext: AiAgentContextEnvelope | null;
   initialSessionId?: string | null;
+  autoSelectFirstSessionOnConnect?: boolean;
   minimizedView?: AiAgentMinimizedView;
   onSessionLinked: (sessionId: string) => void;
   onMinimize: () => void;
@@ -22,6 +23,7 @@ export function AIAgentWindowContent({
   mode,
   pageContext,
   initialSessionId,
+  autoSelectFirstSessionOnConnect,
   minimizedView = "input-only",
   onSessionLinked,
   onMinimize,
@@ -41,6 +43,7 @@ export function AIAgentWindowContent({
     >
       <div className="min-h-0 flex-1">
         <AIAgentChat
+          autoSelectFirstSessionOnConnect={autoSelectFirstSessionOnConnect}
           className={isInputOnlyMinimized ? undefined : "h-full"}
           initialSessionId={initialSessionId}
           minimizedDisplayMode={isMinimized ? minimizedView : "thread"}

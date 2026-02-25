@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  BookOpen,
-  Bot,
-  Settings2,
-  Workflow,
-} from "lucide-react";
+import { BookOpen, Bot, Settings2, Workflow } from "lucide-react";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useCallback, useMemo } from "react";
@@ -28,7 +23,7 @@ const NAV_ITEMS: ShellNavItem[] = [
     id: "chat",
     label: "Chat",
     description: "AI agent assistant",
-    href: "/app",
+    href: "/app?chatStart=empty",
     icon: Bot,
     requiredPermissions: ["route:dashboard:view"],
   },
