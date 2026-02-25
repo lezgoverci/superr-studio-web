@@ -35,6 +35,12 @@ type OpenCodeConnectionProps = {
   className?: string;
   triggerVariant?: OpenCodeConnectionTriggerVariant;
   onTriggerClick?: () => void;
+  /** When true, renders only the Dialog (no trigger button). Use when rendering outside a dropdown. */
+  dialogOnly?: boolean;
+  /** Controlled open state for the dialog (used when rendered outside dropdown). */
+  externalOpen?: boolean;
+  /** Callback when external controlled open state changes. */
+  onExternalOpenChange?: (open: boolean) => void;
 };
 
 export function OpenCodeConnection({
@@ -42,9 +48,14 @@ export function OpenCodeConnection({
   className,
   triggerVariant = "default",
   onTriggerClick,
+  dialogOnly = false,
+  externalOpen,
+  onExternalOpenChange,
 }: OpenCodeConnectionProps) {
   const [status, setStatus] = useState<ConnectionStatus>("checking");
-  const [showDialog, setShowDialog] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const showDialog = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setShowDialog = onExternalOpenChange !== undefined ? onExternalOpenChange : setInternalOpen;
   const [url, setUrl] = useState("http://localhost:4096");
   const [token, setToken] = useState("");
   const [saving, setSaving] = useState(false);
@@ -84,6 +95,21 @@ export function OpenCodeConnection({
     setError(null);
     setShowDialog(true);
   };
+
+  // Populate fields when dialog is opened externally
+  useEffect(() => {
+    if (showDialog) {
+      const config = getConnectionConfig();
+      if (config) {
+        setUrl(config.url);
+        setToken(config.token);
+      } else {
+        setUrl("http://localhost:4096");
+        setToken("");
+      }
+      setError(null);
+    }
+  }, [showDialog]);
 
   const handleSave = async () => {
     if (!url.trim() || !token.trim()) {
@@ -181,17 +207,19 @@ export function OpenCodeConnection({
 
   return (
     <>
-      {isMenuItemTrigger ? (
-        triggerButton
-      ) : (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>{triggerButton}</TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p>{current.label} — click to configure</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+      {!dialogOnly && (
+        isMenuItemTrigger ? (
+          triggerButton
+        ) : (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>{triggerButton}</TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p>{current.label} — click to configure</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )
       )}
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>

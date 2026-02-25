@@ -79,7 +79,9 @@ import {
   Minus,
   MoreHorizontal,
   Plus,
+  Settings,
   Trash2,
+  Wifi,
 } from "lucide-react";
 import type { Session } from "@opencode-ai/sdk/client";
 
@@ -482,6 +484,8 @@ export function AIAgentChat({
   const [initialMessages, setInitialMessages] = useState<UIMessage[]>([]);
   const [sessionSelectorOpen, setSessionSelectorOpen] = useState(false);
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
+  const [connectionDialogOpen, setConnectionDialogOpen] = useState(false);
+  const [providerSettingsOpen, setProviderSettingsOpen] = useState(false);
   const [chatSurfaceKey, setChatSurfaceKey] = useState(0);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
@@ -981,19 +985,43 @@ export function AIAgentChat({
               <DropdownMenuSeparator />
             ) : null}
 
-            <OpenCodeConnection
-              onStatusChange={handleConnected}
-              onTriggerClick={() => setActionsMenuOpen(false)}
-              triggerVariant="menu-item"
-            />
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                setActionsMenuOpen(false);
+                setConnectionDialogOpen(true);
+              }}
+            >
+              <Wifi className="size-4" />
+              OpenCode Connection
+            </DropdownMenuItem>
             {hasConnection ? (
-              <ProviderSettings
-                onTriggerClick={() => setActionsMenuOpen(false)}
-                triggerVariant="menu-item"
-              />
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  setActionsMenuOpen(false);
+                  setProviderSettingsOpen(true);
+                }}
+              >
+                <Settings className="size-4" />
+                Provider Settings
+              </DropdownMenuItem>
             ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
+        <OpenCodeConnection
+          onStatusChange={handleConnected}
+          dialogOnly
+          externalOpen={connectionDialogOpen}
+          onExternalOpenChange={setConnectionDialogOpen}
+        />
+        {hasConnection ? (
+          <ProviderSettings
+            dialogOnly
+            externalOpen={providerSettingsOpen}
+            onExternalOpenChange={setProviderSettingsOpen}
+          />
+        ) : null}
       </div>
 
       {hasConnection ? (

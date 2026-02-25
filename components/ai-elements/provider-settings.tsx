@@ -15,14 +15,25 @@ type ProviderSettingsProps = {
   className?: string;
   triggerVariant?: ProviderSettingsTriggerVariant;
   onTriggerClick?: () => void;
+  /** When true, renders only the Dialog (no trigger button). */
+  dialogOnly?: boolean;
+  /** Controlled open state for the dialog. */
+  externalOpen?: boolean;
+  /** Callback when controlled open state changes. */
+  onExternalOpenChange?: (open: boolean) => void;
 };
 
 export function ProviderSettings({
   className,
   triggerVariant = "default",
   onTriggerClick,
+  dialogOnly = false,
+  externalOpen,
+  onExternalOpenChange,
 }: ProviderSettingsProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = onExternalOpenChange !== undefined ? onExternalOpenChange : setInternalOpen;
   const [providers, setProviders] = useState<any[]>([]);
   const [connected, setConnected] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -119,30 +130,32 @@ export function ProviderSettings({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {triggerVariant === "menu-item" ? (
-          <button
-            className={cn(
-              "focus:bg-accent focus:text-accent-foreground hover:bg-accent hover:text-accent-foreground relative flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none",
-              className
-            )}
-            onClick={() => onTriggerClick?.()}
-            type="button"
-          >
-            <Settings className="size-4" />
-            <span className="flex-1 text-left">Provider Settings</span>
-          </button>
-        ) : (
-          <Button
-            className={cn("ml-2 h-8 w-8", className)}
-            onClick={() => onTriggerClick?.()}
-            size="icon"
-            variant="ghost"
-          >
-            <Settings className="size-4" />
-          </Button>
-        )}
-      </DialogTrigger>
+      {!dialogOnly && (
+        <DialogTrigger asChild>
+          {triggerVariant === "menu-item" ? (
+            <button
+              className={cn(
+                "focus:bg-accent focus:text-accent-foreground hover:bg-accent hover:text-accent-foreground relative flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none",
+                className
+              )}
+              onClick={() => onTriggerClick?.()}
+              type="button"
+            >
+              <Settings className="size-4" />
+              <span className="flex-1 text-left">Provider Settings</span>
+            </button>
+          ) : (
+            <Button
+              className={cn("ml-2 h-8 w-8", className)}
+              onClick={() => onTriggerClick?.()}
+              size="icon"
+              variant="ghost"
+            >
+              <Settings className="size-4" />
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>AI Provider Connections</DialogTitle>
