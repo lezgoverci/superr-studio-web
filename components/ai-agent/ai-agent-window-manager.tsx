@@ -85,12 +85,23 @@ export function AIAgentWindowManager() {
     ) {
       return;
     }
-    router.push("/app");
+
+    setWindowState((previous) => {
+      if (!(previous.isOpen && previous.mode === "fullpage")) {
+        return previous;
+      }
+
+      return {
+        ...previous,
+        mode: "minimized",
+        isOpen: true,
+      };
+    });
   }, [
     hydrated,
     isAgentRoute,
     isAppRoute,
-    router,
+    setWindowState,
     windowState.isOpen,
     windowState.mode,
   ]);

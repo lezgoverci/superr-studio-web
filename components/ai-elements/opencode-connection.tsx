@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,20 +60,25 @@ export function OpenCodeConnection({
   const [token, setToken] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const onStatusChangeRef = useRef(onStatusChange);
+
+  useEffect(() => {
+    onStatusChangeRef.current = onStatusChange;
+  }, [onStatusChange]);
 
   const checkConnection = useCallback(async () => {
     const config = getConnectionConfig();
     if (!config) {
       setStatus("not-configured");
-      onStatusChange?.(false);
+      onStatusChangeRef.current?.(false);
       return;
     }
     setStatus("checking");
     const ok = await pingOpenCode();
     const newStatus = ok ? "connected" : "disconnected";
     setStatus(newStatus);
-    onStatusChange?.(ok);
-  }, [onStatusChange]);
+    onStatusChangeRef.current?.(ok);
+  }, []);
 
   // Check connection on mount and every 30 seconds
   useEffect(() => {
@@ -128,7 +133,7 @@ export function OpenCodeConnection({
         return;
       }
       setStatus("connected");
-      onStatusChange?.(true);
+      onStatusChangeRef.current?.(true);
       setShowDialog(false);
     } catch (err) {
       setError("Connection failed: " + (err instanceof Error ? err.message : String(err)));
@@ -140,7 +145,7 @@ export function OpenCodeConnection({
   const handleDisconnect = () => {
     clearConnectionConfig();
     setStatus("not-configured");
-    onStatusChange?.(false);
+    onStatusChangeRef.current?.(false);
     setShowDialog(false);
   };
 

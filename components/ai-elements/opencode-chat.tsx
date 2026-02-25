@@ -494,13 +494,45 @@ export function AIAgentChat({
   const [hasLoadedSessions, setHasLoadedSessions] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const initialSessionAppliedRef = useRef<string | null>(null);
+  const activeSessionIdRef = useRef<string | null>(null);
+  const connectedRef = useRef(false);
+  const initialSessionIdRef = useRef(initialSessionId);
+  const autoSelectFirstSessionOnConnectRef = useRef(
+    autoSelectFirstSessionOnConnect,
+  );
+  const connectionKeyRef = useRef<string | null>(null);
+  const messageLoadRequestIdRef = useRef(0);
+  const linkSessionToWorkflowRef = useRef<
+    (sessionId: string, sessionTitle?: string) => void
+  >(() => undefined);
   const resolvedPageContext = useAiAgentPageContext();
   const pageContext = pageContextOverride ?? resolvedPageContext;
   const isMinimizedVariant = uiVariant === "minimized";
   const isInputOnlyMinimized =
     isMinimizedVariant && minimizedDisplayMode === "input-only";
+  const connection = getConnectionConfig();
+  const connectionKey = useMemo(() => {
+    if (!connection) {
+      return null;
+    }
+    return getOpenCodeSessionConnectionKey(connection);
+  }, [connection?.url, connection?.username]);
 
+  const setActiveSession = useCallback((sessionId: string | null) => {
+    activeSessionIdRef.current = sessionId;
+    setActiveSessionId(sessionId);
+  }, []);
 
+  const cancelPendingMessageLoads = useCallback(() => {
+    messageLoadRequestIdRef.current += 1;
+    setIsLoadingMessages(false);
+  }, []);
+
+  const resetInactiveSession = useCallback(() => {
+    cancelPendingMessageLoads();
+    setInitialMessages([]);
+    setChatSurfaceKey((previous) => previous + 1);
+  }, [cancelPendingMessageLoads]);
 
   const loadSessions = useCallback(async (): Promise<Session[]> => {
     const client = getOpenCodeClient();
@@ -528,19 +560,41 @@ export function AIAgentChat({
   const loadMessages = useCallback(async (sessionId: string) => {
     const client = getOpenCodeClient();
     if (!client) {
-      setInitialMessages([]);
+      if (activeSessionIdRef.current === sessionId) {
+        setInitialMessages([]);
+        setChatSurfaceKey((previous) => previous + 1);
+      }
+      setIsLoadingMessages(false);
       return;
     }
 
+    const requestId = messageLoadRequestIdRef.current + 1;
+    messageLoadRequestIdRef.current = requestId;
     setIsLoadingMessages(true);
+
     try {
       const response = await client.session.messages({
         path: { id: sessionId },
       });
+
+      if (
+        requestId !== messageLoadRequestIdRef.current ||
+        activeSessionIdRef.current !== sessionId
+      ) {
+        return;
+      }
+
       const list = response.data;
       const history = Array.isArray(list) ? list : [];
       setInitialMessages(mapOpenCodeHistoryToUIMessages(history));
     } catch (error) {
+      if (
+        requestId !== messageLoadRequestIdRef.current ||
+        activeSessionIdRef.current !== sessionId
+      ) {
+        return;
+      }
+
       const message =
         error instanceof Error
           ? error.message
@@ -548,18 +602,13 @@ export function AIAgentChat({
       toast.error(message);
       setInitialMessages([]);
     } finally {
+      if (requestId !== messageLoadRequestIdRef.current) {
+        return;
+      }
       setChatSurfaceKey((previous) => previous + 1);
       setIsLoadingMessages(false);
     }
   }, []);
-
-  const connection = getConnectionConfig();
-  const connectionKey = useMemo(() => {
-    if (!connection) {
-      return null;
-    }
-    return getOpenCodeSessionConnectionKey(connection);
-  }, [connection?.url, connection?.username]);
 
   const linkSessionToWorkflow = useCallback(
     (sessionId: string, sessionTitle?: string) => {
@@ -580,15 +629,45 @@ export function AIAgentChat({
     [connectionKey, onSessionLinked, workflowId, workflowName],
   );
 
+  useEffect(() => {
+    linkSessionToWorkflowRef.current = linkSessionToWorkflow;
+  }, [linkSessionToWorkflow]);
+
+  useEffect(() => {
+    activeSessionIdRef.current = activeSessionId;
+  }, [activeSessionId]);
+
+  useEffect(() => {
+    connectedRef.current = connected;
+  }, [connected]);
+
+  useEffect(() => {
+    initialSessionIdRef.current = initialSessionId;
+    initialSessionAppliedRef.current = null;
+  }, [initialSessionId]);
+
+  useEffect(() => {
+    autoSelectFirstSessionOnConnectRef.current = autoSelectFirstSessionOnConnect;
+  }, [autoSelectFirstSessionOnConnect]);
+
+  useEffect(() => {
+    connectionKeyRef.current = connectionKey;
+  }, [connectionKey]);
+
   const applyInitialSessionIfNeeded = useCallback(
     async (sessionList: Session[]): Promise<boolean> => {
-      const normalizedInitialSessionId = initialSessionId?.trim();
+      const normalizedInitialSessionId = initialSessionIdRef.current?.trim();
       if (!normalizedInitialSessionId) {
         return false;
       }
 
       if (initialSessionAppliedRef.current === normalizedInitialSessionId) {
         return false;
+      }
+
+      if (activeSessionIdRef.current === normalizedInitialSessionId) {
+        initialSessionAppliedRef.current = normalizedInitialSessionId;
+        return true;
       }
 
       const targetSession = sessionList.find(
@@ -601,88 +680,93 @@ export function AIAgentChat({
       }
 
       initialSessionAppliedRef.current = normalizedInitialSessionId;
-      setActiveSessionId(normalizedInitialSessionId);
-      linkSessionToWorkflow(
+      setActiveSession(normalizedInitialSessionId);
+      linkSessionToWorkflowRef.current(
         normalizedInitialSessionId,
         getSessionTitle(targetSession),
       );
-      if (connectionKey) {
+      const currentConnectionKey = connectionKeyRef.current;
+      if (currentConnectionKey) {
         markSessionWorkflowMappingOpened(
-          connectionKey,
+          currentConnectionKey,
           normalizedInitialSessionId,
         );
       }
       await loadMessages(normalizedInitialSessionId);
       return true;
     },
-    [connectionKey, initialSessionId, linkSessionToWorkflow, loadMessages],
+    [loadMessages, setActiveSession],
   );
-
-  useEffect(() => {
-    initialSessionAppliedRef.current = null;
-  }, [initialSessionId]);
 
   const handleConnected = useCallback(
     async (isConnected: boolean) => {
+      if (connectedRef.current === isConnected) {
+        return;
+      }
+
+      connectedRef.current = isConnected;
       setConnected(isConnected);
 
       if (!isConnected) {
         setHasLoadedSessions(false);
         setSessions([]);
-        setActiveSessionId(null);
-        setInitialMessages([]);
-        setChatSurfaceKey((previous) => previous + 1);
+        setActiveSession(null);
+        setUnreadCount(0);
+        resetInactiveSession();
         return;
       }
 
       setHasLoadedSessions(false);
       const latestSessions = await loadSessions();
+      if (!connectedRef.current) {
+        return;
+      }
       setHasLoadedSessions(true);
       if (await applyInitialSessionIfNeeded(latestSessions)) {
         return;
       }
 
+      const currentActiveSessionId = activeSessionIdRef.current;
       const activeSessionStillExists =
-        activeSessionId !== null &&
-        latestSessions.some((session) => session.id === activeSessionId);
+        currentActiveSessionId !== null &&
+        latestSessions.some((session) => session.id === currentActiveSessionId);
       if (activeSessionStillExists) {
         return;
       }
 
-      if (!autoSelectFirstSessionOnConnect) {
-        setActiveSessionId(null);
-        setInitialMessages([]);
-        setChatSurfaceKey((previousKey) => previousKey + 1);
+      if (!autoSelectFirstSessionOnConnectRef.current) {
+        setActiveSession(null);
+        setUnreadCount(0);
+        resetInactiveSession();
         return;
       }
 
       const fallbackSession = latestSessions[0] ?? null;
       const fallbackSessionId = fallbackSession?.id ?? null;
-      setActiveSessionId(fallbackSessionId);
+      setActiveSession(fallbackSessionId);
+      setUnreadCount(0);
 
       if (!fallbackSessionId) {
-        setInitialMessages([]);
-        setChatSurfaceKey((previousKey) => previousKey + 1);
+        resetInactiveSession();
         return;
       }
 
-      linkSessionToWorkflow(
+      linkSessionToWorkflowRef.current(
         fallbackSessionId,
         fallbackSession ? getSessionTitle(fallbackSession) : undefined,
       );
-      if (connectionKey) {
-        markSessionWorkflowMappingOpened(connectionKey, fallbackSessionId);
+      const currentConnectionKey = connectionKeyRef.current;
+      if (currentConnectionKey) {
+        markSessionWorkflowMappingOpened(currentConnectionKey, fallbackSessionId);
       }
       await loadMessages(fallbackSessionId);
     },
     [
-      activeSessionId,
-      autoSelectFirstSessionOnConnect,
       applyInitialSessionIfNeeded,
-      connectionKey,
-      linkSessionToWorkflow,
       loadMessages,
       loadSessions,
+      resetInactiveSession,
+      setActiveSession,
     ],
   );
 
@@ -695,7 +779,7 @@ export function AIAgentChat({
 
   const handleSelectSession = useCallback(
     async (sessionId: string) => {
-      setActiveSessionId(sessionId);
+      setActiveSession(sessionId);
       setUnreadCount(0);
       const selectedSession = sessions.find(
         (session) => session.id === sessionId,
@@ -704,12 +788,13 @@ export function AIAgentChat({
         sessionId,
         selectedSession ? getSessionTitle(selectedSession) : undefined,
       );
-      if (connectionKey) {
-        markSessionWorkflowMappingOpened(connectionKey, sessionId);
+      const currentConnectionKey = connectionKeyRef.current;
+      if (currentConnectionKey) {
+        markSessionWorkflowMappingOpened(currentConnectionKey, sessionId);
       }
       await loadMessages(sessionId);
     },
-    [connectionKey, linkSessionToWorkflow, loadMessages, sessions],
+    [linkSessionToWorkflow, loadMessages, sessions, setActiveSession],
   );
 
   const handleNewSession = useCallback(async () => {
@@ -728,13 +813,15 @@ export function AIAgentChat({
       }
 
       setSessions((previous) => [session, ...previous]);
-      setActiveSessionId(session.id);
+      setActiveSession(session.id);
+      cancelPendingMessageLoads();
       setInitialMessages([]);
       setUnreadCount(0);
       setChatSurfaceKey((previous) => previous + 1);
       linkSessionToWorkflow(session.id, getSessionTitle(session));
-      if (connectionKey) {
-        markSessionWorkflowMappingOpened(connectionKey, session.id);
+      const currentConnectionKey = connectionKeyRef.current;
+      if (currentConnectionKey) {
+        markSessionWorkflowMappingOpened(currentConnectionKey, session.id);
       }
     } catch (error) {
       const message =
@@ -743,7 +830,7 @@ export function AIAgentChat({
     } finally {
       setIsCreatingSession(false);
     }
-  }, [connectionKey, linkSessionToWorkflow]);
+  }, [cancelPendingMessageLoads, linkSessionToWorkflow, setActiveSession]);
 
   const handleDeleteSession = useCallback(
     async (sessionId: string) => {
@@ -758,29 +845,30 @@ export function AIAgentChat({
           (session) => session.id !== sessionId,
         );
         setSessions(remainingSessions);
-        if (connectionKey) {
-          removeSessionWorkflowMapping(connectionKey, sessionId);
+        const currentConnectionKey = connectionKeyRef.current;
+        if (currentConnectionKey) {
+          removeSessionWorkflowMapping(currentConnectionKey, sessionId);
         }
 
-        if (activeSessionId === sessionId) {
+        if (activeSessionIdRef.current === sessionId) {
           const fallbackSession = remainingSessions[0] ?? null;
           const fallbackSessionId = fallbackSession?.id ?? null;
-          setActiveSessionId(fallbackSessionId);
+          setActiveSession(fallbackSessionId);
+          setUnreadCount(0);
           if (fallbackSessionId) {
             linkSessionToWorkflow(
               fallbackSessionId,
               fallbackSession ? getSessionTitle(fallbackSession) : undefined,
             );
-            if (connectionKey) {
+            if (currentConnectionKey) {
               markSessionWorkflowMappingOpened(
-                connectionKey,
+                currentConnectionKey,
                 fallbackSessionId,
               );
             }
             await loadMessages(fallbackSessionId);
           } else {
-            setInitialMessages([]);
-            setChatSurfaceKey((previous) => previous + 1);
+            resetInactiveSession();
           }
         }
       } catch (error) {
@@ -790,11 +878,11 @@ export function AIAgentChat({
       }
     },
     [
-      activeSessionId,
-      connectionKey,
       linkSessionToWorkflow,
       loadMessages,
+      resetInactiveSession,
       sessions,
+      setActiveSession,
     ],
   );
 
@@ -1101,7 +1189,15 @@ export function AIAgentChat({
           <p className="flex-1 text-muted-foreground text-xs">
             AI Agent not connected
           </p>
-          <OpenCodeConnection onStatusChange={handleConnected} />
+          <Button
+            onClick={() => {
+              setConnectionDialogOpen(true);
+            }}
+            size="sm"
+            variant="secondary"
+          >
+            Connect
+          </Button>
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center gap-4 p-6 text-center">
@@ -1114,7 +1210,14 @@ export function AIAgentChat({
               Connect OpenCode to use your own AI subscriptions.
             </p>
           </div>
-          <OpenCodeConnection onStatusChange={handleConnected} />
+          <Button
+            onClick={() => {
+              setConnectionDialogOpen(true);
+            }}
+            size="sm"
+          >
+            Connect OpenCode
+          </Button>
         </div>
       )}
     </div>

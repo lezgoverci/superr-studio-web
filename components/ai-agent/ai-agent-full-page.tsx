@@ -2,13 +2,17 @@
 
 import { useAtom, useSetAtom } from "jotai";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect } from "react";
 import { AIAgentWindowContent } from "@/components/ai-agent/ai-agent-window-content";
 import { useAiAgentPageContext } from "@/lib/ai-agent/page-context/use-ai-agent-page-context";
 import {
   aiAgentWindowStateAtom,
   setAiAgentSessionForContextAtom,
 } from "@/lib/ai-agent/window-state";
+
+function areContextsEquivalent(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
 
 export function AIAgentFullPage() {
   const router = useRouter();
@@ -19,20 +23,29 @@ export function AIAgentFullPage() {
   const shouldStartEmpty = searchParams.get("chatStart") === "empty";
 
   useEffect(() => {
-    setWindowState((previous) => ({
-      ...previous,
-      mode: "fullpage",
-      isOpen: true,
-    }));
-  }, [setWindowState]);
+    setWindowState((previous) => {
+      const shouldUpdateWindowMode = !(
+        previous.mode === "fullpage" && previous.isOpen
+      );
+      const shouldUpdateContext =
+        previous.activeContextKey !== routeContext.contextKey ||
+        !areContextsEquivalent(previous.activeContext, routeContext);
 
-  const activeContext = useMemo(() => {
-    if (shouldStartEmpty) {
-      return routeContext;
-    }
-    return windowState.activeContext ?? routeContext;
-  }, [routeContext, shouldStartEmpty, windowState.activeContext]);
-  const activeContextKey = activeContext?.contextKey ?? null;
+      if (!(shouldUpdateWindowMode || shouldUpdateContext)) {
+        return previous;
+      }
+
+      return {
+        ...previous,
+        mode: "fullpage",
+        isOpen: true,
+        activeContext: routeContext,
+        activeContextKey: routeContext.contextKey,
+      };
+    });
+  }, [routeContext, setWindowState]);
+
+  const activeContextKey = routeContext.contextKey;
   const persistedSessionId = activeContextKey
     ? (windowState.sessionByContextKey[activeContextKey] ?? null)
     : null;
@@ -79,7 +92,7 @@ export function AIAgentFullPage() {
         onMinimize={handleMinimize}
         onOpenFullpage={handleOpenFullpage}
         onSessionLinked={handleSessionLinked}
-        pageContext={activeContext}
+        pageContext={routeContext}
       />
     </main>
   );
