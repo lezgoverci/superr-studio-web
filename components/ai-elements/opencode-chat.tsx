@@ -938,31 +938,25 @@ export function AIAgentChat({
           <DropdownMenuContent align="end" className="w-56" forceMount>
             {windowControls ? (
               <>
-                <DropdownMenuItem
-                  disabled={windowControls.mode === "fullpage"}
-                  onSelect={() => {
-                    windowControls.onOpenFullpage();
-                  }}
-                >
-                  <Maximize2 className="size-4" />
-                  Open Full Page
-                  {windowControls.mode === "fullpage" ? (
-                    <Check className="ml-auto size-4" />
-                  ) : null}
-                </DropdownMenuItem>
-
-                <DropdownMenuItem
-                  disabled={windowControls.mode === "minimized"}
-                  onSelect={() => {
-                    windowControls.onMinimize();
-                  }}
-                >
-                  <Minimize2 className="size-4" />
-                  Minimize
-                  {windowControls.mode === "minimized" ? (
-                    <Check className="ml-auto size-4" />
-                  ) : null}
-                </DropdownMenuItem>
+                {windowControls.mode === "minimized" ? (
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      windowControls.onOpenFullpage();
+                    }}
+                  >
+                    <Maximize2 className="size-4" />
+                    Open Full Page
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      windowControls.onMinimize();
+                    }}
+                  >
+                    <Minimize2 className="size-4" />
+                    Minimize
+                  </DropdownMenuItem>
+                )}
               </>
             ) : null}
 
