@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { AIAgentChat } from "@/components/ai-elements/opencode-chat";
 import { ArtifactPanel } from "@/components/artifacts/artifact-panel";
 import {
   AlertDialog,
@@ -42,7 +41,6 @@ import {
   isWorkflowOwnerAtom,
   newlyCreatedNodeIdAtom,
   nodesAtom,
-  opencodeSessionIdAtom,
   type PropertiesPanelTab,
   pendingIntegrationNodesAtom,
   propertiesPanelActiveTabAtom,
@@ -157,7 +155,6 @@ export const PanelInner = () => {
   const [currentWorkflowName, setCurrentWorkflowName] = useAtom(
     currentWorkflowNameAtom
   );
-  const opencodeSessionId = useAtomValue(opencodeSessionIdAtom);
   const isOwner = useAtomValue(isWorkflowOwnerAtom);
   const updateNodeData = useSetAtom(updateNodeDataAtom);
   const deleteNode = useSetAtom(deleteNodeAtom);
@@ -188,8 +185,7 @@ export const PanelInner = () => {
         value === "properties" ||
         value === "code" ||
         value === "runs" ||
-        value === "artifacts" ||
-        value === "ai"
+        value === "artifacts"
       ) {
         setActiveTab(value as PropertiesPanelTab);
       }
@@ -644,14 +640,6 @@ export const PanelInner = () => {
                 Artifacts
               </TabsTrigger>
             )}
-            {isOwner && (
-              <TabsTrigger
-                className="bg-transparent text-muted-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none"
-                value="ai"
-              >
-                AI
-              </TabsTrigger>
-            )}
           </TabsList>
           <TabsContent
             className="flex flex-col overflow-hidden"
@@ -755,20 +743,6 @@ export const PanelInner = () => {
               </div>
             </TabsContent>
           ) : null}
-          {isOwner && (
-            <TabsContent
-              className="flex flex-col overflow-hidden"
-              style={{ height: "calc(100% - 56px)" }}
-              value="ai"
-            >
-              <AIAgentChat
-                className="h-full"
-                initialSessionId={opencodeSessionId}
-                workflowId={currentWorkflowId}
-                workflowName={currentWorkflowName}
-              />
-            </TabsContent>
-          )}
           <TabsContent
             className="flex flex-col overflow-hidden data-[state=inactive]:hidden"
             forceMount
