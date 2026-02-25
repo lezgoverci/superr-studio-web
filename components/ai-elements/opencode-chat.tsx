@@ -274,6 +274,7 @@ type ChatSurfaceProps = {
   connection: OpenCodeConnectionConfig;
   pageContext: AiAgentContextEnvelope | null;
   onAbortSession: (sessionId: string) => Promise<void>;
+  onNewMessages?: (count: number) => void;
   uiVariant: "default" | "minimized";
   hideConversation?: boolean;
 };
@@ -285,11 +286,13 @@ function ChatSurface({
   connection,
   pageContext,
   onAbortSession,
+  onNewMessages,
   uiVariant,
   hideConversation = false,
 }: ChatSurfaceProps) {
   const [input, setInput] = useState("");
   const activeSessionIdRef = useRef(activeSessionId);
+  const prevMessageCountRef = useRef(initialMessages.length);
 
   useEffect(() => {
     activeSessionIdRef.current = activeSessionId;
@@ -331,6 +334,26 @@ function ChatSurface({
     },
     transport,
   });
+
+  // Notify parent when new assistant messages arrive
+  const onNewMessagesRef = useRef(onNewMessages);
+  useEffect(() => {
+    onNewMessagesRef.current = onNewMessages;
+  }, [onNewMessages]);
+
+  useEffect(() => {
+    const prev = prevMessageCountRef.current;
+    const curr = messages.length;
+    if (curr > prev) {
+      const newAssistantMessages = messages
+        .slice(prev)
+        .filter((m) => m.role === "assistant").length;
+      if (newAssistantMessages > 0) {
+        onNewMessagesRef.current?.(newAssistantMessages);
+      }
+    }
+    prevMessageCountRef.current = curr;
+  }, [messages]);
 
   const isGenerating = status === "submitted" || status === "streaming";
 
@@ -463,6 +486,7 @@ export function AIAgentChat({
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [hasLoadedSessions, setHasLoadedSessions] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const initialSessionAppliedRef = useRef<string | null>(null);
   const resolvedPageContext = useAiAgentPageContext();
   const pageContext = pageContextOverride ?? resolvedPageContext;
@@ -658,6 +682,7 @@ export function AIAgentChat({
   const handleSelectSession = useCallback(
     async (sessionId: string) => {
       setActiveSessionId(sessionId);
+      setUnreadCount(0);
       const selectedSession = sessions.find(
         (session) => session.id === sessionId,
       );
@@ -691,6 +716,7 @@ export function AIAgentChat({
       setSessions((previous) => [session, ...previous]);
       setActiveSessionId(session.id);
       setInitialMessages([]);
+      setUnreadCount(0);
       setChatSurfaceKey((previous) => previous + 1);
       linkSessionToWorkflow(session.id, getSessionTitle(session));
       if (connectionKey) {
@@ -793,6 +819,23 @@ export function AIAgentChat({
   const hasDeleteSessionOption = hasConnection && activeSessionId;
   const hasWindowModeSection = Boolean(windowControls);
 
+  const handleNewMessages = useCallback(
+    (count: number) => {
+      if (isInputOnlyMinimized) {
+        setUnreadCount((prev) => prev + count);
+      }
+    },
+    [isInputOnlyMinimized],
+  );
+
+  const handleToggleThread = useCallback(() => {
+    if (!isShowingThread) {
+      // Opening the thread — clear unread badge
+      setUnreadCount(0);
+    }
+    windowControls?.onToggleMinimizedView?.();
+  }, [isShowingThread, windowControls]);
+
   return (
     <div
       className={cn(
@@ -862,19 +905,26 @@ export function AIAgentChat({
         </DropdownMenu>
         <div className="flex-1" />
         {showThreadToggle ? (
-          <Button
-            className="size-6"
-            onClick={() => windowControls?.onToggleMinimizedView?.()}
-            size="icon"
-            variant="ghost"
-            title={isShowingThread ? "Input Only" : "Show Thread"}
-          >
-            {isShowingThread ? (
-              <Minus className="size-3.5" />
-            ) : (
-              <MessageSquare className="size-3.5" />
-            )}
-          </Button>
+          <div className="relative">
+            <Button
+              className="size-6"
+              onClick={handleToggleThread}
+              size="icon"
+              variant="ghost"
+              title={isShowingThread ? "Input Only" : "Show Thread"}
+            >
+              {isShowingThread ? (
+                <Minus className="size-3.5" />
+              ) : (
+                <MessageSquare className="size-3.5" />
+              )}
+            </Button>
+            {!isShowingThread && unreadCount > 0 ? (
+              <span className="pointer-events-none absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[10px] font-bold leading-none text-white">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            ) : null}
+          </div>
         ) : null}
         <DropdownMenu
           onOpenChange={setActionsMenuOpen}
@@ -963,6 +1013,7 @@ export function AIAgentChat({
                 isLoadingMessages={isLoadingMessages}
                 key={chatSurfaceKey}
                 onAbortSession={abortSession}
+                onNewMessages={handleNewMessages}
                 pageContext={pageContext}
                 hideConversation={isInputOnlyMinimized}
                 uiVariant={uiVariant}
