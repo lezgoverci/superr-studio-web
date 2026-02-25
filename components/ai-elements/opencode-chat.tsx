@@ -70,14 +70,26 @@ import {
 } from "@/lib/opencode-session-mapping";
 import { cn } from "@/lib/utils";
 import {
+  Check,
   ChevronLeft,
   Loader2,
+  Maximize2,
   MessageSquare,
+  Minimize2,
   MoreHorizontal,
+  PanelRight,
   Plus,
   Trash2,
 } from "lucide-react";
 import type { Session } from "@opencode-ai/sdk/client";
+
+type AIAgentWindowControls = {
+  mode: "minimized" | "sidebar" | "fullpage";
+  onMinimize: () => void;
+  onOpenSidebar: () => void;
+  onOpenFullpage: () => void;
+  onToggleMinimizedView?: () => void;
+};
 
 export type AIAgentChatProps = {
   className?: string;
@@ -88,6 +100,7 @@ export type AIAgentChatProps = {
   pageContext?: AiAgentContextEnvelope | null;
   uiVariant?: "default" | "minimized";
   minimizedDisplayMode?: "thread" | "input-only";
+  windowControls?: AIAgentWindowControls;
 };
 
 const QUICK_SUGGESTIONS = [
@@ -100,7 +113,6 @@ type SessionSidebarProps = {
   sessions: Session[];
   activeId: string | null;
   onSelect: (id: string) => void;
-  onNew: () => void;
   onDelete: (id: string) => void;
 };
 
@@ -108,27 +120,10 @@ function SessionSidebar({
   sessions,
   activeId,
   onSelect,
-  onNew,
   onDelete,
 }: SessionSidebarProps) {
   return (
     <div className="flex h-full flex-col border-r">
-      <div className="flex items-center justify-between border-b px-3 py-2">
-        <span className="text-muted-foreground text-xs font-medium">
-          Sessions
-        </span>
-        <div className="flex items-center gap-1">
-          <ProviderSettings />
-          <Button
-            className="size-6"
-            onClick={onNew}
-            size="icon"
-            variant="ghost"
-          >
-            <Plus className="size-3.5" />
-          </Button>
-        </div>
-      </div>
       <div className="flex-1 overflow-y-auto py-1">
         {sessions.length === 0 && (
           <p className="px-3 py-4 text-center text-muted-foreground text-xs">
@@ -507,6 +502,7 @@ export function AIAgentChat({
   pageContext: pageContextOverride,
   uiVariant = "default",
   minimizedDisplayMode = "input-only",
+  windowControls,
 }: AIAgentChatProps) {
   const [connected, setConnected] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -836,39 +832,20 @@ export function AIAgentChat({
     }
     return sessions.find((session) => session.id === activeSessionId) ?? null;
   }, [activeSessionId, sessions]);
-
-  if (!(connected && connection)) {
-    if (isInputOnlyMinimized) {
-      return (
-        <div className={cn("flex items-center gap-2 p-2", className)}>
-          <p className="flex-1 text-muted-foreground text-xs">
-            AI Agent not connected
-          </p>
-          <OpenCodeConnection onStatusChange={handleConnected} />
-        </div>
-      );
-    }
-
-    return (
-      <div
-        className={cn(
-          "flex flex-col items-center justify-center gap-4 p-6 text-center",
-          className,
-        )}
-      >
-        <div className="rounded-full bg-muted p-4">
-          <MessageSquare className="size-8 text-muted-foreground" />
-        </div>
-        <div className="space-y-1">
-          <p className="font-medium">AI Agent not connected</p>
-          <p className="text-muted-foreground text-sm">
-            Connect OpenCode to use your own AI subscriptions.
-          </p>
-        </div>
-        <OpenCodeConnection onStatusChange={handleConnected} />
-      </div>
-    );
-  }
+  const hasConnection = connected && Boolean(connection);
+  const headerTitle = hasConnection
+    ? activeSession
+      ? getSessionTitle(activeSession)
+      : activeSessionId
+        ? "Session"
+        : "New Session"
+    : "Not Connected";
+  const canToggleSessions = hasConnection && !isInputOnlyMinimized;
+  const showMinimizedDisplayToggle =
+    windowControls?.mode === "minimized" &&
+    Boolean(windowControls.onToggleMinimizedView);
+  const hasSessionMenuSection = canToggleSessions || showMinimizedDisplayToggle;
+  const hasWindowModeSection = Boolean(windowControls);
 
   return (
     <div
@@ -881,14 +858,10 @@ export function AIAgentChat({
       <div
         className={cn(
           "flex shrink-0 items-center gap-2 border-b",
-          isInputOnlyMinimized
-            ? "px-2 py-1"
-            : isMinimizedVariant
-              ? "px-2 py-1.5"
-              : "px-3 py-2",
+          isMinimizedVariant ? "px-2 py-1.5" : "px-3 py-2",
         )}
       >
-        {isInputOnlyMinimized ? null : (
+        {canToggleSessions ? (
           <Button
             className="size-6"
             onClick={() => setShowSidebar((visible) => !visible)}
@@ -901,165 +874,225 @@ export function AIAgentChat({
               <MessageSquare className="size-3.5" />
             )}
           </Button>
-        )}
+        ) : null}
         <span
           className={cn(
             "flex-1 truncate font-medium",
             isMinimizedVariant ? "text-xs" : "text-sm",
           )}
         >
-          {activeSessionId
-            ? activeSession
-              ? getSessionTitle(activeSession)
-              : "Session"
-            : "Session required"}
+          {headerTitle}
         </span>
-        {isMinimizedVariant ? (
-          <DropdownMenu
-            onOpenChange={setActionsMenuOpen}
-            open={actionsMenuOpen}
-          >
-            <DropdownMenuTrigger asChild>
-              <Button className="size-6" size="icon" variant="ghost">
-                <MoreHorizontal className="size-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56" forceMount>
-              {isInputOnlyMinimized ? null : (
-                <DropdownMenuItem
-                  onSelect={() => {
-                    setShowSidebar((visible) => !visible);
-                  }}
-                >
-                  <MessageSquare className="size-4" />
-                  {showSidebar ? "Hide Sessions" : "Show Sessions"}
-                </DropdownMenuItem>
-              )}
+        <Button
+          className={cn(
+            "h-7 px-2 text-muted-foreground",
+            isMinimizedVariant ? "text-xs" : "text-sm",
+          )}
+          disabled={isCreatingSession}
+          onClick={() => {
+            void handleNewSession();
+          }}
+          size="sm"
+          variant="ghost"
+        >
+          {isCreatingSession ? (
+            <Loader2 className="mr-2 size-3.5 animate-spin" />
+          ) : (
+            <Plus className="mr-2 size-3.5" />
+          )}
+          New Session
+        </Button>
+        <DropdownMenu
+          onOpenChange={setActionsMenuOpen}
+          open={actionsMenuOpen}
+        >
+          <DropdownMenuTrigger asChild>
+            <Button className="size-6" size="icon" variant="ghost">
+              <MoreHorizontal className="size-3.5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56" forceMount>
+            {canToggleSessions ? (
               <DropdownMenuItem
-                disabled={isCreatingSession}
                 onSelect={() => {
-                  void handleNewSession();
+                  setShowSidebar((visible) => !visible);
                 }}
               >
-                {isCreatingSession ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Plus className="size-4" />
-                )}
-                New Session
+                <MessageSquare className="size-4" />
+                {showSidebar ? "Hide Sessions" : "Show Sessions"}
               </DropdownMenuItem>
+            ) : null}
+
+            {showMinimizedDisplayToggle ? (
+              <DropdownMenuItem
+                onSelect={() => {
+                  windowControls?.onToggleMinimizedView?.();
+                }}
+              >
+                <MessageSquare className="size-4" />
+                {isInputOnlyMinimized ? "Show Thread" : "Input Only"}
+              </DropdownMenuItem>
+            ) : null}
+
+            {hasSessionMenuSection && hasWindowModeSection ? (
               <DropdownMenuSeparator />
-              <OpenCodeConnection
-                onStatusChange={handleConnected}
-                onTriggerClick={() => setActionsMenuOpen(false)}
-                triggerVariant="menu-item"
-              />
+            ) : null}
+
+            {windowControls ? (
+              <>
+                <DropdownMenuItem
+                  disabled={windowControls.mode === "sidebar"}
+                  onSelect={() => {
+                    windowControls.onOpenSidebar();
+                  }}
+                >
+                  <PanelRight className="size-4" />
+                  Open Sidebar
+                  {windowControls.mode === "sidebar" ? (
+                    <Check className="ml-auto size-4" />
+                  ) : null}
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  disabled={windowControls.mode === "fullpage"}
+                  onSelect={() => {
+                    windowControls.onOpenFullpage();
+                  }}
+                >
+                  <Maximize2 className="size-4" />
+                  Open Full Page
+                  {windowControls.mode === "fullpage" ? (
+                    <Check className="ml-auto size-4" />
+                  ) : null}
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  disabled={windowControls.mode === "minimized"}
+                  onSelect={() => {
+                    windowControls.onMinimize();
+                  }}
+                >
+                  <Minimize2 className="size-4" />
+                  Minimize
+                  {windowControls.mode === "minimized" ? (
+                    <Check className="ml-auto size-4" />
+                  ) : null}
+                </DropdownMenuItem>
+              </>
+            ) : null}
+
+            {hasSessionMenuSection || hasWindowModeSection ? (
+              <DropdownMenuSeparator />
+            ) : null}
+
+            <OpenCodeConnection
+              onStatusChange={handleConnected}
+              onTriggerClick={() => setActionsMenuOpen(false)}
+              triggerVariant="menu-item"
+            />
+            {hasConnection ? (
               <ProviderSettings
                 onTriggerClick={() => setActionsMenuOpen(false)}
                 triggerVariant="menu-item"
               />
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <>
-            {activeSessionId ? (
-              <Button
-                className="text-muted-foreground"
-                disabled={isCreatingSession}
-                onClick={() => {
-                  void handleNewSession();
-                }}
-                size="sm"
-                variant="ghost"
-              >
-                {isCreatingSession ? (
-                  <Loader2 className="mr-2 size-3.5 animate-spin" />
-                ) : (
-                  <Plus className="mr-2 size-3.5" />
-                )}
-                New Session
-              </Button>
             ) : null}
-            <OpenCodeConnection
-              className="ml-auto"
-              onStatusChange={handleConnected}
-            />
-          </>
-        )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        {showSidebar && !isInputOnlyMinimized && (
-          <div className={cn("shrink-0", isMinimizedVariant ? "w-40" : "w-48")}>
-            <SessionSidebar
-              activeId={activeSessionId}
-              onDelete={handleDeleteSession}
-              onNew={handleNewSession}
-              onSelect={handleSelectSession}
-              sessions={sessions}
-            />
-          </div>
-        )}
-
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          {activeSessionId ? (
-            <ChatSurface
-              activeSessionId={activeSessionId}
-              connection={connection}
-              initialMessages={initialMessages}
-              isLoadingMessages={isLoadingMessages}
-              key={chatSurfaceKey}
-              onAbortSession={abortSession}
-              pageContext={pageContext}
-              hideConversation={isInputOnlyMinimized}
-              uiVariant={uiVariant}
-            />
-          ) : (
-            <div
-              className={cn(
-                "flex h-full items-center",
-                isInputOnlyMinimized
-                  ? "gap-2 px-2 py-2"
-                  : "flex-col justify-center gap-4 p-6 text-center",
-              )}
-              data-testid="opencode-chat-inactive"
-            >
-              {isInputOnlyMinimized ? (
-                <p className="flex-1 text-muted-foreground text-xs">
-                  No active OpenCode session
-                </p>
-              ) : (
-                <>
-                  <div className="rounded-full bg-muted p-4">
-                    <MessageSquare className="size-8 text-muted-foreground" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="font-medium">No active OpenCode session</p>
-                    <p className="text-muted-foreground text-sm">
-                      Start a session to begin chatting.
-                    </p>
-                  </div>
-                </>
-              )}
-              <Button
-                data-testid="opencode-start-session"
-                disabled={isCreatingSession}
-                onClick={() => {
-                  void handleNewSession();
-                }}
-                size={isInputOnlyMinimized ? "sm" : "default"}
-              >
-                {isCreatingSession ? (
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                ) : (
-                  <Plus className="mr-2 size-4" />
-                )}
-                Start Session
-              </Button>
+      {hasConnection ? (
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          {showSidebar && !isInputOnlyMinimized && (
+            <div className={cn("shrink-0", isMinimizedVariant ? "w-40" : "w-48")}>
+              <SessionSidebar
+                activeId={activeSessionId}
+                onDelete={handleDeleteSession}
+                onSelect={handleSelectSession}
+                sessions={sessions}
+              />
             </div>
           )}
+
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            {activeSessionId && connection ? (
+              <ChatSurface
+                activeSessionId={activeSessionId}
+                connection={connection}
+                initialMessages={initialMessages}
+                isLoadingMessages={isLoadingMessages}
+                key={chatSurfaceKey}
+                onAbortSession={abortSession}
+                pageContext={pageContext}
+                hideConversation={isInputOnlyMinimized}
+                uiVariant={uiVariant}
+              />
+            ) : (
+              <div
+                className={cn(
+                  "flex h-full items-center",
+                  isInputOnlyMinimized
+                    ? "gap-2 px-2 py-2"
+                    : "flex-col justify-center gap-4 p-6 text-center",
+                )}
+                data-testid="opencode-chat-inactive"
+              >
+                {isInputOnlyMinimized ? (
+                  <p className="flex-1 text-muted-foreground text-xs">
+                    No active OpenCode session
+                  </p>
+                ) : (
+                  <>
+                    <div className="rounded-full bg-muted p-4">
+                      <MessageSquare className="size-8 text-muted-foreground" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="font-medium">No active OpenCode session</p>
+                      <p className="text-muted-foreground text-sm">
+                        Start a session to begin chatting.
+                      </p>
+                    </div>
+                  </>
+                )}
+                <Button
+                  data-testid="opencode-start-session"
+                  disabled={isCreatingSession}
+                  onClick={() => {
+                    void handleNewSession();
+                  }}
+                  size={isInputOnlyMinimized ? "sm" : "default"}
+                >
+                  {isCreatingSession ? (
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                  ) : (
+                    <Plus className="mr-2 size-4" />
+                  )}
+                  Start Session
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      ) : isInputOnlyMinimized ? (
+        <div className="flex items-center gap-2 p-2">
+          <p className="flex-1 text-muted-foreground text-xs">
+            AI Agent not connected
+          </p>
+          <OpenCodeConnection onStatusChange={handleConnected} />
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center gap-4 p-6 text-center">
+          <div className="rounded-full bg-muted p-4">
+            <MessageSquare className="size-8 text-muted-foreground" />
+          </div>
+          <div className="space-y-1">
+            <p className="font-medium">AI Agent not connected</p>
+            <p className="text-muted-foreground text-sm">
+              Connect OpenCode to use your own AI subscriptions.
+            </p>
+          </div>
+          <OpenCodeConnection onStatusChange={handleConnected} />
+        </div>
+      )}
     </div>
   );
 }
