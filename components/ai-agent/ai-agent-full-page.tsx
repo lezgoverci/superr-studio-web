@@ -52,6 +52,7 @@ export function AIAgentFullPage() {
       ...previous,
       mode: "minimized",
       isOpen: true,
+      minimizedView: "input-only",
     }));
     router.replace(windowState.originPath || "/app");
   }, [router, setWindowState, windowState.originPath]);

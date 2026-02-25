@@ -143,6 +143,7 @@ export function AIAgentWindowManager() {
       ...previous,
       mode: "minimized",
       isOpen: true,
+      minimizedView: "input-only",
     }));
 
     if (isAgentRoute) {

@@ -128,6 +128,19 @@ function sanitizeWindowState(raw: unknown): AiAgentWindowState {
   };
 }
 
+function normalizeHydratedWindowState(
+  state: AiAgentWindowState
+): AiAgentWindowState {
+  if (state.mode !== "minimized" || state.minimizedView === "input-only") {
+    return state;
+  }
+
+  return {
+    ...state,
+    minimizedView: "input-only",
+  };
+}
+
 export function loadAiAgentWindowStateFromStorage(): AiAgentWindowState {
   if (typeof window === "undefined") {
     return DEFAULT_AI_AGENT_WINDOW_STATE;
@@ -139,7 +152,9 @@ export function loadAiAgentWindowStateFromStorage(): AiAgentWindowState {
   }
 
   try {
-    return sanitizeWindowState(JSON.parse(rawValue));
+    return normalizeHydratedWindowState(
+      sanitizeWindowState(JSON.parse(rawValue))
+    );
   } catch {
     return DEFAULT_AI_AGENT_WINDOW_STATE;
   }
@@ -165,7 +180,10 @@ export const aiAgentWindowStateAtom = atom<AiAgentWindowState>(
 export const hydrateAiAgentWindowStateAtom = atom(
   null,
   (_get, set, state: AiAgentWindowState) => {
-    set(aiAgentWindowStateAtom, sanitizeWindowState(state));
+    set(
+      aiAgentWindowStateAtom,
+      normalizeHydratedWindowState(sanitizeWindowState(state))
+    );
   }
 );
 
