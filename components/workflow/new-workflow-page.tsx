@@ -1,14 +1,14 @@
 "use client";
 
 import { useAtomValue, useSetAtom } from "jotai";
-import { Loader2 } from "lucide-react";
+import { ArrowRight, Clock, Loader2, Plus } from "lucide-react";
 import { nanoid } from "nanoid";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { api } from "@/lib/api-client";
+import { api, type SavedWorkflow } from "@/lib/api-client";
 import { signInWithWhop, useSession } from "@/lib/auth-client";
 import {
   currentWorkflowIdAtom,
@@ -54,6 +54,8 @@ export function NewWorkflowPage() {
   );
   const currentWorkflowName = useAtomValue(currentWorkflowNameAtom);
   const [isCreating, setIsCreating] = useState(false);
+  const [recentWorkflows, setRecentWorkflows] = useState<SavedWorkflow[]>([]);
+  const [isLoadingWorkflows, setIsLoadingWorkflows] = useState(true);
 
   // Reset sidebar animation state when on homepage
   useEffect(() => {
@@ -64,6 +66,32 @@ export function NewWorkflowPage() {
   useEffect(() => {
     document.title = `${currentWorkflowName} - AI Workflow Builder`;
   }, [currentWorkflowName]);
+
+  // Fetch recent workflows
+  useEffect(() => {
+    async function fetchRecentWorkflows() {
+      if (!session) {
+        setIsLoadingWorkflows(false);
+        return;
+      }
+      try {
+        const allWorkflows = await api.workflow.getAll();
+        const filtered = allWorkflows
+          .filter((w) => w.name !== "__current__")
+          .sort(
+            (a, b) =>
+              new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+          )
+          .slice(0, 3);
+        setRecentWorkflows(filtered);
+      } catch (error) {
+        console.error("Failed to fetch recent workflows:", error);
+      } finally {
+        setIsLoadingWorkflows(false);
+      }
+    }
+    fetchRecentWorkflows();
+  }, [session]);
 
   // Require Whop authentication before creating workflows.
   const ensureSession = useCallback(async () => {
@@ -125,28 +153,80 @@ export function NewWorkflowPage() {
   return (
     <div className="pointer-events-none flex h-full w-full items-center justify-center p-6">
       {nodes.length === 0 ? (
-        <div className="pointer-events-auto w-full max-w-md rounded-xl border bg-background/95 p-6 text-center shadow-lg backdrop-blur">
-          <h1 className="font-semibold text-2xl tracking-tight">
-            No workflow selected
-          </h1>
-          <p className="mt-2 text-muted-foreground text-sm">
-            Create a new workflow to start building in the canvas.
-          </p>
-          <div className="mt-5 flex flex-wrap justify-center gap-2">
+        <div className="pointer-events-auto w-full max-w-sm space-y-8">
+          <div className="flex flex-col items-center space-y-4 text-center">
+            <div className="flex size-12 items-center justify-center rounded-2xl border border-border/50 bg-background/50 shadow-sm backdrop-blur-xl">
+              <Plus className="size-6 text-foreground/70" />
+            </div>
+            <div className="space-y-1.5">
+              <h1 className="font-semibold text-xl tracking-tight">
+                Start building
+              </h1>
+              <p className="text-muted-foreground text-sm">
+                Create a new workflow or continue where you left off.
+              </p>
+            </div>
             <Button
+              className="mt-2 h-9 px-4 rounded-lg shadow-sm"
               disabled={isCreating}
               onClick={handleCreateWorkflow}
-              size="sm"
             >
               {isCreating ? (
                 <Loader2 className="mr-2 size-4 animate-spin" />
               ) : null}
               Create New Workflow
             </Button>
-            <Button asChild size="sm" variant="secondary">
-              <Link href="/app/workflows">All Workflows</Link>
-            </Button>
           </div>
+
+          {session && !isLoadingWorkflows && recentWorkflows.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between px-1">
+                <h2 className="flex items-center gap-2 font-medium text-xs text-muted-foreground uppercase tracking-wider">
+                  <Clock className="size-3.5" />
+                  Recent workflows
+                </h2>
+                <Link
+                  href="/app/workflows"
+                  className="group flex items-center gap-1 text-muted-foreground text-xs hover:text-foreground transition-colors"
+                >
+                  See all <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
+                </Link>
+              </div>
+              <div className="flex flex-col gap-2">
+                {recentWorkflows.map((workflow) => (
+                  <button
+                    key={workflow.id}
+                    onClick={() => router.push(`/app/workflows/${workflow.id}`)}
+                    className="group flex w-full items-center justify-between rounded-xl border border-border/50 bg-background/50 p-3 text-left shadow-sm backdrop-blur-xl transition-all hover:bg-accent/50 hover:border-border"
+                    type="button"
+                  >
+                    <div className="min-w-0 flex-1 space-y-0.5 pr-4">
+                      <p className="truncate font-medium text-sm">
+                        {workflow.name}
+                      </p>
+                      <p className="line-clamp-1 text-muted-foreground text-xs">
+                        {workflow.description || "No description"}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center justify-center rounded-full bg-background/80 p-1.5 opacity-0 shadow-sm transition-all group-hover:opacity-100 border border-border/50">
+                      <ArrowRight className="size-3.5 text-muted-foreground" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {session && (!isLoadingWorkflows && recentWorkflows.length === 0) && (
+            <div className="flex justify-center pt-2">
+               <Link
+                  href="/app/workflows"
+                  className="group flex items-center gap-1.5 text-muted-foreground text-sm hover:text-foreground transition-colors font-medium"
+                >
+                  See all workflows <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+                </Link>
+            </div>
+          )}
         </div>
       ) : null}
     </div>
