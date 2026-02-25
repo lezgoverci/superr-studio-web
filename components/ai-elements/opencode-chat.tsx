@@ -47,6 +47,13 @@ import {
 import { OpenCodeConnection } from "@/components/ai-elements/opencode-connection";
 import { ProviderSettings } from "@/components/ai-elements/provider-settings";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { AiAgentContextEnvelope } from "@/lib/ai-agent/page-context/types";
 import { useAiAgentPageContext } from "@/lib/ai-agent/page-context/use-ai-agent-page-context";
 import { getConnectionConfig, getOpenCodeClient, type OpenCodeConnectionConfig } from "@/lib/opencode-client";
@@ -62,6 +69,7 @@ import {
   ChevronLeft,
   Loader2,
   MessageSquare,
+  MoreHorizontal,
   Plus,
   Trash2,
 } from "lucide-react";
@@ -74,6 +82,7 @@ export type AIAgentChatProps = {
   initialSessionId?: string | null;
   onSessionLinked?: (sessionId: string) => void;
   pageContext?: AiAgentContextEnvelope | null;
+  uiVariant?: "default" | "minimized";
 };
 
 const QUICK_SUGGESTIONS = [
@@ -314,6 +323,7 @@ type ChatSurfaceProps = {
   connection: OpenCodeConnectionConfig;
   pageContext: AiAgentContextEnvelope | null;
   onAbortSession: (sessionId: string) => Promise<void>;
+  uiVariant: "default" | "minimized";
 };
 
 function ChatSurface({
@@ -323,6 +333,7 @@ function ChatSurface({
   connection,
   pageContext,
   onAbortSession,
+  uiVariant,
 }: ChatSurfaceProps) {
   const [input, setInput] = useState("");
   const activeSessionIdRef = useRef(activeSessionId);
@@ -382,10 +393,16 @@ function ChatSurface({
     await onAbortSession(activeSessionIdRef.current);
   }, [onAbortSession, stop]);
 
+  const isMinimizedVariant = uiVariant === "minimized";
+
   return (
     <>
       <Conversation className="min-h-0 flex-1">
-        <ConversationContent className="px-4 py-4">
+        <ConversationContent
+          className={cn(
+            isMinimizedVariant ? "px-3 py-3" : "px-4 py-4"
+          )}
+        >
           {isLoadingMessages ? (
             <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground text-sm">
               <Loader2 className="size-4 animate-spin" />
@@ -404,7 +421,12 @@ function ChatSurface({
         <ConversationScrollButton />
       </Conversation>
 
-      <div className="shrink-0 border-t px-3 py-3">
+      <div
+        className={cn(
+          "shrink-0 border-t",
+          isMinimizedVariant ? "px-2 py-2" : "px-3 py-3"
+        )}
+      >
         {messages.length === 0 && (
           <div className="mb-2">
             <Suggestions>
@@ -420,7 +442,10 @@ function ChatSurface({
         )}
 
         <PromptInput
-          className="rounded-xl border bg-background shadow-sm"
+          className={cn(
+            "rounded-xl border bg-background shadow-sm",
+            isMinimizedVariant && "rounded-lg"
+          )}
           onSubmit={({ text }) => {
             void handleSubmit(text);
           }}
@@ -448,7 +473,12 @@ function ChatSurface({
           </PromptInputFooter>
         </PromptInput>
 
-        <p className="mt-1 text-center text-[10px] text-muted-foreground">
+        <p
+          className={cn(
+            "mt-1 text-center text-[10px] text-muted-foreground",
+            isMinimizedVariant && "text-[9px]"
+          )}
+        >
           Powered by{" "}
           <a
             className="underline"
@@ -471,12 +501,14 @@ export function AIAgentChat({
   initialSessionId,
   onSessionLinked,
   pageContext: pageContextOverride,
+  uiVariant = "default",
 }: AIAgentChatProps) {
   const [connected, setConnected] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [initialMessages, setInitialMessages] = useState<UIMessage[]>([]);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const [chatSurfaceKey, setChatSurfaceKey] = useState(0);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
@@ -484,6 +516,7 @@ export function AIAgentChat({
   const initialSessionAppliedRef = useRef<string | null>(null);
   const resolvedPageContext = useAiAgentPageContext();
   const pageContext = pageContextOverride ?? resolvedPageContext;
+  const isMinimizedVariant = uiVariant === "minimized";
 
   const loadSessions = useCallback(async (): Promise<Session[]> => {
     const client = getOpenCodeClient();
@@ -786,7 +819,12 @@ export function AIAgentChat({
 
   return (
     <div className={cn("flex h-full flex-col", className)}>
-      <div className="flex shrink-0 items-center gap-2 border-b px-3 py-2">
+      <div
+        className={cn(
+          "flex shrink-0 items-center gap-2 border-b",
+          isMinimizedVariant ? "px-2 py-1.5" : "px-3 py-2"
+        )}
+      >
         <Button
           className="size-6"
           onClick={() => setShowSidebar((visible) => !visible)}
@@ -799,35 +837,85 @@ export function AIAgentChat({
             <MessageSquare className="size-3.5" />
           )}
         </Button>
-        <span className="flex-1 truncate text-sm font-medium">
+        <span
+          className={cn(
+            "flex-1 truncate font-medium",
+            isMinimizedVariant ? "text-xs" : "text-sm"
+          )}
+        >
           {activeSessionId
             ? (activeSession ? getSessionTitle(activeSession) : "Session")
             : "Session required"}
         </span>
-        {activeSessionId ? (
-          <Button
-            className="text-muted-foreground"
-            disabled={isCreatingSession}
-            onClick={() => {
-              void handleNewSession();
-            }}
-            size="sm"
-            variant="ghost"
-          >
-            {isCreatingSession ? (
-              <Loader2 className="mr-2 size-3.5 animate-spin" />
-            ) : (
-              <Plus className="mr-2 size-3.5" />
-            )}
-            New Session
-          </Button>
-        ) : null}
-        <OpenCodeConnection className="ml-auto" onStatusChange={handleConnected} />
+        {isMinimizedVariant ? (
+          <DropdownMenu onOpenChange={setActionsMenuOpen} open={actionsMenuOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button className="size-6" size="icon" variant="ghost">
+                <MoreHorizontal className="size-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56" forceMount>
+              <DropdownMenuItem
+                onSelect={() => {
+                  setShowSidebar((visible) => !visible);
+                }}
+              >
+                <MessageSquare className="size-4" />
+                {showSidebar ? "Hide Sessions" : "Show Sessions"}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={isCreatingSession}
+                onSelect={() => {
+                  void handleNewSession();
+                }}
+              >
+                {isCreatingSession ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Plus className="size-4" />
+                )}
+                New Session
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <OpenCodeConnection
+                onStatusChange={handleConnected}
+                onTriggerClick={() => setActionsMenuOpen(false)}
+                triggerVariant="menu-item"
+              />
+              <ProviderSettings
+                onTriggerClick={() => setActionsMenuOpen(false)}
+                triggerVariant="menu-item"
+              />
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <>
+            {activeSessionId ? (
+              <Button
+                className="text-muted-foreground"
+                disabled={isCreatingSession}
+                onClick={() => {
+                  void handleNewSession();
+                }}
+                size="sm"
+                variant="ghost"
+              >
+                {isCreatingSession ? (
+                  <Loader2 className="mr-2 size-3.5 animate-spin" />
+                ) : (
+                  <Plus className="mr-2 size-3.5" />
+                )}
+                New Session
+              </Button>
+            ) : null}
+            <OpenCodeConnection className="ml-auto" onStatusChange={handleConnected} />
+          </>
+        )}
       </div>
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {showSidebar && (
-          <div className="w-48 shrink-0">
+          <div className={cn("shrink-0", isMinimizedVariant ? "w-40" : "w-48")}>
             <SessionSidebar
               activeId={activeSessionId}
               onDelete={handleDeleteSession}
@@ -848,6 +936,7 @@ export function AIAgentChat({
               key={chatSurfaceKey}
               onAbortSession={abortSession}
               pageContext={pageContext}
+              uiVariant={uiVariant}
             />
           ) : (
             <div

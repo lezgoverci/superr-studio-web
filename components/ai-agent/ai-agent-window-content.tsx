@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 
 type AiAgentWindowContentProps = {
   className?: string;
-  mode: "sidebar" | "fullpage";
+  mode: "minimized" | "sidebar" | "fullpage";
   pageContext: AiAgentContextEnvelope | null;
   initialSessionId?: string | null;
   onSessionLinked: (sessionId: string) => void;
@@ -32,21 +32,37 @@ export function AIAgentWindowContent({
   onOpenSidebar,
   onOpenFullpage,
 }: AiAgentWindowContentProps) {
+  const isMinimized = mode === "minimized";
+
   return (
     <div
       className={cn("flex h-full min-h-0 flex-col bg-background", className)}
     >
-      <div className="flex shrink-0 items-center gap-2 border-b px-3 py-2">
+      <div
+        className={cn(
+          "flex shrink-0 items-center gap-2 border-b",
+          isMinimized ? "px-2 py-1.5" : "px-3 py-2"
+        )}
+      >
         <div className="min-w-0 flex-1">
-          <p className="truncate font-medium text-sm">AI Agent</p>
-          <p className="truncate text-muted-foreground text-xs">
-            {pageContext?.summary || "Assistant context is ready."}
+          <p
+            className={cn(
+              "truncate font-medium",
+              isMinimized ? "text-xs" : "text-sm"
+            )}
+          >
+            AI Agent
           </p>
+          {isMinimized ? null : (
+            <p className="truncate text-muted-foreground text-xs">
+              {pageContext?.summary || "Assistant context is ready."}
+            </p>
+          )}
         </div>
 
         <Button
           aria-label="Open sidebar mode"
-          className="size-7"
+          className={cn(isMinimized ? "size-6" : "size-7")}
           disabled={mode === "sidebar"}
           onClick={onOpenSidebar}
           size="icon"
@@ -61,7 +77,7 @@ export function AIAgentWindowContent({
 
         <Button
           aria-label="Open full page mode"
-          className="size-7"
+          className={cn(isMinimized ? "size-6" : "size-7")}
           disabled={mode === "fullpage"}
           onClick={onOpenFullpage}
           size="icon"
@@ -70,15 +86,17 @@ export function AIAgentWindowContent({
           <Maximize2 className="size-3.5" />
         </Button>
 
-        <Button
-          aria-label="Minimize AI Agent"
-          className="size-7"
-          onClick={onMinimize}
-          size="icon"
-          variant="ghost"
-        >
-          <Minimize2 className="size-3.5" />
-        </Button>
+        {isMinimized ? null : (
+          <Button
+            aria-label="Minimize AI Agent"
+            className="size-7"
+            onClick={onMinimize}
+            size="icon"
+            variant="ghost"
+          >
+            <Minimize2 className="size-3.5" />
+          </Button>
+        )}
       </div>
 
       <div className="min-h-0 flex-1">
@@ -87,6 +105,7 @@ export function AIAgentWindowContent({
           initialSessionId={initialSessionId}
           onSessionLinked={onSessionLinked}
           pageContext={pageContext}
+          uiVariant={isMinimized ? "minimized" : "default"}
         />
       </div>
     </div>

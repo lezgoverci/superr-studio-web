@@ -1,11 +1,9 @@
 "use client";
 
 import { useAtom, useSetAtom } from "jotai";
-import { MessageSquareText } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AIAgentWindowContent } from "@/components/ai-agent/ai-agent-window-content";
-import { Button } from "@/components/ui/button";
 import { useAiAgentPageContext } from "@/lib/ai-agent/page-context/use-ai-agent-page-context";
 import {
   aiAgentWindowStateAtom,
@@ -201,16 +199,19 @@ export function AIAgentWindowManager() {
       ) : null}
 
       {windowState.mode === "minimized" && !isAgentRoute ? (
-        <div className="pointer-events-auto fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
-          <Button
-            className="rounded-full border px-5 shadow-lg"
-            onClick={handleOpenSidebar}
-            size="sm"
-            variant="secondary"
-          >
-            <MessageSquareText className="mr-2 size-4" />
-            AI Agent
-          </Button>
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] md:bottom-4 md:px-4 md:pb-0">
+          <div className="pointer-events-auto h-[68dvh] w-full max-w-none overflow-hidden rounded-2xl border bg-background shadow-2xl md:h-[560px] md:max-h-[calc(100dvh-7rem)] md:max-w-[760px]">
+            <AIAgentWindowContent
+              className="h-full"
+              initialSessionId={activeSessionId}
+              mode="minimized"
+              onMinimize={handleMinimize}
+              onOpenFullpage={handleOpenFullpage}
+              onOpenSidebar={handleOpenSidebar}
+              onSessionLinked={handleSessionLinked}
+              pageContext={activeContext}
+            />
+          </div>
         </div>
       ) : null}
     </>

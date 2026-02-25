@@ -7,8 +7,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Settings, Save, Trash2, Key, Loader2, Link as LinkIcon, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
-export function ProviderSettings() {
+type ProviderSettingsTriggerVariant = "default" | "menu-item";
+
+type ProviderSettingsProps = {
+  className?: string;
+  triggerVariant?: ProviderSettingsTriggerVariant;
+  onTriggerClick?: () => void;
+};
+
+export function ProviderSettings({
+  className,
+  triggerVariant = "default",
+  onTriggerClick,
+}: ProviderSettingsProps) {
   const [open, setOpen] = useState(false);
   const [providers, setProviders] = useState<any[]>([]);
   const [connected, setConnected] = useState<string[]>([]);
@@ -107,9 +120,28 @@ export function ProviderSettings() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8 ml-2">
-          <Settings className="size-4" />
-        </Button>
+        {triggerVariant === "menu-item" ? (
+          <button
+            className={cn(
+              "focus:bg-accent focus:text-accent-foreground hover:bg-accent hover:text-accent-foreground relative flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none",
+              className
+            )}
+            onClick={() => onTriggerClick?.()}
+            type="button"
+          >
+            <Settings className="size-4" />
+            <span className="flex-1 text-left">Provider Settings</span>
+          </button>
+        ) : (
+          <Button
+            className={cn("ml-2 h-8 w-8", className)}
+            onClick={() => onTriggerClick?.()}
+            size="icon"
+            variant="ghost"
+          >
+            <Settings className="size-4" />
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>

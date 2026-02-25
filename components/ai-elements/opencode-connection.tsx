@@ -28,13 +28,21 @@ import { cn } from "@/lib/utils";
 import { Download, Settings, Wifi, WifiOff, Loader2, ExternalLink } from "lucide-react";
 
 type ConnectionStatus = "checking" | "connected" | "disconnected" | "not-configured";
+type OpenCodeConnectionTriggerVariant = "default" | "menu-item";
 
 type OpenCodeConnectionProps = {
   onStatusChange?: (connected: boolean) => void;
   className?: string;
+  triggerVariant?: OpenCodeConnectionTriggerVariant;
+  onTriggerClick?: () => void;
 };
 
-export function OpenCodeConnection({ onStatusChange, className }: OpenCodeConnectionProps) {
+export function OpenCodeConnection({
+  onStatusChange,
+  className,
+  triggerVariant = "default",
+  onTriggerClick,
+}: OpenCodeConnectionProps) {
   const [status, setStatus] = useState<ConnectionStatus>("checking");
   const [showDialog, setShowDialog] = useState(false);
   const [url, setUrl] = useState("http://localhost:4096");
@@ -64,6 +72,7 @@ export function OpenCodeConnection({ onStatusChange, className }: OpenCodeConnec
   }, [checkConnection]);
 
   const handleOpenDialog = () => {
+    onTriggerClick?.();
     const config = getConnectionConfig();
     if (config) {
       setUrl(config.url);
@@ -133,29 +142,57 @@ export function OpenCodeConnection({ onStatusChange, className }: OpenCodeConnec
   };
 
   const current = statusConfig[status];
+  const isMenuItemTrigger = triggerVariant === "menu-item";
+  const compactStatusLabel =
+    status === "connected"
+      ? "Connected"
+      : status === "disconnected"
+        ? "Offline"
+        : status === "not-configured"
+          ? "Not set up"
+          : "Checking";
+
+  const triggerButton = (
+    <button
+      className={cn(
+        isMenuItemTrigger
+          ? "focus:bg-accent focus:text-accent-foreground hover:bg-accent hover:text-accent-foreground relative flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none"
+          : "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+        className
+      )}
+      onClick={handleOpenDialog}
+      type="button"
+    >
+      {isMenuItemTrigger ? (
+        <>
+          <span className={cn("size-2 rounded-full shrink-0", current.dot)} />
+          <span className="flex-1 text-left">OpenCode Connection</span>
+          <span className="text-muted-foreground text-xs">{compactStatusLabel}</span>
+        </>
+      ) : (
+        <>
+          <span className={cn("size-1.5 rounded-full flex-shrink-0", current.dot)} />
+          <span className="hidden sm:inline">{current.label}</span>
+          {current.icon}
+        </>
+      )}
+    </button>
+  );
 
   return (
     <>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              className={cn(
-                "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-                className
-              )}
-              onClick={handleOpenDialog}
-            >
-              <span className={cn("size-1.5 rounded-full flex-shrink-0", current.dot)} />
-              <span className="hidden sm:inline">{current.label}</span>
-              {current.icon}
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <p>{current.label} — click to configure</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      {isMenuItemTrigger ? (
+        triggerButton
+      ) : (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>{triggerButton}</TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>{current.label} — click to configure</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="sm:max-w-[520px]">
