@@ -72,6 +72,7 @@ import { cn } from "@/lib/utils";
 import {
   Check,
   ChevronDown,
+  ChevronUp,
   Loader2,
   Maximize2,
   MessageSquare,
@@ -1013,12 +1014,12 @@ export function AIAgentChat({
               onClick={handleToggleThread}
               size="icon"
               variant="ghost"
-              title={isShowingThread ? "Input Only" : "Show Thread"}
+              title={isShowingThread ? "Collapse Chat" : "Expand Chat"}
             >
               {isShowingThread ? (
-                <Minus className="size-3.5" />
+                <ChevronDown className="size-3.5" />
               ) : (
-                <MessageSquare className="size-3.5" />
+                <ChevronUp className="size-3.5" />
               )}
             </Button>
             {!isShowingThread && unreadCount > 0 ? (
