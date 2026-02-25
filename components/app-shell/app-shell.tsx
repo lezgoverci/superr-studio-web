@@ -2,6 +2,7 @@
 
 import {
   BookOpen,
+  Bot,
   LayoutDashboard,
   MessagesSquare,
   Settings2,
@@ -19,6 +20,7 @@ import type { ShellNavItem, ShellUser } from "./types";
 
 const DEFAULT_PERMISSIONS = [
   "route:dashboard:view",
+  "route:agent:view",
   "route:workflows:view",
   "route:sessions:view",
   "route:library:view",
@@ -33,6 +35,14 @@ const NAV_ITEMS: ShellNavItem[] = [
     href: "/app",
     icon: LayoutDashboard,
     requiredPermissions: ["route:dashboard:view"],
+  },
+  {
+    id: "agent",
+    label: "AI Agent",
+    description: "Universal chat assistant",
+    href: "/app/agent",
+    icon: Bot,
+    requiredPermissions: ["route:agent:view"],
   },
   {
     id: "workflows",

@@ -26,7 +26,7 @@ export function NavContent({
   const pathname = usePathname();
 
   return (
-    <nav className="space-y-1 flex-1 overflow-y-auto w-full">
+    <nav className="w-full flex-1 space-y-1 overflow-y-auto">
       {items.map((item) => {
         const active = isItemActive(pathname, item.href);
         const Icon = item.icon;
@@ -34,9 +34,9 @@ export function NavContent({
         return (
           <Link
             className={cn(
-              "flex items-center gap-3 px-3 py-2 text-sm transition-colors rounded-md",
+              "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
               active
-                ? "bg-primary/10 text-primary font-medium"
+                ? "bg-primary/10 font-medium text-primary"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
             href={item.href}
@@ -54,9 +54,9 @@ export function NavContent({
 
 export function AppNav({ items }: AppNavProps) {
   return (
-    <aside className="pointer-events-auto hidden w-64 shrink-0 border-r bg-background p-4 lg:flex lg:flex-col z-20">
+    <aside className="pointer-events-auto z-20 hidden w-64 shrink-0 border-r bg-background p-4 lg:flex lg:flex-col">
       <div className="mb-4 px-3">
-        <div className="text-muted-foreground font-semibold text-xs tracking-wider uppercase">
+        <div className="font-semibold text-muted-foreground text-xs uppercase tracking-wider">
           Workspace
         </div>
       </div>

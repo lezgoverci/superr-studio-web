@@ -47,6 +47,8 @@ import {
 import { OpenCodeConnection } from "@/components/ai-elements/opencode-connection";
 import { ProviderSettings } from "@/components/ai-elements/provider-settings";
 import { Button } from "@/components/ui/button";
+import type { AiAgentContextEnvelope } from "@/lib/ai-agent/page-context/types";
+import { useAiAgentPageContext } from "@/lib/ai-agent/page-context/use-ai-agent-page-context";
 import { getConnectionConfig, getOpenCodeClient, type OpenCodeConnectionConfig } from "@/lib/opencode-client";
 import { mapOpenCodeHistoryToUIMessages } from "@/lib/opencode-chat-adapter";
 import {
@@ -65,12 +67,13 @@ import {
 } from "lucide-react";
 import type { Session } from "@opencode-ai/sdk/client";
 
-type OpenCodeChatProps = {
+export type AIAgentChatProps = {
   className?: string;
   workflowId?: string | null;
   workflowName?: string;
   initialSessionId?: string | null;
   onSessionLinked?: (sessionId: string) => void;
+  pageContext?: AiAgentContextEnvelope | null;
 };
 
 const QUICK_SUGGESTIONS = [
@@ -309,6 +312,7 @@ type ChatSurfaceProps = {
   initialMessages: UIMessage[];
   isLoadingMessages: boolean;
   connection: OpenCodeConnectionConfig;
+  pageContext: AiAgentContextEnvelope | null;
   onAbortSession: (sessionId: string) => Promise<void>;
 };
 
@@ -317,6 +321,7 @@ function ChatSurface({
   initialMessages,
   isLoadingMessages,
   connection,
+  pageContext,
   onAbortSession,
 }: ChatSurfaceProps) {
   const [input, setInput] = useState("");
@@ -340,11 +345,12 @@ function ChatSurface({
               opencodeUrl: connection.url,
               opencodeUsername: connection.username,
               sessionId: activeSessionIdRef.current,
+              pageContext,
             },
           };
         },
       }),
-    [activeSessionId, connection.token, connection.url, connection.username]
+    [activeSessionId, connection.token, connection.url, connection.username, pageContext]
   );
 
   const { messages, sendMessage, status, stop } = useChat({
@@ -458,13 +464,14 @@ function ChatSurface({
   );
 }
 
-export function OpenCodeChat({
+export function AIAgentChat({
   className,
   workflowId,
   workflowName,
   initialSessionId,
   onSessionLinked,
-}: OpenCodeChatProps) {
+  pageContext: pageContextOverride,
+}: AIAgentChatProps) {
   const [connected, setConnected] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -475,6 +482,8 @@ export function OpenCodeChat({
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [hasLoadedSessions, setHasLoadedSessions] = useState(false);
   const initialSessionAppliedRef = useRef<string | null>(null);
+  const resolvedPageContext = useAiAgentPageContext();
+  const pageContext = pageContextOverride ?? resolvedPageContext;
 
   const loadSessions = useCallback(async (): Promise<Session[]> => {
     const client = getOpenCodeClient();
@@ -530,6 +539,8 @@ export function OpenCodeChat({
 
   const linkSessionToWorkflow = useCallback(
     (sessionId: string, sessionTitle?: string) => {
+      onSessionLinked?.(sessionId);
+
       if (!(workflowId && connectionKey)) {
         return;
       }
@@ -541,7 +552,6 @@ export function OpenCodeChat({
         workflowName,
         sessionTitle,
       });
-      onSessionLinked?.(sessionId);
     },
     [connectionKey, onSessionLinked, workflowId, workflowName]
   );
@@ -609,7 +619,8 @@ export function OpenCodeChat({
         return;
       }
 
-      const fallbackSessionId = latestSessions[0]?.id ?? null;
+      const fallbackSession = latestSessions[0] ?? null;
+      const fallbackSessionId = fallbackSession?.id ?? null;
       setActiveSessionId(fallbackSessionId);
 
       if (!fallbackSessionId) {
@@ -618,9 +629,23 @@ export function OpenCodeChat({
         return;
       }
 
+      linkSessionToWorkflow(
+        fallbackSessionId,
+        fallbackSession ? getSessionTitle(fallbackSession) : undefined
+      );
+      if (connectionKey) {
+        markSessionWorkflowMappingOpened(connectionKey, fallbackSessionId);
+      }
       await loadMessages(fallbackSessionId);
     },
-    [activeSessionId, applyInitialSessionIfNeeded, loadMessages, loadSessions]
+    [
+      activeSessionId,
+      applyInitialSessionIfNeeded,
+      connectionKey,
+      linkSessionToWorkflow,
+      loadMessages,
+      loadSessions,
+    ]
   );
 
   useEffect(() => {
@@ -692,9 +717,17 @@ export function OpenCodeChat({
         }
 
         if (activeSessionId === sessionId) {
-          const fallbackSessionId = remainingSessions[0]?.id ?? null;
+          const fallbackSession = remainingSessions[0] ?? null;
+          const fallbackSessionId = fallbackSession?.id ?? null;
           setActiveSessionId(fallbackSessionId);
           if (fallbackSessionId) {
+            linkSessionToWorkflow(
+              fallbackSessionId,
+              fallbackSession ? getSessionTitle(fallbackSession) : undefined
+            );
+            if (connectionKey) {
+              markSessionWorkflowMappingOpened(connectionKey, fallbackSessionId);
+            }
             await loadMessages(fallbackSessionId);
           } else {
             setInitialMessages([]);
@@ -706,7 +739,7 @@ export function OpenCodeChat({
         toast.error(message);
       }
     },
-    [activeSessionId, connectionKey, loadMessages, sessions]
+    [activeSessionId, connectionKey, linkSessionToWorkflow, loadMessages, sessions]
   );
 
   const abortSession = useCallback(async (sessionId: string) => {
@@ -814,6 +847,7 @@ export function OpenCodeChat({
               isLoadingMessages={isLoadingMessages}
               key={chatSurfaceKey}
               onAbortSession={abortSession}
+              pageContext={pageContext}
             />
           ) : (
             <div
@@ -850,3 +884,6 @@ export function OpenCodeChat({
     </div>
   );
 }
+
+export type OpenCodeChatProps = AIAgentChatProps;
+export const OpenCodeChat = AIAgentChat;

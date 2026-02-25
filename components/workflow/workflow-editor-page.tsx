@@ -10,6 +10,10 @@ import { Button } from "@/components/ui/button";
 import { NodeConfigPanel } from "@/components/workflow/node-config-panel";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useWorkflowExecutionStreams } from "@/hooks/use-workflow-execution-streams";
+import {
+  clearAiAgentPageContextDetailsAtom,
+  setAiAgentPageContextDetailsAtom,
+} from "@/lib/ai-agent/page-context/store";
 import { api } from "@/lib/api-client";
 import {
   integrationsAtom,
@@ -113,11 +117,12 @@ function WorkflowEditor({ params }: WorkflowPageProps) {
   const requestedTab = searchParams?.get("tab");
   const requestedOpenCodeSessionId = searchParams?.get("opencodeSessionId");
   const isMobile = useIsMobile();
-  const [isGenerating, setIsGenerating] = useAtom(isGeneratingAtom);
+  const isGenerating = useAtomValue(isGeneratingAtom);
   const [_isSaving, setIsSaving] = useAtom(isSavingAtom);
   const [nodes] = useAtom(nodesAtom);
   const [edges] = useAtom(edgesAtom);
   const [currentWorkflowId] = useAtom(currentWorkflowIdAtom);
+  const currentWorkflowName = useAtomValue(currentWorkflowNameAtom);
   const [selectedExecutionId] = useAtom(selectedExecutionIdAtom);
   const setNodes = useSetAtom(nodesAtom);
   const setEdges = useSetAtom(edgesAtom);
@@ -144,6 +149,10 @@ function WorkflowEditor({ params }: WorkflowPageProps) {
   const setGlobalIntegrations = useSetAtom(integrationsAtom);
   const setIntegrationsLoaded = useSetAtom(integrationsLoadedAtom);
   const integrationsVersion = useAtomValue(integrationsVersionAtom);
+  const setAiAgentContextDetails = useSetAtom(setAiAgentPageContextDetailsAtom);
+  const clearAiAgentContextDetails = useSetAtom(
+    clearAiAgentPageContextDetailsAtom
+  );
 
   // Panel width state for resizing
   const [panelWidth, setPanelWidth] = useState(30); // default percentage
@@ -314,47 +323,6 @@ function WorkflowEditor({ params }: WorkflowPageProps) {
     nodesRef.current = nodes;
   }, [nodes]);
 
-  // Helper function to generate workflow from AI
-  const generateWorkflowFromAI = useCallback(
-    async (prompt: string) => {
-      setIsGenerating(true);
-      setCurrentWorkflowId(workflowId);
-      setCurrentWorkflowName("AI Generated Workflow");
-
-      try {
-        const workflowData = await api.ai.generate(prompt);
-
-        // Clear selection on all nodes
-        const nodesWithoutSelection = (workflowData.nodes || []).map(
-          (node: WorkflowNode) => ({ ...node, selected: false })
-        );
-        setNodes(nodesWithoutSelection);
-        setEdges(workflowData.edges || []);
-        setCurrentWorkflowName(workflowData.name || "AI Generated Workflow");
-
-        await api.workflow.update(workflowId, {
-          name: workflowData.name,
-          description: workflowData.description,
-          nodes: workflowData.nodes,
-          edges: workflowData.edges,
-        });
-      } catch (error) {
-        console.error("Failed to generate workflow:", error);
-        toast.error("Failed to generate workflow");
-      } finally {
-        setIsGenerating(false);
-      }
-    },
-    [
-      workflowId,
-      setIsGenerating,
-      setCurrentWorkflowId,
-      setCurrentWorkflowName,
-      setNodes,
-      setEdges,
-    ]
-  );
-
   // Helper function to load existing workflow
   const loadExistingWorkflow = useCallback(async () => {
     try {
@@ -407,38 +375,35 @@ function WorkflowEditor({ params }: WorkflowPageProps) {
   );
 
   useEffect(() => {
-    const loadWorkflowData = async () => {
-      const isGeneratingParam = searchParams?.get("generating") === "true";
-      const storedPrompt = sessionStorage.getItem("ai-prompt");
-      const storedWorkflowId = sessionStorage.getItem("generating-workflow-id");
+    if (currentWorkflowId === workflowId && nodes.length > 0) {
+      return;
+    }
 
-      // Check if state is already loaded for this workflow
-      if (currentWorkflowId === workflowId && nodes.length > 0) {
-        return;
-      }
+    loadExistingWorkflow().catch((error) => {
+      console.error("Failed to load workflow data:", error);
+    });
+  }, [workflowId, currentWorkflowId, nodes.length, loadExistingWorkflow]);
 
-      // Check if we should generate from AI
-      if (
-        isGeneratingParam &&
-        storedPrompt &&
-        storedWorkflowId === workflowId
-      ) {
-        sessionStorage.removeItem("ai-prompt");
-        sessionStorage.removeItem("generating-workflow-id");
-        await generateWorkflowFromAI(storedPrompt);
-      } else {
-        await loadExistingWorkflow();
-      }
+  useEffect(() => {
+    setAiAgentContextDetails({
+      entities: {
+        workflowId,
+        workflowName: currentWorkflowName,
+      },
+      capabilities: ["edit-workflow", "run-workflow", "inspect-canvas"],
+      summary: currentWorkflowName
+        ? `Editing workflow ${currentWorkflowName}.`
+        : `Editing workflow ${workflowId}.`,
+    });
+
+    return () => {
+      clearAiAgentContextDetails();
     };
-
-    loadWorkflowData();
   }, [
+    clearAiAgentContextDetails,
+    currentWorkflowName,
+    setAiAgentContextDetails,
     workflowId,
-    searchParams,
-    currentWorkflowId,
-    nodes.length,
-    generateWorkflowFromAI,
-    loadExistingWorkflow,
   ]);
 
   // Auto-fix invalid/missing integrations on workflow load or when integrations change

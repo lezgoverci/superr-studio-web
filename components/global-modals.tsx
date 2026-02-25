@@ -1,5 +1,6 @@
 "use client";
 
+import { AIAgentWindowManager } from "@/components/ai-agent/ai-agent-window-manager";
 import { OverlayContainer } from "@/components/overlays/overlay-container";
 import { OverlaySync } from "@/components/overlays/overlay-sync";
 
@@ -9,6 +10,7 @@ import { OverlaySync } from "@/components/overlays/overlay-sync";
 export function GlobalModals() {
   return (
     <>
+      <AIAgentWindowManager />
       <OverlayContainer />
       <OverlaySync />
     </>

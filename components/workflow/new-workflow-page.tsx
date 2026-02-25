@@ -167,7 +167,7 @@ export function NewWorkflowPage() {
               </p>
             </div>
             <Button
-              className="mt-2 h-9 px-4 rounded-lg shadow-sm"
+              className="mt-2 h-9 rounded-lg px-4 shadow-sm"
               disabled={isCreating}
               onClick={handleCreateWorkflow}
             >
@@ -181,23 +181,24 @@ export function NewWorkflowPage() {
           {session && !isLoadingWorkflows && recentWorkflows.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between px-1">
-                <h2 className="flex items-center gap-2 font-medium text-xs text-muted-foreground uppercase tracking-wider">
+                <h2 className="flex items-center gap-2 font-medium text-muted-foreground text-xs uppercase tracking-wider">
                   <Clock className="size-3.5" />
                   Recent workflows
                 </h2>
                 <Link
+                  className="group flex items-center gap-1 text-muted-foreground text-xs transition-colors hover:text-foreground"
                   href="/app/workflows"
-                  className="group flex items-center gap-1 text-muted-foreground text-xs hover:text-foreground transition-colors"
                 >
-                  See all <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
+                  See all{" "}
+                  <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
                 </Link>
               </div>
               <div className="flex flex-col gap-2">
                 {recentWorkflows.map((workflow) => (
                   <button
+                    className="group flex w-full items-center justify-between rounded-xl border border-border/50 bg-background/50 p-3 text-left shadow-sm backdrop-blur-xl transition-all hover:border-border hover:bg-accent/50"
                     key={workflow.id}
                     onClick={() => router.push(`/app/workflows/${workflow.id}`)}
-                    className="group flex w-full items-center justify-between rounded-xl border border-border/50 bg-background/50 p-3 text-left shadow-sm backdrop-blur-xl transition-all hover:bg-accent/50 hover:border-border"
                     type="button"
                   >
                     <div className="min-w-0 flex-1 space-y-0.5 pr-4">
@@ -208,7 +209,7 @@ export function NewWorkflowPage() {
                         {workflow.description || "No description"}
                       </p>
                     </div>
-                    <div className="flex shrink-0 items-center justify-center rounded-full bg-background/80 p-1.5 opacity-0 shadow-sm transition-all group-hover:opacity-100 border border-border/50">
+                    <div className="flex shrink-0 items-center justify-center rounded-full border border-border/50 bg-background/80 p-1.5 opacity-0 shadow-sm transition-all group-hover:opacity-100">
                       <ArrowRight className="size-3.5 text-muted-foreground" />
                     </div>
                   </button>
@@ -217,14 +218,15 @@ export function NewWorkflowPage() {
             </div>
           )}
 
-          {session && (!isLoadingWorkflows && recentWorkflows.length === 0) && (
+          {session && !isLoadingWorkflows && recentWorkflows.length === 0 && (
             <div className="flex justify-center pt-2">
-               <Link
-                  href="/app/workflows"
-                  className="group flex items-center gap-1.5 text-muted-foreground text-sm hover:text-foreground transition-colors font-medium"
-                >
-                  See all workflows <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
-                </Link>
+              <Link
+                className="group flex items-center gap-1.5 font-medium text-muted-foreground text-sm transition-colors hover:text-foreground"
+                href="/app/workflows"
+              >
+                See all workflows{" "}
+                <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+              </Link>
             </div>
           )}
         </div>

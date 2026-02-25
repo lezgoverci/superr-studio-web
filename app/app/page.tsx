@@ -1,6 +1,7 @@
 import {
   ArrowRight,
   BookOpen,
+  Bot,
   MessagesSquare,
   Settings2,
   Sparkles,
@@ -18,6 +19,12 @@ import {
 } from "@/components/ui/card";
 
 const QUICK_LINKS = [
+  {
+    title: "AI Agent",
+    description: "Start a new context-aware agent conversation.",
+    href: "/app/agent",
+    icon: Bot,
+  },
   {
     title: "Workflows",
     description: "Open the canvas builder and continue automation design.",
@@ -62,6 +69,9 @@ export default function DashboardPage() {
             workspace settings as the product grows.
           </p>
           <div className="flex flex-wrap gap-2">
+            <Button asChild>
+              <Link href="/app/agent">Start AI Agent</Link>
+            </Button>
             <Button asChild>
               <Link href="/app/workflows/new">New Workflow</Link>
             </Button>

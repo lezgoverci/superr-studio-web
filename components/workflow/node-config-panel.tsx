@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { OpenCodeChat } from "@/components/ai-elements/opencode-chat";
+import { AIAgentChat } from "@/components/ai-elements/opencode-chat";
 import { ArtifactPanel } from "@/components/artifacts/artifact-panel";
 import {
   AlertDialog,
@@ -761,7 +761,7 @@ export const PanelInner = () => {
               style={{ height: "calc(100% - 56px)" }}
               value="ai"
             >
-              <OpenCodeChat
+              <AIAgentChat
                 className="h-full"
                 initialSessionId={opencodeSessionId}
                 workflowId={currentWorkflowId}

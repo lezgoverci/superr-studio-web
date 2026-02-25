@@ -1,17 +1,9 @@
 "use client";
 
-import { Check, ChevronDown, Loader2, Sparkles } from "lucide-react";
+import { Check, ChevronDown, Loader2, Menu, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Menu } from "lucide-react";
-import { useAppShellContext } from "./shell-context";
-import { NavContent } from "./app-nav";
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,9 +12,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { api } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import { UserMenu } from "../workflows/user-menu";
+import { NavContent } from "./app-nav";
+import { useAppShellContext } from "./shell-context";
 
 const WORKFLOW_EDITOR_PATH = /^\/app\/workflows\/[^/]+$/;
 const WORKFLOW_DETAIL_PATH = /^\/app\/workflows\/([^/]+)$/;
@@ -227,34 +222,44 @@ export function AppHeader() {
         <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3">
           {/* Mobile Navigation */}
           {!isWorkflowEditor && (
-            <div className="lg:hidden flex items-center">
-              <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+            <div className="flex items-center lg:hidden">
+              <Sheet onOpenChange={setIsMobileMenuOpen} open={isMobileMenuOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="shrink-0 rounded-full h-8 w-8 hover:bg-muted/80 text-foreground/80">
+                  <Button
+                    className="h-8 w-8 shrink-0 rounded-full text-foreground/80 hover:bg-muted/80"
+                    size="icon"
+                    variant="ghost"
+                  >
                     <Menu className="size-4.5" />
                     <span className="sr-only">Toggle navigation menu</span>
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-64 p-0 flex flex-col border-r bg-background">
-                  <div className="p-4 border-b">
+                <SheetContent
+                  className="flex w-64 flex-col border-r bg-background p-0"
+                  side="left"
+                >
+                  <div className="border-b p-4">
                     <Link
                       className="flex items-center gap-2 px-2"
                       href="/app"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       <Sparkles className="size-4 text-primary" />
-                      <span className="font-semibold text-sm tracking-tight text-foreground">
+                      <span className="font-semibold text-foreground text-sm tracking-tight">
                         SuperrStudio
                       </span>
                     </Link>
                   </div>
-                  <div className="flex-1 overflow-y-auto w-full p-4">
+                  <div className="w-full flex-1 overflow-y-auto p-4">
                     <div className="mb-4 px-3">
-                      <div className="text-muted-foreground font-semibold text-xs tracking-wider uppercase">
+                      <div className="font-semibold text-muted-foreground text-xs uppercase tracking-wider">
                         Workspace
                       </div>
                     </div>
-                    <NavContent items={navItems} onItemClick={() => setIsMobileMenuOpen(false)} />
+                    <NavContent
+                      items={navItems}
+                      onItemClick={() => setIsMobileMenuOpen(false)}
+                    />
                   </div>
                 </SheetContent>
               </Sheet>
@@ -265,10 +270,10 @@ export function AppHeader() {
             className="flex shrink-0 items-center gap-2 md:gap-3"
             href="/app"
           >
-            <div className="hidden lg:flex rounded-lg bg-primary/15 p-1.5 text-primary">
+            <div className="hidden rounded-lg bg-primary/15 p-1.5 text-primary lg:flex">
               <Sparkles className="size-4" />
             </div>
-            <span className="hidden font-semibold text-sm tracking-tight lg:inline md:text-base">
+            <span className="hidden font-semibold text-sm tracking-tight md:text-base lg:inline">
               SuperrStudio
             </span>
           </Link>
