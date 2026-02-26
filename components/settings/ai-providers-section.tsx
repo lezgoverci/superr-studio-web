@@ -131,7 +131,7 @@ export function AiProvidersSection({ className }: ProviderSettingsProps) {
           </div>
         ) : providers.length === 0 ? (
           <div className="py-8 text-center text-muted-foreground text-sm">
-            No providers available. Please check OpenCode server connection.
+            No providers available. Please check Agent server connection.
           </div>
         ) : (
           <div className="space-y-4">

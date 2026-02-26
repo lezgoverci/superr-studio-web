@@ -168,7 +168,7 @@ export function ProviderSettings({
             </div>
           ) : providers.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
-              No providers available. Please check OpenCode server connection.
+              No providers available. Please check Agent server connection.
             </p>
           ) : (
             providers.map((p) => {

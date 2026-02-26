@@ -778,7 +778,7 @@ export default function SessionsPage() {
           <DialogHeader>
             <DialogTitle>Link Session to Workflow</DialogTitle>
             <DialogDescription>
-              Choose which workflow this OpenCode session belongs to. This
+              Choose which workflow this Agent session belongs to. This
               mapping is stored locally in your browser.
             </DialogDescription>
           </DialogHeader>
@@ -849,7 +849,7 @@ export default function SessionsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Session</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove this OpenCode session and all of its
+              This will permanently remove this Agent session and all of its
               conversation history.
             </AlertDialogDescription>
           </AlertDialogHeader>

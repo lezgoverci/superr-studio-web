@@ -1251,7 +1251,7 @@ export function AIAgentChat({
           <div className="space-y-1">
             <p className="font-medium">AI Agent not connected</p>
             <p className="text-muted-foreground text-sm">
-              Connect OpenCode to use your own AI subscriptions.
+              Connect Agent to start chatting and create workflows.
             </p>
           </div>
           <Button
@@ -1260,7 +1260,7 @@ export function AIAgentChat({
             size="sm"
           >
             {isConnecting && <Loader2 className="mr-2 size-4 animate-spin" />}
-            Connect OpenCode
+            Connect Agent
           </Button>
         </div>
       )}
