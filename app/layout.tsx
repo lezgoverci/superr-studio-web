@@ -13,6 +13,7 @@ import { OverlayProvider } from "@/components/overlays/overlay-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { PersistentCanvas } from "@/components/workflow/persistent-canvas";
+import { OpenCodeProvider } from "@/components/ai-elements/opencode-provider";
 import { mono, sans } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
 
@@ -34,17 +35,13 @@ type RootLayoutProps = {
   children: ReactNode;
 };
 
-import { OpenCodeProvider } from "@/components/ai-elements/opencode-provider";
-
 // Inner content wrapped by GitHubStarsProvider (used for both loading and loaded states)
 function LayoutContent({ children }: { children: ReactNode }) {
   return (
-    <OpenCodeProvider>
-      <ReactFlowProvider>
-        <PersistentCanvas />
-        <div className="pointer-events-none relative z-10">{children}</div>
-      </ReactFlowProvider>
-    </OpenCodeProvider>
+    <ReactFlowProvider>
+      <PersistentCanvas />
+      <div className="pointer-events-none relative z-10">{children}</div>
+    </ReactFlowProvider>
   );
 }
 
@@ -59,21 +56,23 @@ const RootLayout = ({ children }: RootLayoutProps) => (
       >
         <Provider>
           <AuthProvider>
-            <OverlayProvider>
-              <Suspense
-                fallback={
-                  <GitHubStarsProvider stars={null}>
+            <OpenCodeProvider>
+              <OverlayProvider>
+                <Suspense
+                  fallback={
+                    <GitHubStarsProvider stars={null}>
+                      <LayoutContent>{children}</LayoutContent>
+                    </GitHubStarsProvider>
+                  }
+                >
+                  <GitHubStarsLoader>
                     <LayoutContent>{children}</LayoutContent>
-                  </GitHubStarsProvider>
-                }
-              >
-                <GitHubStarsLoader>
-                  <LayoutContent>{children}</LayoutContent>
-                </GitHubStarsLoader>
-              </Suspense>
-              <Toaster />
-              <GlobalModals />
-            </OverlayProvider>
+                  </GitHubStarsLoader>
+                </Suspense>
+                <Toaster />
+                <GlobalModals />
+              </OverlayProvider>
+            </OpenCodeProvider>
           </AuthProvider>
         </Provider>
       </ThemeProvider>
