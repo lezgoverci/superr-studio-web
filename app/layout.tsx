@@ -34,13 +34,17 @@ type RootLayoutProps = {
   children: ReactNode;
 };
 
+import { OpenCodeProvider } from "@/components/ai-elements/opencode-provider";
+
 // Inner content wrapped by GitHubStarsProvider (used for both loading and loaded states)
 function LayoutContent({ children }: { children: ReactNode }) {
   return (
-    <ReactFlowProvider>
-      <PersistentCanvas />
-      <div className="pointer-events-none relative z-10">{children}</div>
-    </ReactFlowProvider>
+    <OpenCodeProvider>
+      <ReactFlowProvider>
+        <PersistentCanvas />
+        <div className="pointer-events-none relative z-10">{children}</div>
+      </ReactFlowProvider>
+    </OpenCodeProvider>
   );
 }
 

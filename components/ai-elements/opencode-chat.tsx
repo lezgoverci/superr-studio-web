@@ -62,6 +62,7 @@ import {
   type OpenCodeConnectionConfig,
 } from "@/lib/opencode-client";
 import { useOpencode } from "@/hooks/use-opencode";
+import { useOpenCodeConnection } from "@/components/ai-elements/opencode-provider";
 import { mapOpenCodeHistoryToUIMessages } from "@/lib/opencode-chat-adapter";
 import {
   getOpenCodeSessionConnectionKey,
@@ -483,7 +484,6 @@ export function AIAgentChat({
   minimizedDisplayMode = "input-only",
   windowControls,
 }: AIAgentChatProps) {
-  const [connected, setConnected] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [initialMessages, setInitialMessages] = useState<UIMessage[]>([]);
@@ -497,6 +497,7 @@ export function AIAgentChat({
   const { connectViaDaemon } = useOpencode();
   const [hasLoadedSessions, setHasLoadedSessions] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const { connected, connectionConfig: connection, updateConnectionConfig, verifyConnection } = useOpenCodeConnection();
   const initialSessionAppliedRef = useRef<string | null>(null);
   const activeSessionIdRef = useRef<string | null>(null);
   const connectedRef = useRef(false);
@@ -514,11 +515,7 @@ export function AIAgentChat({
   const isMinimizedVariant = uiVariant === "minimized";
   const isInputOnlyMinimized =
     isMinimizedVariant && minimizedDisplayMode === "input-only";
-  const [connection, setConnection] = useState<OpenCodeConnectionConfig | null>(null);
 
-  useEffect(() => {
-    setConnection(getConnectionConfig());
-  }, []);
   const connectionKey = useMemo(() => {
     if (!connection) {
       return null;
@@ -540,7 +537,7 @@ export function AIAgentChat({
     try {
       const result = await connectViaDaemon();
       if (result.connected) {
-        await handleConnected(true);
+        updateConnectionConfig(result.config);
         toast.success(
           result.startedOpencode
             ? "Local AI Agent started and connected."
@@ -549,7 +546,7 @@ export function AIAgentChat({
         return;
       }
 
-      await handleConnected(false);
+      void verifyConnection();
 
       if (result.reason === "bridge_unavailable") {
         toast.error("Desktop bridge is not running. Start superr-bridge and retry.");
@@ -754,13 +751,11 @@ export function AIAgentChat({
 
   const handleConnected = useCallback(
     async (isConnected: boolean) => {
-      setConnection(getConnectionConfig());
       if (connectedRef.current === isConnected) {
         return;
       }
 
       connectedRef.current = isConnected;
-      setConnected(isConnected);
 
       if (!isConnected) {
         setHasLoadedSessions(false);
@@ -824,6 +819,11 @@ export function AIAgentChat({
       setActiveSession,
     ],
   );
+
+  // When connection state changes globally, fire our init callback
+  useEffect(() => {
+    void handleConnected(connected);
+  }, [connected, handleConnected]);
 
   useEffect(() => {
     if (!(connected && hasLoadedSessions)) {

@@ -9,8 +9,8 @@ import {
 import { getConnectionConfig, pingOpenCodeWithRetry } from "@/lib/opencode-client";
 import { cn } from "@/lib/utils";
 import { Loader2, Server, ServerOff, Unplug } from "lucide-react";
+import { useOpenCodeConnection } from "@/components/ai-elements/opencode-provider";
 
-type ConnectionStatus = "checking" | "connected" | "disconnected" | "not-configured";
 type OpenCodeConnectionTriggerVariant = "default" | "menu-item";
 
 type OpenCodeConnectionProps = {
@@ -49,7 +49,7 @@ export function OpenCodeConnection({
   onTriggerClick,
 }: OpenCodeConnectionProps) {
   const { connectViaDaemon, isLoading: bridgeLoading } = useOpencode();
-  const [status, setStatus] = useState<ConnectionStatus>("checking");
+  const { status, updateConnectionConfig, connected, verifyConnection } = useOpenCodeConnection();
   const [actionLoading, setActionLoading] = useState(false);
   const onStatusChangeRef = useRef(onStatusChange);
 
@@ -57,28 +57,10 @@ export function OpenCodeConnection({
     onStatusChangeRef.current = onStatusChange;
   }, [onStatusChange]);
 
-  const checkConnection = useCallback(async () => {
-    const config = getConnectionConfig();
-    if (!config) {
-      setStatus("not-configured");
-      onStatusChangeRef.current?.(false);
-      return;
-    }
-
-    setStatus("checking");
-    const ok = await pingOpenCodeWithRetry(2, 200);
-    const nextStatus: ConnectionStatus = ok ? "connected" : "disconnected";
-    setStatus(nextStatus);
-    onStatusChangeRef.current?.(ok);
-  }, []);
-
+  // Sync the external callback whenever our global "connected" flag changes
   useEffect(() => {
-    void checkConnection();
-    const interval = setInterval(() => {
-      void checkConnection();
-    }, 30_000);
-    return () => clearInterval(interval);
-  }, [checkConnection]);
+    onStatusChangeRef.current?.(connected);
+  }, [connected]);
 
   const handleConnect = useCallback(async () => {
     onTriggerClick?.();
@@ -90,8 +72,8 @@ export function OpenCodeConnection({
     try {
       const result = await connectViaDaemon();
       if (result.connected) {
-        setStatus("connected");
-        onStatusChangeRef.current?.(true);
+        // Force the provider to re-check its connection status and get new config
+        updateConnectionConfig(result.config);
         toast.success(
           result.startedOpencode
             ? "Local AI Agent started and connected."
@@ -100,12 +82,7 @@ export function OpenCodeConnection({
         return;
       }
 
-      const nextStatus: ConnectionStatus =
-        result.reason === "not_installed" || result.reason === "missing_config"
-          ? "not-configured"
-          : "disconnected";
-      setStatus(nextStatus);
-      onStatusChangeRef.current?.(false);
+      void verifyConnection(); // Run verify to switch state if necessary
       toast.error(getConnectFailureMessage(result.reason, result.error));
     } finally {
       setActionLoading(false);
