@@ -10,6 +10,7 @@ import {
   Search,
   Trash2,
   Workflow,
+  Unplug
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -657,8 +658,8 @@ export default function SessionsPage() {
     return (
       <PageContainer>
         <div className="flex h-full min-h-[480px] flex-col items-center justify-center gap-4 rounded-xl border bg-background p-6 text-center">
-          <div className="rounded-full bg-muted p-4">
-            <MessageSquare className="size-8 text-muted-foreground" />
+          <div className="rounded-full bg-destructive/10 p-4">
+            <Unplug className="size-8 text-destructive" />
           </div>
           <div className="space-y-1">
             <p className="font-medium">Agent is not connected</p>

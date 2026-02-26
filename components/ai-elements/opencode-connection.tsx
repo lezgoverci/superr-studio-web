@@ -8,7 +8,7 @@ import {
 } from "@/hooks/use-opencode";
 import { getConnectionConfig, pingOpenCodeWithRetry } from "@/lib/opencode-client";
 import { cn } from "@/lib/utils";
-import { Loader2, Wifi, WifiOff } from "lucide-react";
+import { Loader2, Server, ServerOff, Unplug } from "lucide-react";
 
 type ConnectionStatus = "checking" | "connected" | "disconnected" | "not-configured";
 type OpenCodeConnectionTriggerVariant = "default" | "menu-item";
@@ -119,17 +119,17 @@ export function OpenCodeConnection({
       dot: "bg-muted-foreground",
     },
     connected: {
-      icon: <Wifi className="size-2.5 text-emerald-500" />,
+      icon: <Server className="size-2.5 text-emerald-500" />,
       label: "AI Agent connected",
       dot: "bg-emerald-500",
     },
     disconnected: {
-      icon: <WifiOff className="size-2.5 text-destructive" />,
+      icon: <ServerOff className="size-2.5 text-destructive" />,
       label: "AI Agent offline",
       dot: "bg-destructive",
     },
     "not-configured": {
-      icon: <WifiOff className="size-2.5 text-muted-foreground" />,
+      icon: <Unplug className="size-2.5 text-muted-foreground" />,
       label: "AI Agent not set up",
       dot: "bg-muted-foreground",
     },

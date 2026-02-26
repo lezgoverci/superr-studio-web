@@ -83,6 +83,8 @@ import {
   Plus,
   Settings,
   Trash2,
+  Bot,
+  Unplug
 } from "lucide-react";
 import type { Session } from "@opencode-ai/sdk/client";
 
@@ -1198,8 +1200,8 @@ export function AIAgentChat({
                   </p>
                 ) : (
                   <>
-                    <div className="rounded-full bg-muted p-4">
-                      <MessageSquare className="size-8 text-muted-foreground" />
+                    <div className="rounded-full bg-primary/10 p-4">
+                      <Bot className="size-8 text-primary" />
                     </div>
                     <div className="space-y-1">
                       <p className="font-medium">No active Agent session</p>
@@ -1245,8 +1247,8 @@ export function AIAgentChat({
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center gap-4 p-6 text-center">
-          <div className="rounded-full bg-muted p-4">
-            <MessageSquare className="size-8 text-muted-foreground" />
+          <div className="rounded-full bg-destructive/10 p-4">
+            <Unplug className="size-8 text-destructive" />
           </div>
           <div className="space-y-1">
             <p className="font-medium">AI Agent not connected</p>
