@@ -1,0 +1,2 @@
+patchedDependencies:
+  ai-sdk-provider-opencode-sdk@2.1.1: patches/ai-sdk-provider-opencode-sdk@2.1.1.patch

@@ -1,14 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { getOpenCodeClient } from "@/lib/opencode-client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Spinner } from "@/components/ui/spinner";
-import { Key, Link as LinkIcon, AlertCircle, Save, Trash2 } from "lucide-react";
+import { AlertCircle, Key, Link as LinkIcon, Save, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { getOpenCodeClient } from "@/lib/opencode-client";
 
 interface Provider {
   id: string;
@@ -112,7 +111,7 @@ export function AiProvidersSection({ className }: ProviderSettingsProps) {
         }
       }, 2000);
 
-      setTimeout(() => clearInterval(interval), 120000);
+      setTimeout(() => clearInterval(interval), 120_000);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
       toast.error(`OAuth failed: ${message}`);
@@ -141,32 +140,32 @@ export function AiProvidersSection({ className }: ProviderSettingsProps) {
                 p.id.includes("gemini") || p.id.includes("antigravity");
 
               return (
-                <div key={p.id} className="space-y-3 rounded-md border p-4">
+                <div className="space-y-3 rounded-md border p-4" key={p.id}>
                   <div className="flex items-center justify-between">
                     <h3 className="font-medium text-sm capitalize">
                       {p.name || p.id}
                     </h3>
                     {isConnected ? (
-                      <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-500">
+                      <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 font-medium text-emerald-500 text-xs">
                         Connected
                       </span>
                     ) : (
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                      <span className="rounded-full bg-muted px-2 py-0.5 font-medium text-muted-foreground text-xs">
                         Not Connected
                       </span>
                     )}
                   </div>
 
                   {p.description && (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       {p.description}
                     </p>
                   )}
 
-                  {!isConnected && !isOAuth && (
+                  {!(isConnected || isOAuth) && (
                     <div className="flex gap-2">
                       <div className="relative flex-1">
-                        <Key className="absolute left-2.5 top-2 size-3.5 text-muted-foreground" />
+                        <Key className="absolute top-2 left-2.5 size-3.5 text-muted-foreground" />
                         <Input
                           className="pl-8 text-xs"
                           onChange={(e) =>
@@ -203,7 +202,7 @@ export function AiProvidersSection({ className }: ProviderSettingsProps) {
                         Connect Account
                       </Button>
                       {p.id.includes("antigravity") && (
-                        <div className="mt-2 flex items-start gap-1.5 rounded bg-amber-500/10 p-2 text-[10px] leading-tight text-amber-600 dark:text-amber-400">
+                        <div className="mt-2 flex items-start gap-1.5 rounded bg-amber-500/10 p-2 text-[10px] text-amber-600 leading-tight dark:text-amber-400">
                           <AlertCircle className="mt-0.5 size-3 shrink-0" />
                           <p>
                             Unofficial Google connection. Use a burner account
@@ -217,7 +216,7 @@ export function AiProvidersSection({ className }: ProviderSettingsProps) {
                   {isConnected && (
                     <div className="flex justify-end">
                       <Button
-                        className="h-8 text-xs text-destructive"
+                        className="h-8 text-destructive text-xs"
                         onClick={() => handleRemoveApiKey(p.id)}
                         size="sm"
                         variant="ghost"

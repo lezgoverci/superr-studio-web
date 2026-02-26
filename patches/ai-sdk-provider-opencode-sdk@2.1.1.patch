@@ -1,0 +1,652 @@
+diff --git a/dist/index.cjs b/dist/index.cjs
+index e165dcb..525d322 100644
+--- a/dist/index.cjs
++++ b/dist/index.cjs
+@@ -468,17 +468,25 @@ function convertEventToStreamParts(event, state, logger) {
+     case "question.asked": {
+       const questionEvent = event;
+       const questionId = questionEvent.properties.id;
++      const toolCallId = questionEvent.properties.tool?.callID ?? questionId;
+       if (!state.questionRequests.has(questionId)) {
+         state.questionRequests.add(questionId);
+-        const warning = "OpenCode question.asked events are not yet mapped to AI SDK responses. The provider cannot answer interactive questions automatically.";
+-        if (logger) {
+-          logger.warn(warning);
+-        }
+         parts.push({
+-          type: "error",
+-          error: new Error(
+-            `${warning} Question ID: ${questionId}. If this blocks generation, answer/reject the question in OpenCode directly.`
+-          )
++          type: "tool-call",
++          toolCallId,
++          toolName: "question",
++          input: JSON.stringify({
++            questions: questionEvent.properties.questions
++          }),
++          providerExecuted: true,
++          dynamic: true,
++          providerMetadata: {
++            opencode: {
++              questionId,
++              toolCallId,
++              sessionId: questionEvent.properties.sessionID
++            }
++          }
+         });
+       }
+       break;
+@@ -604,6 +612,7 @@ function handleReasoningPart(part, delta, state) {
+ function handleToolPart(part, state, logger) {
+   const parts = [];
+   const { callID, tool, state: toolState } = part;
++  const providerExecuted = true;
+   let streamState = state.toolStates.get(callID);
+   if (!streamState) {
+     streamState = {
+@@ -624,7 +633,7 @@ function handleToolPart(part, state, logger) {
+           type: "tool-input-start",
+           id: callID,
+           toolName: tool,
+-          providerExecuted: true,
++          providerExecuted,
+           dynamic: true
+         });
+         streamState.inputStarted = true;
+@@ -636,7 +645,7 @@ function handleToolPart(part, state, logger) {
+           type: "tool-input-start",
+           id: callID,
+           toolName: tool,
+-          providerExecuted: true,
++          providerExecuted,
+           dynamic: true,
+           ...toolState.title ? { title: toolState.title } : {}
+         });
+@@ -683,7 +692,7 @@ function handleToolPart(part, state, logger) {
+             type: "tool-input-start",
+             id: callID,
+             toolName: tool,
+-            providerExecuted: true,
++            providerExecuted,
+             dynamic: true
+           });
+           streamState.inputStarted = true;
+@@ -703,7 +712,7 @@ function handleToolPart(part, state, logger) {
+               );
+             }
+           }),
+-          providerExecuted: true,
++          providerExecuted,
+           dynamic: true
+         });
+         streamState.callEmitted = true;
+@@ -737,7 +746,7 @@ function handleToolPart(part, state, logger) {
+             type: "tool-input-start",
+             id: callID,
+             toolName: tool,
+-            providerExecuted: true,
++            providerExecuted,
+             dynamic: true
+           });
+           streamState.inputStarted = true;
+@@ -757,7 +766,7 @@ function handleToolPart(part, state, logger) {
+               );
+             }
+           }),
+-          providerExecuted: true,
++          providerExecuted,
+           dynamic: true
+         });
+         streamState.callEmitted = true;
+@@ -1496,6 +1505,64 @@ function extractToolApprovalResponses(prompt) {
+   }
+   return responses;
+ }
++function normalizeQuestionAnswers(value) {
++  if (!Array.isArray(value)) {
++    return null;
++  }
++  const normalized = [];
++  for (const answer of value) {
++    if (!Array.isArray(answer)) {
++      return null;
++    }
++    const labels = answer.filter((entry) => typeof entry === "string").map((entry) => entry.trim()).filter((entry) => entry.length > 0);
++    if (labels.length === 0) {
++      return null;
++    }
++    normalized.push(labels);
++  }
++  if (normalized.length === 0) {
++    return null;
++  }
++  return normalized;
++}
++function resolveQuestionRequestId(part) {
++  const providerQuestionId = part.providerOptions?.opencode?.questionId;
++  if (typeof providerQuestionId === "string" && providerQuestionId.trim().length > 0) {
++    return providerQuestionId;
++  }
++  return part.toolCallId;
++}
++function extractToolQuestionResponses(prompt) {
++  const responses = [];
++  for (const message of prompt) {
++    if (!(message.role === "tool" || message.role === "assistant")) {
++      continue;
++    }
++    for (const part of message.content) {
++      if (part.type !== "tool-result" || part.toolName !== "question") {
++        continue;
++      }
++      const questionId = resolveQuestionRequestId(part);
++      const output = part.output;
++      if (output.type === "json" && output.value && typeof output.value === "object" && !Array.isArray(output.value)) {
++        const answers = normalizeQuestionAnswers(output.value.answers);
++        if (answers) {
++          responses.push({
++            questionId,
++            action: "reply",
++            answers
++          });
++          continue;
++        }
++      }
++      responses.push({
++        questionId,
++        action: "reject"
++      });
++    }
++  }
++  return responses;
++}
+ var OpencodeLanguageModel = class {
+   specificationVersion = "v3";
+   modelId;
+@@ -1511,6 +1578,7 @@ var OpencodeLanguageModel = class {
+   sessionId;
+   sessionInitPromise = null;
+   repliedApprovalIdsBySession = /* @__PURE__ */ new Map();
++  repliedQuestionIdsBySession = /* @__PURE__ */ new Map();
+   parsedModelId;
+   constructor(options) {
+     this.modelId = options.modelId;
+@@ -1551,6 +1619,7 @@ var OpencodeLanguageModel = class {
+       warnings.push({ type: "other", message: toolWarning });
+     }
+     const approvalResponses = extractToolApprovalResponses(options.prompt);
++    const questionResponses = extractToolQuestionResponses(options.prompt);
+     const {
+       parts,
+       systemPrompt,
+@@ -1583,6 +1652,16 @@ var OpencodeLanguageModel = class {
+           warnings.push({ type: "other", message: warning });
+         }
+       }
++      if (questionResponses.length > 0) {
++        const questionWarnings = await this.replyToPendingQuestions(
++          client,
++          sessionId,
++          questionResponses
++        );
++        for (const warning of questionWarnings) {
++          warnings.push({ type: "other", message: warning });
++        }
++      }
+       const requestBody = this.buildPromptRequestBody(
+         sessionId,
+         parts,
+@@ -1643,6 +1722,7 @@ var OpencodeLanguageModel = class {
+       warnings.push(toolWarning);
+     }
+     const approvalResponses = extractToolApprovalResponses(options.prompt);
++    const questionResponses = extractToolQuestionResponses(options.prompt);
+     const {
+       parts,
+       systemPrompt,
+@@ -1685,6 +1765,14 @@ var OpencodeLanguageModel = class {
+             );
+             streamWarnings.push(...approvalWarnings);
+           }
++          if (questionResponses.length > 0) {
++            const questionWarnings = await this.replyToPendingQuestions(
++              client,
++              sessionId,
++              questionResponses
++            );
++            streamWarnings.push(...questionWarnings);
++          }
+           controller.enqueue(createStreamStartPart(streamWarnings));
+           streamStartEmitted = true;
+           let resolvePromptFailed;
+@@ -1770,6 +1858,22 @@ var OpencodeLanguageModel = class {
+               for (const part of streamParts) {
+                 controller.enqueue(part);
+               }
++              if (event.type === "question.asked") {
++                const finishParts = createFinishParts(
++                  state,
++                  {
++                    unified: "tool-calls",
++                    raw: "tool_calls"
++                  },
++                  sessionId,
++                  lastMessageInfo?.id
++                );
++                for (const part of finishParts) {
++                  controller.enqueue(part);
++                }
++                await closeIterator();
++                break;
++              }
+               if (event.type === "message.updated") {
+                 const messageEvent = event;
+                 if (messageEvent.properties.info.role === "assistant") {
+@@ -1880,6 +1984,43 @@ var OpencodeLanguageModel = class {
+     }
+     return warnings;
+   }
++  async replyToPendingQuestions(client, sessionId, responses) {
++    const questionApi = client.question;
++    if (typeof questionApi?.reply !== "function" || typeof questionApi?.reject !== "function") {
++      return [
++        "OpenCode question.reply/question.reject is unavailable; question responses were ignored."
++      ];
++    }
++    const warnings = [];
++    const directory = this.getRequestDirectory();
++    const repliedQuestionIds = this.getRepliedQuestionIdsForSession(sessionId);
++    const pendingResponses = this.getPendingQuestionResponses(
++      responses,
++      repliedQuestionIds
++    );
++    for (const response of pendingResponses) {
++      try {
++        if (response.action === "reply") {
++          await questionApi.reply({
++            requestID: response.questionId,
++            answers: response.answers,
++            ...directory ? { directory } : {}
++          });
++        } else {
++          await questionApi.reject({
++            requestID: response.questionId,
++            ...directory ? { directory } : {}
++          });
++        }
++        repliedQuestionIds.add(response.questionId);
++      } catch (error) {
++        const warning = `Failed to apply question response for ${response.questionId}: ${extractErrorMessage(error)}`;
++        this.logger.warn(warning);
++        warnings.push(warning);
++      }
++    }
++    return warnings;
++  }
+   getPendingApprovalResponses(responses, repliedApprovalIds) {
+     const seenInRequest = /* @__PURE__ */ new Set();
+     const pending = [];
+@@ -1895,6 +2036,21 @@ var OpencodeLanguageModel = class {
+     }
+     return pending;
+   }
++  getPendingQuestionResponses(responses, repliedQuestionIds) {
++    const seenInRequest = /* @__PURE__ */ new Set();
++    const pending = [];
++    for (const response of responses) {
++      if (seenInRequest.has(response.questionId)) {
++        continue;
++      }
++      seenInRequest.add(response.questionId);
++      if (repliedQuestionIds.has(response.questionId)) {
++        continue;
++      }
++      pending.push(response);
++    }
++    return pending;
++  }
+   getRepliedApprovalIdsForSession(sessionId) {
+     const existing = this.repliedApprovalIdsBySession.get(sessionId);
+     if (existing) {
+@@ -1904,6 +2060,15 @@ var OpencodeLanguageModel = class {
+     this.repliedApprovalIdsBySession.set(sessionId, created);
+     return created;
+   }
++  getRepliedQuestionIdsForSession(sessionId) {
++    const existing = this.repliedQuestionIdsBySession.get(sessionId);
++    if (existing) {
++      return existing;
++    }
++    const created = /* @__PURE__ */ new Set();
++    this.repliedQuestionIdsBySession.set(sessionId, created);
++    return created;
++  }
+   /**
+    * Get or create a session for this model instance.
+    */
+diff --git a/dist/index.js b/dist/index.js
+index ac173fb..4a73190 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -466,17 +466,25 @@ function convertEventToStreamParts(event, state, logger) {
+     case "question.asked": {
+       const questionEvent = event;
+       const questionId = questionEvent.properties.id;
++      const toolCallId = questionEvent.properties.tool?.callID ?? questionId;
+       if (!state.questionRequests.has(questionId)) {
+         state.questionRequests.add(questionId);
+-        const warning = "OpenCode question.asked events are not yet mapped to AI SDK responses. The provider cannot answer interactive questions automatically.";
+-        if (logger) {
+-          logger.warn(warning);
+-        }
+         parts.push({
+-          type: "error",
+-          error: new Error(
+-            `${warning} Question ID: ${questionId}. If this blocks generation, answer/reject the question in OpenCode directly.`
+-          )
++          type: "tool-call",
++          toolCallId,
++          toolName: "question",
++          input: JSON.stringify({
++            questions: questionEvent.properties.questions
++          }),
++          providerExecuted: true,
++          dynamic: true,
++          providerMetadata: {
++            opencode: {
++              questionId,
++              toolCallId,
++              sessionId: questionEvent.properties.sessionID
++            }
++          }
+         });
+       }
+       break;
+@@ -602,6 +610,7 @@ function handleReasoningPart(part, delta, state) {
+ function handleToolPart(part, state, logger) {
+   const parts = [];
+   const { callID, tool, state: toolState } = part;
++  const providerExecuted = true;
+   let streamState = state.toolStates.get(callID);
+   if (!streamState) {
+     streamState = {
+@@ -622,7 +631,7 @@ function handleToolPart(part, state, logger) {
+           type: "tool-input-start",
+           id: callID,
+           toolName: tool,
+-          providerExecuted: true,
++          providerExecuted,
+           dynamic: true
+         });
+         streamState.inputStarted = true;
+@@ -634,7 +643,7 @@ function handleToolPart(part, state, logger) {
+           type: "tool-input-start",
+           id: callID,
+           toolName: tool,
+-          providerExecuted: true,
++          providerExecuted,
+           dynamic: true,
+           ...toolState.title ? { title: toolState.title } : {}
+         });
+@@ -681,7 +690,7 @@ function handleToolPart(part, state, logger) {
+             type: "tool-input-start",
+             id: callID,
+             toolName: tool,
+-            providerExecuted: true,
++            providerExecuted,
+             dynamic: true
+           });
+           streamState.inputStarted = true;
+@@ -701,7 +710,7 @@ function handleToolPart(part, state, logger) {
+               );
+             }
+           }),
+-          providerExecuted: true,
++          providerExecuted,
+           dynamic: true
+         });
+         streamState.callEmitted = true;
+@@ -735,7 +744,7 @@ function handleToolPart(part, state, logger) {
+             type: "tool-input-start",
+             id: callID,
+             toolName: tool,
+-            providerExecuted: true,
++            providerExecuted,
+             dynamic: true
+           });
+           streamState.inputStarted = true;
+@@ -755,7 +764,7 @@ function handleToolPart(part, state, logger) {
+               );
+             }
+           }),
+-          providerExecuted: true,
++          providerExecuted,
+           dynamic: true
+         });
+         streamState.callEmitted = true;
+@@ -1494,6 +1503,64 @@ function extractToolApprovalResponses(prompt) {
+   }
+   return responses;
+ }
++function normalizeQuestionAnswers(value) {
++  if (!Array.isArray(value)) {
++    return null;
++  }
++  const normalized = [];
++  for (const answer of value) {
++    if (!Array.isArray(answer)) {
++      return null;
++    }
++    const labels = answer.filter((entry) => typeof entry === "string").map((entry) => entry.trim()).filter((entry) => entry.length > 0);
++    if (labels.length === 0) {
++      return null;
++    }
++    normalized.push(labels);
++  }
++  if (normalized.length === 0) {
++    return null;
++  }
++  return normalized;
++}
++function resolveQuestionRequestId(part) {
++  const providerQuestionId = part.providerOptions?.opencode?.questionId;
++  if (typeof providerQuestionId === "string" && providerQuestionId.trim().length > 0) {
++    return providerQuestionId;
++  }
++  return part.toolCallId;
++}
++function extractToolQuestionResponses(prompt) {
++  const responses = [];
++  for (const message of prompt) {
++    if (!(message.role === "tool" || message.role === "assistant")) {
++      continue;
++    }
++    for (const part of message.content) {
++      if (part.type !== "tool-result" || part.toolName !== "question") {
++        continue;
++      }
++      const questionId = resolveQuestionRequestId(part);
++      const output = part.output;
++      if (output.type === "json" && output.value && typeof output.value === "object" && !Array.isArray(output.value)) {
++        const answers = normalizeQuestionAnswers(output.value.answers);
++        if (answers) {
++          responses.push({
++            questionId,
++            action: "reply",
++            answers
++          });
++          continue;
++        }
++      }
++      responses.push({
++        questionId,
++        action: "reject"
++      });
++    }
++  }
++  return responses;
++}
+ var OpencodeLanguageModel = class {
+   specificationVersion = "v3";
+   modelId;
+@@ -1509,6 +1576,7 @@ var OpencodeLanguageModel = class {
+   sessionId;
+   sessionInitPromise = null;
+   repliedApprovalIdsBySession = /* @__PURE__ */ new Map();
++  repliedQuestionIdsBySession = /* @__PURE__ */ new Map();
+   parsedModelId;
+   constructor(options) {
+     this.modelId = options.modelId;
+@@ -1549,6 +1617,7 @@ var OpencodeLanguageModel = class {
+       warnings.push({ type: "other", message: toolWarning });
+     }
+     const approvalResponses = extractToolApprovalResponses(options.prompt);
++    const questionResponses = extractToolQuestionResponses(options.prompt);
+     const {
+       parts,
+       systemPrompt,
+@@ -1581,6 +1650,16 @@ var OpencodeLanguageModel = class {
+           warnings.push({ type: "other", message: warning });
+         }
+       }
++      if (questionResponses.length > 0) {
++        const questionWarnings = await this.replyToPendingQuestions(
++          client,
++          sessionId,
++          questionResponses
++        );
++        for (const warning of questionWarnings) {
++          warnings.push({ type: "other", message: warning });
++        }
++      }
+       const requestBody = this.buildPromptRequestBody(
+         sessionId,
+         parts,
+@@ -1641,6 +1720,7 @@ var OpencodeLanguageModel = class {
+       warnings.push(toolWarning);
+     }
+     const approvalResponses = extractToolApprovalResponses(options.prompt);
++    const questionResponses = extractToolQuestionResponses(options.prompt);
+     const {
+       parts,
+       systemPrompt,
+@@ -1683,6 +1763,14 @@ var OpencodeLanguageModel = class {
+             );
+             streamWarnings.push(...approvalWarnings);
+           }
++          if (questionResponses.length > 0) {
++            const questionWarnings = await this.replyToPendingQuestions(
++              client,
++              sessionId,
++              questionResponses
++            );
++            streamWarnings.push(...questionWarnings);
++          }
+           controller.enqueue(createStreamStartPart(streamWarnings));
+           streamStartEmitted = true;
+           let resolvePromptFailed;
+@@ -1768,6 +1856,22 @@ var OpencodeLanguageModel = class {
+               for (const part of streamParts) {
+                 controller.enqueue(part);
+               }
++              if (event.type === "question.asked") {
++                const finishParts = createFinishParts(
++                  state,
++                  {
++                    unified: "tool-calls",
++                    raw: "tool_calls"
++                  },
++                  sessionId,
++                  lastMessageInfo?.id
++                );
++                for (const part of finishParts) {
++                  controller.enqueue(part);
++                }
++                await closeIterator();
++                break;
++              }
+               if (event.type === "message.updated") {
+                 const messageEvent = event;
+                 if (messageEvent.properties.info.role === "assistant") {
+@@ -1878,6 +1982,43 @@ var OpencodeLanguageModel = class {
+     }
+     return warnings;
+   }
++  async replyToPendingQuestions(client, sessionId, responses) {
++    const questionApi = client.question;
++    if (typeof questionApi?.reply !== "function" || typeof questionApi?.reject !== "function") {
++      return [
++        "OpenCode question.reply/question.reject is unavailable; question responses were ignored."
++      ];
++    }
++    const warnings = [];
++    const directory = this.getRequestDirectory();
++    const repliedQuestionIds = this.getRepliedQuestionIdsForSession(sessionId);
++    const pendingResponses = this.getPendingQuestionResponses(
++      responses,
++      repliedQuestionIds
++    );
++    for (const response of pendingResponses) {
++      try {
++        if (response.action === "reply") {
++          await questionApi.reply({
++            requestID: response.questionId,
++            answers: response.answers,
++            ...directory ? { directory } : {}
++          });
++        } else {
++          await questionApi.reject({
++            requestID: response.questionId,
++            ...directory ? { directory } : {}
++          });
++        }
++        repliedQuestionIds.add(response.questionId);
++      } catch (error) {
++        const warning = `Failed to apply question response for ${response.questionId}: ${extractErrorMessage(error)}`;
++        this.logger.warn(warning);
++        warnings.push(warning);
++      }
++    }
++    return warnings;
++  }
+   getPendingApprovalResponses(responses, repliedApprovalIds) {
+     const seenInRequest = /* @__PURE__ */ new Set();
+     const pending = [];
+@@ -1893,6 +2034,21 @@ var OpencodeLanguageModel = class {
+     }
+     return pending;
+   }
++  getPendingQuestionResponses(responses, repliedQuestionIds) {
++    const seenInRequest = /* @__PURE__ */ new Set();
++    const pending = [];
++    for (const response of responses) {
++      if (seenInRequest.has(response.questionId)) {
++        continue;
++      }
++      seenInRequest.add(response.questionId);
++      if (repliedQuestionIds.has(response.questionId)) {
++        continue;
++      }
++      pending.push(response);
++    }
++    return pending;
++  }
+   getRepliedApprovalIdsForSession(sessionId) {
+     const existing = this.repliedApprovalIdsBySession.get(sessionId);
+     if (existing) {
+@@ -1902,6 +2058,15 @@ var OpencodeLanguageModel = class {
+     this.repliedApprovalIdsBySession.set(sessionId, created);
+     return created;
+   }
++  getRepliedQuestionIdsForSession(sessionId) {
++    const existing = this.repliedQuestionIdsBySession.get(sessionId);
++    if (existing) {
++      return existing;
++    }
++    const created = /* @__PURE__ */ new Set();
++    this.repliedQuestionIdsBySession.set(sessionId, created);
++    return created;
++  }
+   /**
+    * Get or create a session for this model instance.
+    */

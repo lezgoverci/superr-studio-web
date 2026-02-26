@@ -3,11 +3,11 @@
 import { Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { IntegrationIcon } from "@/components/ui/integration-icon";
 import { Spinner } from "@/components/ui/spinner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api, type Integration } from "@/lib/api-client";
 import { getIntegrationLabels } from "@/plugins";
 
@@ -165,7 +165,7 @@ export function ConnectionsSection({
     } catch (error) {
       console.error("Connection test failed:", error);
       toast.error(
-        error instanceof Error ? error.message : "Connection test failed",
+        error instanceof Error ? error.message : "Connection test failed"
       );
     } finally {
       setTestingId(null);
@@ -180,7 +180,7 @@ export function ConnectionsSection({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             className="pl-9"
             onChange={(e) => setFilter(e.target.value)}
@@ -207,10 +207,10 @@ export function ConnectionsSection({
           <div className="space-y-2">
             {integrationsWithLabels.map((integration) => (
               <ConnectionItem
-                key={integration.id}
                 integration={integration}
-                onEdit={() => onOpenEditConnection(integration)}
+                key={integration.id}
                 onDelete={() => onOpenDeleteConnection(integration)}
+                onEdit={() => onOpenEditConnection(integration)}
                 onTest={() => handleTest(integration.id)}
                 testingId={testingId}
               />

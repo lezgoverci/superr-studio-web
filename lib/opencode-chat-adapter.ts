@@ -40,6 +40,38 @@ function parseToolOutput(output: string): unknown {
 }
 
 function mapToolPart(part: ToolPart): UIMessage["parts"][number] {
+  if (part.tool === "question") {
+    if (part.state.status === "pending" || part.state.status === "running") {
+      return {
+        type: "dynamic-tool",
+        toolName: "question",
+        toolCallId: part.callID,
+        state: "input-available",
+        input: part.state.input,
+      };
+    }
+
+    if (part.state.status === "completed") {
+      return {
+        type: "dynamic-tool",
+        toolName: "question",
+        toolCallId: part.callID,
+        state: "output-available",
+        input: part.state.input,
+        output: parseToolOutput(part.state.output),
+      };
+    }
+
+    return {
+      type: "dynamic-tool",
+      toolName: "question",
+      toolCallId: part.callID,
+      state: "output-error",
+      input: part.state.input,
+      errorText: part.state.error,
+    };
+  }
+
   if (part.state.status === "pending") {
     return {
       type: "dynamic-tool",

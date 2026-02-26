@@ -3,10 +3,6 @@
 import { Copy, Key, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Spinner } from "@/components/ui/spinner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,7 +14,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 
 type ApiKey = {
   id: string;
@@ -59,7 +59,7 @@ function CreateApiKeyForm({
     } catch (error) {
       console.error("Failed to create API key:", error);
       toast.error(
-        error instanceof Error ? error.message : "Failed to create API key",
+        error instanceof Error ? error.message : "Failed to create API key"
       );
     } finally {
       setCreating(false);

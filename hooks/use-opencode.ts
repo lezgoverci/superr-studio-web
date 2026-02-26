@@ -4,7 +4,7 @@ import {
   saveConnectionConfig,
 } from "@/lib/opencode-client";
 
-const BRIDGE_PORT = 31256;
+const BRIDGE_PORT = 31_256;
 const BRIDGE_URL = `http://127.0.0.1:${BRIDGE_PORT}`;
 
 export type OpencodeStatus =
@@ -163,7 +163,9 @@ export function useOpencode() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Start failed with ${response.status}`);
+        throw new Error(
+          errorData.error || `Start failed with ${response.status}`
+        );
       }
 
       await checkStatus({ silent: true });
@@ -186,7 +188,9 @@ export function useOpencode() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Stop failed with ${response.status}`);
+        throw new Error(
+          errorData.error || `Stop failed with ${response.status}`
+        );
       }
 
       await checkStatus({ silent: true });
@@ -199,8 +203,8 @@ export function useOpencode() {
     }
   }, [checkStatus]);
 
-  const connectViaDaemon = useCallback(
-    async (): Promise<OpencodeConnectResult> => {
+  const connectViaDaemon =
+    useCallback(async (): Promise<OpencodeConnectResult> => {
       setIsLoading(true);
       setError(null);
 
@@ -226,7 +230,8 @@ export function useOpencode() {
             return {
               connected: false,
               reason: "start_failed",
-              error: errorData.error || `Start failed with ${startResponse.status}`,
+              error:
+                errorData.error || `Start failed with ${startResponse.status}`,
             };
           }
 
@@ -260,9 +265,7 @@ export function useOpencode() {
       } finally {
         setIsLoading(false);
       }
-    },
-    [checkStatus]
-  );
+    }, [checkStatus]);
 
   // Initial check
   useEffect(() => {

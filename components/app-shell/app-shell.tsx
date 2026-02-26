@@ -1,6 +1,6 @@
 "use client";
 
-import { Layers, MessageSquare, Settings, GitBranch } from "lucide-react";
+import { GitBranch, Layers, MessageSquare, Settings } from "lucide-react";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useCallback, useMemo } from "react";
@@ -71,22 +71,22 @@ export function AppShell({ children }: AppShellProps) {
 
   const permissions = useMemo(
     () => new Set<string>([...DEFAULT_PERMISSIONS]),
-    [],
+    []
   );
 
   const hasPermission = useCallback(
     (permission: string) => permissions.has(permission),
-    [permissions],
+    [permissions]
   );
 
   const navItems = useMemo(
     () =>
       NAV_ITEMS.filter((item) =>
         item.requiredPermissions.every((permission) =>
-          hasPermission(permission),
-        ),
+          hasPermission(permission)
+        )
       ),
-    [hasPermission],
+    [hasPermission]
   );
 
   const user: ShellUser = session?.user
@@ -114,7 +114,7 @@ export function AppShell({ children }: AppShellProps) {
       <div
         className={cn(
           "relative z-10 flex h-dvh flex-col",
-          isWorkflowCanvas ? "pointer-events-none" : "pointer-events-auto",
+          isWorkflowCanvas ? "pointer-events-none" : "pointer-events-auto"
         )}
       >
         <AppHeader />
@@ -124,14 +124,14 @@ export function AppShell({ children }: AppShellProps) {
             "flex min-h-0 flex-1 overflow-hidden",
             isWorkflowCanvas
               ? "pointer-events-none bg-transparent"
-              : "pointer-events-auto bg-muted/20",
+              : "pointer-events-auto bg-muted/20"
           )}
         >
           {showSideNav ? <AppNav items={navItems} /> : null}
           <div
             className={cn(
               "min-h-0 flex-1 overflow-hidden",
-              isWorkflowCanvas ? "pointer-events-none" : "pointer-events-auto",
+              isWorkflowCanvas ? "pointer-events-none" : "pointer-events-auto"
             )}
           >
             {children}

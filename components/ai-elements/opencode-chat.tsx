@@ -4,6 +4,7 @@ import { useChat } from "@ai-sdk/react";
 import {
   DefaultChatTransport,
   type DynamicToolUIPart,
+  lastAssistantMessageIsCompleteWithToolCalls,
   type ToolUIPart,
   type UIMessage,
 } from "ai";
@@ -44,6 +45,7 @@ import {
   ToolInput,
   ToolOutput,
 } from "@/components/ai-sdk-elements/tool";
+import { QuestionToolUI } from "@/components/ai-sdk-elements/question-tool";
 import { OpenCodeConnection } from "@/components/ai-elements/opencode-connection";
 import { ProviderSettings } from "@/components/ai-elements/provider-settings";
 import { Button } from "@/components/ui/button";
@@ -85,7 +87,7 @@ import {
   Settings,
   Trash2,
   Bot,
-  Unplug
+  Unplug,
 } from "lucide-react";
 import type { Session } from "@opencode-ai/sdk/client";
 
@@ -95,6 +97,90 @@ type AIAgentWindowControls = {
   onOpenFullpage: () => void;
   onToggleMinimizedView?: () => void;
 };
+
+type QuestionToolInput = {
+  questions: Array<{
+    question: string;
+    header: string;
+    options: Array<{ label: string; description: string }>;
+    multiple?: boolean;
+    custom?: boolean;
+  }>;
+};
+
+function parseQuestionToolInput(input: unknown): QuestionToolInput | null {
+  let value = input;
+  if (typeof value === "string") {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+
+  if (!(value && typeof value === "object")) {
+    return null;
+  }
+
+  const rawQuestions = (value as { questions?: unknown }).questions;
+  if (!Array.isArray(rawQuestions)) {
+    return null;
+  }
+
+  const questions = rawQuestions.flatMap((rawQuestion) => {
+    if (!(rawQuestion && typeof rawQuestion === "object")) {
+      return [];
+    }
+
+    const questionRecord = rawQuestion as Record<string, unknown>;
+    const question =
+      typeof questionRecord.question === "string" ? questionRecord.question : "";
+    if (!question) {
+      return [];
+    }
+
+    const optionsRaw = Array.isArray(questionRecord.options)
+      ? questionRecord.options
+      : [];
+    const options = optionsRaw.flatMap((rawOption) => {
+      if (!(rawOption && typeof rawOption === "object")) {
+        return [];
+      }
+      const optionRecord = rawOption as Record<string, unknown>;
+      const label =
+        typeof optionRecord.label === "string" ? optionRecord.label : "";
+      if (!label) {
+        return [];
+      }
+      const description =
+        typeof optionRecord.description === "string"
+          ? optionRecord.description
+          : "";
+      return [{ label, description }];
+    });
+
+    return [
+      {
+        question,
+        header:
+          typeof questionRecord.header === "string" ? questionRecord.header : "",
+        options,
+        ...(typeof questionRecord.multiple === "boolean"
+          ? { multiple: questionRecord.multiple }
+          : {}),
+        ...(typeof questionRecord.custom === "boolean"
+          ? { custom: questionRecord.custom }
+          : {}),
+      },
+    ];
+  });
+
+  if (questions.length === 0) {
+    return null;
+  }
+
+  return { questions };
+}
 
 export type AIAgentChatProps = {
   className?: string;
@@ -115,12 +201,44 @@ const QUICK_SUGGESTIONS = [
   "Add an HTTP request step after the trigger",
 ] as const;
 
-
-
 function isToolPart(
   part: UIMessage["parts"][number],
 ): part is DynamicToolUIPart | ToolUIPart {
   return part.type === "dynamic-tool" || part.type.startsWith("tool-");
+}
+
+function getToolName(part: DynamicToolUIPart | ToolUIPart): string {
+  return part.type === "dynamic-tool"
+    ? part.toolName
+    : part.type.replace(/^tool-/, "");
+}
+
+function lastAssistantMessageHasCompletedQuestionOutput(
+  messages: UIMessage[],
+): boolean {
+  const message = messages[messages.length - 1];
+  if (!message || message.role !== "assistant") {
+    return false;
+  }
+
+  const lastStepStartIndex = message.parts.reduce((lastIndex, part, index) => {
+    return part.type === "step-start" ? index : lastIndex;
+  }, -1);
+
+  const stepToolParts = message.parts
+    .slice(lastStepStartIndex + 1)
+    .filter(isToolPart);
+  const questionParts = stepToolParts.filter(
+    (part) => getToolName(part) === "question",
+  );
+
+  return (
+    questionParts.length > 0 &&
+    questionParts.every(
+      (part) =>
+        part.state === "output-available" || part.state === "output-error",
+    )
+  );
 }
 
 function renderUserMessagePart(part: UIMessage["parts"][number], key: string) {
@@ -149,11 +267,34 @@ function renderUserMessagePart(part: UIMessage["parts"][number], key: string) {
   );
 }
 
-function renderToolPart(part: DynamicToolUIPart | ToolUIPart, key: string) {
+function renderToolPart(
+  part: DynamicToolUIPart | ToolUIPart,
+  key: string,
+  onQuestionSubmit?: (toolCallId: string, answers: string[][]) => void,
+  onQuestionDismiss?: (toolCallId: string) => void,
+) {
   const toolName =
     part.type === "dynamic-tool"
       ? part.toolName
       : part.type.replace(/^tool-/, "");
+  const questionInput = parseQuestionToolInput(part.input);
+
+  if (
+    toolName === "question" &&
+    (part.state === "approval-requested" ||
+      part.state === "input-streaming" ||
+      part.state === "input-available") &&
+    questionInput
+  ) {
+    return (
+      <QuestionToolUI
+        key={key}
+        input={questionInput}
+        onSubmit={(answers) => onQuestionSubmit?.(part.toolCallId, answers)}
+        onDismiss={() => onQuestionDismiss?.(part.toolCallId)}
+      />
+    );
+  }
 
   return (
     <Tool
@@ -188,6 +329,8 @@ function renderToolPart(part: DynamicToolUIPart | ToolUIPart, key: string) {
 function renderAssistantMessagePart(
   part: UIMessage["parts"][number],
   key: string,
+  onQuestionSubmit?: (toolCallId: string, answers: string[][]) => void,
+  onQuestionDismiss?: (toolCallId: string) => void,
 ) {
   if (part.type === "text") {
     return <MessageResponse key={key}>{part.text}</MessageResponse>;
@@ -207,7 +350,7 @@ function renderAssistantMessagePart(
   }
 
   if (isToolPart(part)) {
-    return renderToolPart(part, key);
+    return renderToolPart(part, key, onQuestionSubmit, onQuestionDismiss);
   }
 
   if (part.type === "step-start") {
@@ -242,7 +385,15 @@ function renderAssistantMessagePart(
   );
 }
 
-function ChatMessage({ message }: { message: UIMessage }) {
+function ChatMessage({
+  message,
+  onQuestionSubmit,
+  onQuestionDismiss,
+}: {
+  message: UIMessage;
+  onQuestionSubmit?: (toolCallId: string, answers: string[][]) => void;
+  onQuestionDismiss?: (toolCallId: string) => void;
+}) {
   if (message.role === "user") {
     return (
       <Message from="user">
@@ -260,7 +411,12 @@ function ChatMessage({ message }: { message: UIMessage }) {
       <Message from="assistant">
         <MessageContent>
           {message.parts.map((part, index) =>
-            renderAssistantMessagePart(part, `${message.id}-${index}`),
+            renderAssistantMessagePart(
+              part,
+              `${message.id}-${index}`,
+              onQuestionSubmit,
+              onQuestionDismiss,
+            ),
           )}
         </MessageContent>
       </Message>
@@ -333,12 +489,15 @@ function ChatSurface({
     ],
   );
 
-  const { messages, sendMessage, status, stop } = useChat({
+  const { messages, sendMessage, addToolOutput, status, stop } = useChat({
     id: activeSessionId,
     messages: initialMessages,
     onError: (error) => {
       toast.error(error.message || "AI response failed");
     },
+    sendAutomaticallyWhen: ({ messages }) =>
+      lastAssistantMessageIsCompleteWithToolCalls({ messages }) ||
+      lastAssistantMessageHasCompletedQuestionOutput(messages),
     transport,
   });
 
@@ -382,6 +541,30 @@ function ChatSurface({
     await onAbortSession(activeSessionIdRef.current);
   }, [onAbortSession, stop]);
 
+  const handleQuestionSubmit = useCallback(
+    async (toolCallId: string, answers: string[][]) => {
+      await addToolOutput({
+        tool: "question",
+        toolCallId,
+        state: "output-available",
+        output: { answers },
+      });
+    },
+    [addToolOutput],
+  );
+
+  const handleQuestionDismiss = useCallback(
+    async (toolCallId: string) => {
+      await addToolOutput({
+        tool: "question",
+        toolCallId,
+        state: "output-error",
+        errorText: "Question dismissed by user",
+      });
+    },
+    [addToolOutput],
+  );
+
   const isMinimizedVariant = uiVariant === "minimized";
   const shouldShowConversation = !hideConversation;
 
@@ -407,7 +590,12 @@ function ChatSurface({
               />
             ) : (
               messages.map((message) => (
-                <ChatMessage key={message.id} message={message} />
+                <ChatMessage
+                  key={message.id}
+                  message={message}
+                  onQuestionSubmit={handleQuestionSubmit}
+                  onQuestionDismiss={handleQuestionDismiss}
+                />
               ))
             )}
           </ConversationContent>
@@ -497,7 +685,12 @@ export function AIAgentChat({
   const { connectViaDaemon } = useOpencode();
   const [hasLoadedSessions, setHasLoadedSessions] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const { connected, connectionConfig: connection, updateConnectionConfig, verifyConnection } = useOpenCodeConnection();
+  const {
+    connected,
+    connectionConfig: connection,
+    updateConnectionConfig,
+    verifyConnection,
+  } = useOpenCodeConnection();
   const initialSessionAppliedRef = useRef<string | null>(null);
   const activeSessionIdRef = useRef<string | null>(null);
   const connectedRef = useRef(false);
@@ -541,7 +734,7 @@ export function AIAgentChat({
         toast.success(
           result.startedOpencode
             ? "Local AI Agent started and connected."
-            : "Connected to local AI Agent."
+            : "Connected to local AI Agent.",
         );
         return;
       }
@@ -549,11 +742,15 @@ export function AIAgentChat({
       void verifyConnection();
 
       if (result.reason === "bridge_unavailable") {
-        toast.error("Desktop bridge is not running. Start superr-bridge and retry.");
+        toast.error(
+          "Desktop bridge is not running. Start superr-bridge and retry.",
+        );
         return;
       }
       if (result.reason === "not_installed") {
-        toast.error("Agent is not installed locally. Install it from the desktop bridge.");
+        toast.error(
+          "Agent is not installed locally. Install it from the desktop bridge.",
+        );
         return;
       }
       if (result.reason === "missing_config") {
@@ -698,7 +895,8 @@ export function AIAgentChat({
   }, [initialSessionId]);
 
   useEffect(() => {
-    autoSelectFirstSessionOnConnectRef.current = autoSelectFirstSessionOnConnect;
+    autoSelectFirstSessionOnConnectRef.current =
+      autoSelectFirstSessionOnConnect;
   }, [autoSelectFirstSessionOnConnect]);
 
   useEffect(() => {
@@ -807,7 +1005,10 @@ export function AIAgentChat({
       );
       const currentConnectionKey = connectionKeyRef.current;
       if (currentConnectionKey) {
-        markSessionWorkflowMappingOpened(currentConnectionKey, fallbackSessionId);
+        markSessionWorkflowMappingOpened(
+          currentConnectionKey,
+          fallbackSessionId,
+        );
       }
       await loadMessages(fallbackSessionId);
     },
@@ -1027,7 +1228,10 @@ export function AIAgentChat({
               ) : null}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-64 max-h-72 overflow-y-auto">
+          <DropdownMenuContent
+            align="start"
+            className="w-64 max-h-72 overflow-y-auto"
+          >
             <DropdownMenuItem
               disabled={isCreatingSession}
               onSelect={() => {
@@ -1083,10 +1287,7 @@ export function AIAgentChat({
             ) : null}
           </div>
         ) : null}
-        <DropdownMenu
-          onOpenChange={setActionsMenuOpen}
-          open={actionsMenuOpen}
-        >
+        <DropdownMenu onOpenChange={setActionsMenuOpen} open={actionsMenuOpen}>
           <DropdownMenuTrigger asChild>
             <Button className="size-6" size="icon" variant="ghost">
               <MoreHorizontal className="size-3.5" />
@@ -1134,7 +1335,7 @@ export function AIAgentChat({
               </>
             ) : null}
 
-            {(hasWindowModeSection || hasDeleteSessionOption) ? (
+            {hasWindowModeSection || hasDeleteSessionOption ? (
               <DropdownMenuSeparator />
             ) : null}
 

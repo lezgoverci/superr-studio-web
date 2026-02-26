@@ -46,7 +46,7 @@ export function NavContent({
               "group relative flex items-center justify-center rounded-md p-3 text-sm transition-colors",
               active
                 ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
             href={item.href}
             key={item.id}

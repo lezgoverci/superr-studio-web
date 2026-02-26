@@ -28,7 +28,8 @@ export const { registry: workflowRunRegistry } = defineRegistry(
     components: {
       Stack: ({ props, children }: any) => {
         const gapClasses = { sm: "gap-2", md: "gap-4", lg: "gap-6" };
-        const gapClass = gapClasses[(props.gap ?? "md") as keyof typeof gapClasses] ?? "gap-4";
+        const gapClass =
+          gapClasses[(props.gap ?? "md") as keyof typeof gapClasses] ?? "gap-4";
 
         return (
           <div
@@ -61,7 +62,9 @@ export const { registry: workflowRunRegistry } = defineRegistry(
           h3: "text-xl font-semibold",
           h4: "text-lg font-medium",
         };
-        const className = hClasses[(props.level ?? "h2") as keyof typeof hClasses] ?? "text-2xl font-semibold tracking-tight";
+        const className =
+          hClasses[(props.level ?? "h2") as keyof typeof hClasses] ??
+          "text-2xl font-semibold tracking-tight";
 
         return <Tag className={className}>{props.text}</Tag>;
       },

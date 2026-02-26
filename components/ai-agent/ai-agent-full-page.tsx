@@ -2,7 +2,7 @@
 
 import { useAtom, useSetAtom } from "jotai";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, Suspense } from "react";
+import { Suspense, useCallback, useEffect } from "react";
 import { AIAgentWindowContent } from "@/components/ai-agent/ai-agent-window-content";
 import { useAiAgentPageContext } from "@/lib/ai-agent/page-context/use-ai-agent-page-context";
 import {

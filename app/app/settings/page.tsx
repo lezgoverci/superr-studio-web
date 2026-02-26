@@ -3,22 +3,24 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { PageContainer } from "@/components/app-shell/page-container";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AddConnectionOverlay } from "@/components/overlays/add-connection-overlay";
+import {
+  DeleteConnectionOverlay,
+  EditConnectionOverlay,
+} from "@/components/overlays/edit-connection-overlay";
+import { useOverlay } from "@/components/overlays/overlay-provider";
+import { AiProvidersSection } from "@/components/settings/ai-providers-section";
+import { ApiKeysSection } from "@/components/settings/api-keys-section";
+import { AppearanceSection } from "@/components/settings/appearance-section";
+import { ConnectionsSection } from "@/components/settings/connections-section";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { AppearanceSection } from "@/components/settings/appearance-section";
-import { ApiKeysSection } from "@/components/settings/api-keys-section";
-import { ConnectionsSection } from "@/components/settings/connections-section";
-import { AiProvidersSection } from "@/components/settings/ai-providers-section";
-import { api } from "@/lib/api-client";
-import { useOverlay } from "@/components/overlays/overlay-provider";
-import { AddConnectionOverlay } from "@/components/overlays/add-connection-overlay";
-import { EditConnectionOverlay } from "@/components/overlays/edit-connection-overlay";
-import { DeleteConnectionOverlay } from "@/components/overlays/edit-connection-overlay";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Integration } from "@/lib/api-client";
+import { api } from "@/lib/api-client";
 
 function AccountSection() {
   const [loading, setLoading] = useState(true);
@@ -141,7 +143,7 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        <Tabs defaultValue="account" className="w-full">
+        <Tabs className="w-full" defaultValue="account">
           <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="connections">Connections</TabsTrigger>

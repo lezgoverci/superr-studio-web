@@ -9,17 +9,17 @@ import {
   Plus,
   Search,
   Trash2,
+  Unplug,
   Workflow,
-  Unplug
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   type ReactNode,
+  Suspense,
   useCallback,
   useEffect,
   useMemo,
   useState,
-  Suspense,
 } from "react";
 import { toast } from "sonner";
 import { OpenCodeConnection } from "@/components/ai-elements/opencode-connection";
@@ -780,8 +780,8 @@ function SessionsPageContent() {
           <DialogHeader>
             <DialogTitle>Link Session to Workflow</DialogTitle>
             <DialogDescription>
-              Choose which workflow this Agent session belongs to. This
-              mapping is stored locally in your browser.
+              Choose which workflow this Agent session belongs to. This mapping
+              is stored locally in your browser.
             </DialogDescription>
           </DialogHeader>
 

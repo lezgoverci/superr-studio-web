@@ -5,6 +5,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ReactFlowProvider } from "@xyflow/react";
 import { Provider } from "jotai";
 import { type ReactNode, Suspense } from "react";
+import { OpenCodeProvider } from "@/components/ai-elements/opencode-provider";
 import { AuthProvider } from "@/components/auth/provider";
 import { GitHubStarsLoader } from "@/components/github-stars-loader";
 import { GitHubStarsProvider } from "@/components/github-stars-provider";
@@ -13,7 +14,6 @@ import { OverlayProvider } from "@/components/overlays/overlay-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { PersistentCanvas } from "@/components/workflow/persistent-canvas";
-import { OpenCodeProvider } from "@/components/ai-elements/opencode-provider";
 import { mono, sans } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
 
