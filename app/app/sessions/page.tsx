@@ -19,6 +19,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  Suspense,
 } from "react";
 import { toast } from "sonner";
 import { OpenCodeConnection } from "@/components/ai-elements/opencode-connection";
@@ -264,7 +265,7 @@ function isCurrentWorkflowPlaceholder(name: string): boolean {
 }
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Sessions page coordinates connection, listing, linking, and thread rendering.
-export default function SessionsPage() {
+function SessionsPageContent() {
   const router = useRouter();
   const [connected, setConnected] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -869,5 +870,13 @@ export default function SessionsPage() {
         </AlertDialogContent>
       </AlertDialog>
     </PageContainer>
+  );
+}
+
+export default function SessionsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SessionsPageContent />
+    </Suspense>
   );
 }

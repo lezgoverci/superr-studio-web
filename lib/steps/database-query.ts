@@ -44,7 +44,7 @@ async function executeQuery(
   client: postgres.Sql,
   queryString: string
 ): Promise<unknown> {
-  const db = drizzle(client);
+  const db = drizzle(client as any);
   return await db.execute(sql.raw(queryString));
 }
 

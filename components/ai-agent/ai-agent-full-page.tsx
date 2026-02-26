@@ -2,7 +2,7 @@
 
 import { useAtom, useSetAtom } from "jotai";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, Suspense } from "react";
 import { AIAgentWindowContent } from "@/components/ai-agent/ai-agent-window-content";
 import { useAiAgentPageContext } from "@/lib/ai-agent/page-context/use-ai-agent-page-context";
 import {
@@ -15,6 +15,14 @@ function areContextsEquivalent(left: unknown, right: unknown): boolean {
 }
 
 export function AIAgentFullPage() {
+  return (
+    <Suspense fallback={<div className="h-full w-full bg-background" />}>
+      <AIAgentFullPageContent />
+    </Suspense>
+  );
+}
+
+function AIAgentFullPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const routeContext = useAiAgentPageContext();

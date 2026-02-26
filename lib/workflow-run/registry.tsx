@@ -26,10 +26,9 @@ export const { registry: workflowRunRegistry } = defineRegistry(
   workflowRunCatalog,
   {
     components: {
-      Stack: ({ props, children }) => {
-        const gapClass =
-          { sm: "gap-2", md: "gap-4", lg: "gap-6" }[props.gap ?? "md"] ??
-          "gap-4";
+      Stack: ({ props, children }: any) => {
+        const gapClasses = { sm: "gap-2", md: "gap-4", lg: "gap-6" };
+        const gapClass = gapClasses[(props.gap ?? "md") as keyof typeof gapClasses] ?? "gap-4";
 
         return (
           <div
@@ -40,7 +39,7 @@ export const { registry: workflowRunRegistry } = defineRegistry(
         );
       },
 
-      Card: ({ props, children }) => (
+      Card: ({ props, children }: any) => (
         <Card>
           {(props.title || props.description) && (
             <CardHeader>
@@ -54,26 +53,26 @@ export const { registry: workflowRunRegistry } = defineRegistry(
         </Card>
       ),
 
-      Heading: ({ props }) => {
+      Heading: ({ props }: any) => {
         const Tag = (props.level ?? "h2") as "h1" | "h2" | "h3" | "h4";
-        const className =
-          {
-            h1: "text-3xl font-bold tracking-tight",
-            h2: "text-2xl font-semibold tracking-tight",
-            h3: "text-xl font-semibold",
-            h4: "text-lg font-medium",
-          }[props.level ?? "h2"] ?? "text-2xl font-semibold tracking-tight";
+        const hClasses = {
+          h1: "text-3xl font-bold tracking-tight",
+          h2: "text-2xl font-semibold tracking-tight",
+          h3: "text-xl font-semibold",
+          h4: "text-lg font-medium",
+        };
+        const className = hClasses[(props.level ?? "h2") as keyof typeof hClasses] ?? "text-2xl font-semibold tracking-tight";
 
         return <Tag className={className}>{props.text}</Tag>;
       },
 
-      Text: ({ props }) => (
+      Text: ({ props }: any) => (
         <p className={props.muted ? "text-muted-foreground" : ""}>
           {props.content}
         </p>
       ),
 
-      Alert: ({ props }) => (
+      Alert: ({ props }: any) => (
         <Alert variant={props.variant ?? "default"}>
           <AlertTitle>{props.title}</AlertTitle>
           {props.description ? (
@@ -82,7 +81,7 @@ export const { registry: workflowRunRegistry } = defineRegistry(
         </Alert>
       ),
 
-      Form: ({ children, emit }) => (
+      Form: ({ children, emit }: any) => (
         <form
           className="flex flex-col gap-4"
           onSubmit={(event) => {
@@ -94,7 +93,7 @@ export const { registry: workflowRunRegistry } = defineRegistry(
         </form>
       ),
 
-      Input: ({ props, bindings }) => {
+      Input: ({ props, bindings }: any) => {
         const [value, setValue] = useBoundProp<string | number | undefined>(
           props.value as string | number | undefined,
           bindings?.value
@@ -119,7 +118,7 @@ export const { registry: workflowRunRegistry } = defineRegistry(
         );
       },
 
-      Select: ({ props, bindings }) => {
+      Select: ({ props, bindings }: any) => {
         const [value, setValue] = useBoundProp<string | undefined>(
           props.value as string | undefined,
           bindings?.value
@@ -136,7 +135,7 @@ export const { registry: workflowRunRegistry } = defineRegistry(
                 <SelectValue placeholder={props.placeholder ?? "Select..."} />
               </SelectTrigger>
               <SelectContent>
-                {props.options.map((option) => (
+                {props.options.map((option: any) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
@@ -147,7 +146,7 @@ export const { registry: workflowRunRegistry } = defineRegistry(
         );
       },
 
-      Checkbox: ({ props, bindings }) => {
+      Checkbox: ({ props, bindings }: any) => {
         const [checked, setChecked] = useBoundProp<boolean | undefined>(
           props.checked as boolean | undefined,
           bindings?.checked
@@ -170,7 +169,7 @@ export const { registry: workflowRunRegistry } = defineRegistry(
         );
       },
 
-      Button: ({ props, emit, loading }) => (
+      Button: ({ props, emit, loading }: any) => (
         <UIButton
           disabled={loading || (props.disabled ?? false)}
           onClick={() => emit("press")}
