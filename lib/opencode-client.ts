@@ -123,6 +123,31 @@ export async function pingOpenCode(): Promise<boolean> {
 }
 
 /**
+ * Retry pinging OpenCode to tolerate short startup races.
+ */
+export async function pingOpenCodeWithRetry(
+  attempts = 6,
+  delayMs = 500
+): Promise<boolean> {
+  const normalizedAttempts = Math.max(1, attempts);
+  const normalizedDelay = Math.max(0, delayMs);
+
+  for (let index = 0; index < normalizedAttempts; index += 1) {
+    const connected = await pingOpenCode();
+    if (connected) {
+      return true;
+    }
+
+    const isLastAttempt = index >= normalizedAttempts - 1;
+    if (!isLastAttempt) {
+      await new Promise((resolve) => setTimeout(resolve, normalizedDelay));
+    }
+  }
+
+  return false;
+}
+
+/**
  * React hook config key for react-query / SWR invalidation.
  */
 export const OPENCODE_QUERY_KEYS = {

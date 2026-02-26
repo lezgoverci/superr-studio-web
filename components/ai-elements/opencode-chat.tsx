@@ -61,6 +61,7 @@ import {
   getOpenCodeClient,
   type OpenCodeConnectionConfig,
 } from "@/lib/opencode-client";
+import { useOpencode } from "@/hooks/use-opencode";
 import { mapOpenCodeHistoryToUIMessages } from "@/lib/opencode-chat-adapter";
 import {
   getOpenCodeSessionConnectionKey,
@@ -82,7 +83,6 @@ import {
   Plus,
   Settings,
   Trash2,
-  Wifi,
 } from "lucide-react";
 import type { Session } from "@opencode-ai/sdk/client";
 
@@ -487,11 +487,12 @@ export function AIAgentChat({
   const [initialMessages, setInitialMessages] = useState<UIMessage[]>([]);
   const [sessionSelectorOpen, setSessionSelectorOpen] = useState(false);
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
-  const [connectionDialogOpen, setConnectionDialogOpen] = useState(false);
   const [providerSettingsOpen, setProviderSettingsOpen] = useState(false);
   const [chatSurfaceKey, setChatSurfaceKey] = useState(0);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const { connectViaDaemon } = useOpencode();
   const [hasLoadedSessions, setHasLoadedSessions] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const initialSessionAppliedRef = useRef<string | null>(null);
@@ -511,7 +512,11 @@ export function AIAgentChat({
   const isMinimizedVariant = uiVariant === "minimized";
   const isInputOnlyMinimized =
     isMinimizedVariant && minimizedDisplayMode === "input-only";
-  const connection = getConnectionConfig();
+  const [connection, setConnection] = useState<OpenCodeConnectionConfig | null>(null);
+
+  useEffect(() => {
+    setConnection(getConnectionConfig());
+  }, []);
   const connectionKey = useMemo(() => {
     if (!connection) {
       return null;
@@ -523,6 +528,52 @@ export function AIAgentChat({
     activeSessionIdRef.current = sessionId;
     setActiveSessionId(sessionId);
   }, []);
+
+  const handleConnectClick = async () => {
+    if (isConnecting) {
+      return;
+    }
+
+    setIsConnecting(true);
+    try {
+      const result = await connectViaDaemon();
+      if (result.connected) {
+        await handleConnected(true);
+        toast.success(
+          result.startedOpencode
+            ? "Local AI Agent started and connected."
+            : "Connected to local AI Agent."
+        );
+        return;
+      }
+
+      await handleConnected(false);
+
+      if (result.reason === "bridge_unavailable") {
+        toast.error("Desktop bridge is not running. Start superr-bridge and retry.");
+        return;
+      }
+      if (result.reason === "not_installed") {
+        toast.error("OpenCode is not installed locally. Install it from the desktop bridge.");
+        return;
+      }
+      if (result.reason === "missing_config") {
+        toast.error("Desktop bridge did not provide connection details.");
+        return;
+      }
+      if (result.reason === "start_failed") {
+        toast.error(result.error || "Failed to start local OpenCode server.");
+        return;
+      }
+      if (result.reason === "ping_failed") {
+        toast.error("OpenCode started but is not reachable yet. Please retry.");
+        return;
+      }
+      toast.error(result.error || "Failed to connect to local AI Agent.");
+    } finally {
+      setIsConnecting(false);
+    }
+  };
 
   const cancelPendingMessageLoads = useCallback(() => {
     messageLoadRequestIdRef.current += 1;
@@ -701,6 +752,7 @@ export function AIAgentChat({
 
   const handleConnected = useCallback(
     async (isConnected: boolean) => {
+      setConnection(getConnectionConfig());
       if (connectedRef.current === isConnected) {
         return;
       }
@@ -1084,16 +1136,13 @@ export function AIAgentChat({
               <DropdownMenuSeparator />
             ) : null}
 
-            <DropdownMenuItem
-              onSelect={(e) => {
-                e.preventDefault();
+            <OpenCodeConnection
+              onStatusChange={handleConnected}
+              onTriggerClick={() => {
                 setActionsMenuOpen(false);
-                setConnectionDialogOpen(true);
               }}
-            >
-              <Wifi className="size-4" />
-              OpenCode Connection
-            </DropdownMenuItem>
+              triggerVariant="menu-item"
+            />
             {hasConnection ? (
               <DropdownMenuItem
                 onSelect={(e) => {
@@ -1108,12 +1157,6 @@ export function AIAgentChat({
             ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
-        <OpenCodeConnection
-          onStatusChange={handleConnected}
-          dialogOnly
-          externalOpen={connectionDialogOpen}
-          onExternalOpenChange={setConnectionDialogOpen}
-        />
         {hasConnection ? (
           <ProviderSettings
             dialogOnly
@@ -1191,12 +1234,12 @@ export function AIAgentChat({
             AI Agent not connected
           </p>
           <Button
-            onClick={() => {
-              setConnectionDialogOpen(true);
-            }}
+            onClick={handleConnectClick}
+            disabled={isConnecting}
             size="sm"
             variant="secondary"
           >
+            {isConnecting && <Loader2 className="mr-2 size-4 animate-spin" />}
             Connect
           </Button>
         </div>
@@ -1212,11 +1255,11 @@ export function AIAgentChat({
             </p>
           </div>
           <Button
-            onClick={() => {
-              setConnectionDialogOpen(true);
-            }}
+            onClick={handleConnectClick}
+            disabled={isConnecting}
             size="sm"
           >
+            {isConnecting && <Loader2 className="mr-2 size-4 animate-spin" />}
             Connect OpenCode
           </Button>
         </div>
