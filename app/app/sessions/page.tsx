@@ -489,7 +489,7 @@ export default function SessionsPage() {
   const handleCreateSession = useCallback(async () => {
     const client = getOpenCodeClient();
     if (!client) {
-      toast.error("OpenCode not connected");
+      toast.error("Agent not connected");
       return;
     }
 
@@ -520,7 +520,7 @@ export default function SessionsPage() {
 
     const client = getOpenCodeClient();
     if (!client) {
-      toast.error("OpenCode not connected");
+      toast.error("Agent not connected");
       return;
     }
 
@@ -661,9 +661,9 @@ export default function SessionsPage() {
             <MessageSquare className="size-8 text-muted-foreground" />
           </div>
           <div className="space-y-1">
-            <p className="font-medium">OpenCode is not connected</p>
+            <p className="font-medium">Agent is not connected</p>
             <p className="text-muted-foreground text-sm">
-              Connect OpenCode to browse local sessions and reopen threads.
+              Connect Agent to browse local sessions and reopen threads.
             </p>
           </div>
           <OpenCodeConnection onStatusChange={handleConnectionChange} />

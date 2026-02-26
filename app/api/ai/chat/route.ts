@@ -261,7 +261,7 @@ export async function POST(request: Request) {
 
     if (!(opencodeUrl && opencodeToken)) {
       return NextResponse.json(
-        { error: "OpenCode URL and token are required." },
+        { error: "Agent URL and token are required." },
         { status: 400 }
       );
     }
@@ -271,7 +271,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "Invalid OpenCode URL. Use HTTPS for remote hosts or HTTP only for localhost/127.0.0.1/::1.",
+            "Invalid Agent URL. Use HTTPS for remote hosts or HTTP only for localhost/127.0.0.1/::1.",
         },
         { status: 400 }
       );

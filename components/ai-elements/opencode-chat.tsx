@@ -554,7 +554,7 @@ export function AIAgentChat({
         return;
       }
       if (result.reason === "not_installed") {
-        toast.error("OpenCode is not installed locally. Install it from the desktop bridge.");
+        toast.error("Agent is not installed locally. Install it from the desktop bridge.");
         return;
       }
       if (result.reason === "missing_config") {
@@ -562,11 +562,11 @@ export function AIAgentChat({
         return;
       }
       if (result.reason === "start_failed") {
-        toast.error(result.error || "Failed to start local OpenCode server.");
+        toast.error(result.error || "Failed to start local Agent server.");
         return;
       }
       if (result.reason === "ping_failed") {
-        toast.error("OpenCode started but is not reachable yet. Please retry.");
+        toast.error("Agent started but is not reachable yet. Please retry.");
         return;
       }
       toast.error(result.error || "Failed to connect to local AI Agent.");
@@ -727,7 +727,7 @@ export function AIAgentChat({
       );
       if (!targetSession) {
         initialSessionAppliedRef.current = normalizedInitialSessionId;
-        toast.error("The requested OpenCode session is not available.");
+        toast.error("The requested Agent session is not available.");
         return false;
       }
 
@@ -853,7 +853,7 @@ export function AIAgentChat({
   const handleNewSession = useCallback(async () => {
     const client = getOpenCodeClient();
     if (!client) {
-      toast.error("OpenCode not connected");
+      toast.error("Agent not connected");
       return;
     }
 
@@ -1194,7 +1194,7 @@ export function AIAgentChat({
               >
                 {isInputOnlyMinimized ? (
                   <p className="flex-1 text-muted-foreground text-xs">
-                    No active OpenCode session
+                    No active Agent session
                   </p>
                 ) : (
                   <>
@@ -1202,7 +1202,7 @@ export function AIAgentChat({
                       <MessageSquare className="size-8 text-muted-foreground" />
                     </div>
                     <div className="space-y-1">
-                      <p className="font-medium">No active OpenCode session</p>
+                      <p className="font-medium">No active Agent session</p>
                       <p className="text-muted-foreground text-sm">
                         Start a session to begin chatting.
                       </p>

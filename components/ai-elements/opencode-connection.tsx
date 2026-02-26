@@ -28,16 +28,16 @@ function getConnectFailureMessage(
     return "Desktop bridge is not running. Start superr-bridge and retry.";
   }
   if (reason === "not_installed") {
-    return "OpenCode is not installed locally. Install it from the desktop bridge.";
+    return "Agent is not installed locally. Install it from the desktop bridge.";
   }
   if (reason === "missing_config") {
     return "Desktop bridge did not provide connection details.";
   }
   if (reason === "start_failed") {
-    return error || "Failed to start local OpenCode server.";
+    return error || "Failed to start local Agent server.";
   }
   if (reason === "ping_failed") {
-    return "OpenCode started but is not reachable yet. Please retry.";
+    return "Agent started but is not reachable yet. Please retry.";
   }
   return error || "Failed to connect to local AI Agent.";
 }
@@ -161,7 +161,7 @@ export function OpenCodeConnection({
         type="button"
       >
         <span className={cn("size-2 rounded-full shrink-0", current.dot)} />
-        <span className="flex-1 text-left">Connect OpenCode</span>
+        <span className="flex-1 text-left">Connect Agent</span>
         <span className="text-muted-foreground text-xs">{compactStatusLabel}</span>
         {isBusy ? <Loader2 className="size-3 animate-spin" /> : null}
       </button>

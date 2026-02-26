@@ -130,7 +130,7 @@ async function handleProxy(request: Request, context: RouteContext) {
 
   if (!(baseUrlHeader && token)) {
     return NextResponse.json(
-      { error: "OpenCode connection is not configured." },
+      { error: "Agent connection is not configured." },
       { status: 400 }
     );
   }
@@ -140,7 +140,7 @@ async function handleProxy(request: Request, context: RouteContext) {
     return NextResponse.json(
       {
         error:
-          "Invalid OpenCode URL. Use HTTPS for remote hosts or HTTP only for localhost/127.0.0.1/::1.",
+          "Invalid Agent URL. Use HTTPS for remote hosts or HTTP only for localhost/127.0.0.1/::1.",
       },
       { status: 400 }
     );
@@ -182,7 +182,7 @@ async function handleProxy(request: Request, context: RouteContext) {
         error:
           error instanceof Error
             ? error.message
-            : "Failed to connect to OpenCode server.",
+            : "Failed to connect to Agent server.",
       },
       { status: 502 }
     );
