@@ -90,15 +90,32 @@ export function getOpenCodeClient(): OpencodeClient | null {
   }
 
   _config = config;
+
+  // If the agent URL is local but the UI is hosted remotely (e.g. Vercel),
+  // the Next.js backend cannot proxy the request because it runs in the cloud
+  // and cannot reach the user's localhost. We must connect directly from the browser.
+  const isAgentLocal =
+    config.url.includes("127.0.0.1") || config.url.includes("localhost");
+  const isUiRemote =
+    typeof window !== "undefined" &&
+    !window.location.hostname.includes("localhost") &&
+    !window.location.hostname.includes("127.0.0.1");
+
+  const useDirectConnection = isAgentLocal && isUiRemote;
+  const username = config.username || DEFAULT_OPENCODE_USERNAME;
+  const authHeader = `Basic ${btoa(`${username}:${config.token}`)}`;
+
   _client = createOpencodeClient({
     // Browser calls go through a same-origin proxy route to avoid CORS preflight
-    // failures against the local OpenCode server.
-    baseUrl: OPENCODE_PROXY_BASE_URL,
-    headers: {
-      "x-opencode-url": config.url,
-      "x-opencode-token": config.token,
-      "x-opencode-username": config.username || DEFAULT_OPENCODE_USERNAME,
-    },
+    // failures against the local OpenCode server, unless we are forced to connect directly.
+    baseUrl: useDirectConnection ? config.url : OPENCODE_PROXY_BASE_URL,
+    headers: useDirectConnection
+      ? { Authorization: authHeader }
+      : {
+          "x-opencode-url": config.url,
+          "x-opencode-token": config.token,
+          "x-opencode-username": username,
+        },
   });
 
   return _client;
