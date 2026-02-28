@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useStableCallback } from "@/lib/use-stable-callback";
 import { api } from "@/lib/api-client";
 import {
   clearConnectionConfig,
@@ -42,6 +43,12 @@ export function OpenCodeProvider({ children }: { children: ReactNode }) {
   const [connectionConfig, setConnectionConfig] =
     useState<OpenCodeConnectionConfig | null>(null);
   const isVerifyingRef = useRef(false);
+  const statusRef = useRef<ConnectionStatus>("checking");
+
+  // Keep statusRef in sync so we can read current status without a dep.
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
 
   const loadConnectionConfigFromServer =
     useCallback(async (): Promise<OpenCodeConnectionConfig | null> => {
@@ -68,6 +75,7 @@ export function OpenCodeProvider({ children }: { children: ReactNode }) {
       }
     }, []);
 
+  // verifyConnection is stable (no status dep) — reads status via ref.
   const verifyConnection = useCallback(async () => {
     if (isVerifyingRef.current) {
       return;
@@ -76,7 +84,7 @@ export function OpenCodeProvider({ children }: { children: ReactNode }) {
     isVerifyingRef.current = true;
 
     try {
-      if (status !== "connected") {
+      if (statusRef.current !== "connected") {
         setStatus("checking");
       }
 
@@ -93,7 +101,8 @@ export function OpenCodeProvider({ children }: { children: ReactNode }) {
     } finally {
       isVerifyingRef.current = false;
     }
-  }, [loadConnectionConfigFromServer, status]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadConnectionConfigFromServer]);
 
   useEffect(() => {
     verifyConnection().catch(() => {});
@@ -105,7 +114,7 @@ export function OpenCodeProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, [verifyConnection]);
 
-  const updateConnectionConfig = useCallback(
+  const updateConnectionConfig = useStableCallback(
     (config: OpenCodeConnectionConfig | null) => {
       if (config) {
         saveConnectionConfig(config);
@@ -117,7 +126,6 @@ export function OpenCodeProvider({ children }: { children: ReactNode }) {
 
       verifyConnection().catch(() => {});
     },
-    [verifyConnection],
   );
 
   return (

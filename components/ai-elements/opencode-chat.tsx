@@ -62,6 +62,7 @@ import { useAiAgentPageContext } from "@/lib/ai-agent/page-context/use-ai-agent-
 import { getOpenCodeClient } from "@/lib/opencode-client";
 import { useOpenCodeConnection } from "@/components/ai-elements/opencode-provider";
 import { mapOpenCodeHistoryToUIMessages } from "@/lib/opencode-chat-adapter";
+import { useStableCallback } from "@/lib/use-stable-callback";
 import {
   getOpenCodeSessionConnectionKey,
   markSessionWorkflowMappingOpened,
@@ -736,7 +737,8 @@ export function AIAgentChat({
         : [];
       setSessions(nextSessions);
       return nextSessions;
-    } catch {
+    } catch (err) {
+      console.error("[opencode] loadSessions error:", err);
       setSessions([]);
       return [];
     }
@@ -822,9 +824,7 @@ export function AIAgentChat({
     activeSessionIdRef.current = activeSessionId;
   }, [activeSessionId]);
 
-  useEffect(() => {
-    connectedRef.current = connected;
-  }, [connected]);
+
 
   useEffect(() => {
     initialSessionIdRef.current = initialSessionId;
@@ -958,10 +958,14 @@ export function AIAgentChat({
     ],
   );
 
+  // Wrap handleConnected so the effect below only re-runs when `connected`
+  // changes — not every time handleConnected's deps change.
+  const stableHandleConnected = useStableCallback(handleConnected);
+
   // When connection state changes globally, fire our init callback
   useEffect(() => {
-    void handleConnected(connected);
-  }, [connected, handleConnected]);
+    void stableHandleConnected(connected);
+  }, [connected, stableHandleConnected]);
 
   useEffect(() => {
     if (!(connected && hasLoadedSessions)) {
