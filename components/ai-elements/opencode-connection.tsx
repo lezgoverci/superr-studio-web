@@ -2,9 +2,7 @@
 
 import {
   Check,
-  ChevronRight,
   Loader2,
-  Plus,
   Server,
   ServerOff,
   Settings,
@@ -214,16 +212,8 @@ export function OpenCodeConnection({
             router.push("/app/settings?tab=agent-server");
           }}
         >
-          <Plus className="mr-2 size-4" />
-          Add Server
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onSelect={() => {
-            router.push("/app/settings?tab=agent-server");
-          }}
-        >
           <Settings className="mr-2 size-4" />
-          Server Settings
+          Settings
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -371,16 +361,8 @@ export function OpenCodeConnectionMenuItems({
           router.push("/app/settings?tab=agent-server");
         }}
       >
-        <Plus className="mr-2 size-4" />
-        Add Server
-      </DropdownMenuItem>
-      <DropdownMenuItem
-        onSelect={() => {
-          router.push("/app/settings?tab=agent-server");
-        }}
-      >
         <Settings className="mr-2 size-4" />
-        Server Settings
+        Settings
       </DropdownMenuItem>
     </>
   );

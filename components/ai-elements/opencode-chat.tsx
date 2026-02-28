@@ -47,7 +47,6 @@ import {
 } from "@/components/ai-sdk-elements/tool";
 import { QuestionToolUI } from "@/components/ai-sdk-elements/question-tool";
 import { OpenCodeConnectionMenuItems } from "@/components/ai-elements/opencode-connection";
-import { ProviderSettings } from "@/components/ai-elements/provider-settings";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -81,7 +80,6 @@ import {
   Minus,
   MoreHorizontal,
   Plus,
-  Settings,
   Trash2,
   Bot,
   Unplug,
@@ -668,7 +666,6 @@ export function AIAgentChat({
   const [initialMessages, setInitialMessages] = useState<UIMessage[]>([]);
   const [sessionSelectorOpen, setSessionSelectorOpen] = useState(false);
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
-  const [providerSettingsOpen, setProviderSettingsOpen] = useState(false);
   const [chatSurfaceKey, setChatSurfaceKey] = useState(0);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
@@ -1315,30 +1312,8 @@ export function AIAgentChat({
             <OpenCodeConnectionMenuItems
               onStatusChange={handleConnected}
             />
-            {hasConnection ? (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onSelect={(e) => {
-                    e.preventDefault();
-                    setActionsMenuOpen(false);
-                    setProviderSettingsOpen(true);
-                  }}
-                >
-                  <Settings className="size-4" />
-                  Provider Settings
-                </DropdownMenuItem>
-              </>
-            ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
-        {hasConnection ? (
-          <ProviderSettings
-            dialogOnly
-            externalOpen={providerSettingsOpen}
-            onExternalOpenChange={setProviderSettingsOpen}
-          />
-        ) : null}
       </div>
 
       {hasConnection ? (
