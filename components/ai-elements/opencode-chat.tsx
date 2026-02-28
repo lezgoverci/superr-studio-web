@@ -46,7 +46,7 @@ import {
   ToolOutput,
 } from "@/components/ai-sdk-elements/tool";
 import { QuestionToolUI } from "@/components/ai-sdk-elements/question-tool";
-import { OpenCodeConnection } from "@/components/ai-elements/opencode-connection";
+import { OpenCodeConnectionMenuItems } from "@/components/ai-elements/opencode-connection";
 import { ProviderSettings } from "@/components/ai-elements/provider-settings";
 import { Button } from "@/components/ui/button";
 import {
@@ -700,6 +700,8 @@ export function AIAgentChat({
     return getOpenCodeSessionConnectionKey(connection);
   }, [connection?.url, connection?.username]);
 
+  const prevConnectionKeyRef = useRef<string | null>(null);
+
   const setActiveSession = useCallback((sessionId: string | null) => {
     activeSessionIdRef.current = sessionId;
     setActiveSessionId(sessionId);
@@ -823,8 +825,6 @@ export function AIAgentChat({
   useEffect(() => {
     activeSessionIdRef.current = activeSessionId;
   }, [activeSessionId]);
-
-
 
   useEffect(() => {
     initialSessionIdRef.current = initialSessionId;
@@ -966,6 +966,38 @@ export function AIAgentChat({
   useEffect(() => {
     void stableHandleConnected(connected);
   }, [connected, stableHandleConnected]);
+
+  useEffect(() => {
+    const currentKey = connectionKey;
+    const prevKey = prevConnectionKeyRef.current;
+
+    if (currentKey !== prevKey && currentKey !== null) {
+      prevConnectionKeyRef.current = currentKey;
+
+      if (connected && hasLoadedSessions) {
+        setHasLoadedSessions(false);
+        setSessions([]);
+        setActiveSessionId(null);
+        setUnreadCount(0);
+        resetInactiveSession();
+
+        loadSessions().then((latestSessions) => {
+          if (connectedRef.current) {
+            setHasLoadedSessions(true);
+            applyInitialSessionIfNeeded(latestSessions);
+          }
+        });
+      }
+    }
+  }, [
+    connectionKey,
+    connected,
+    hasLoadedSessions,
+    resetInactiveSession,
+    loadSessions,
+    setActiveSessionId,
+    applyInitialSessionIfNeeded,
+  ]);
 
   useEffect(() => {
     if (!(connected && hasLoadedSessions)) {
@@ -1280,24 +1312,23 @@ export function AIAgentChat({
               <DropdownMenuSeparator />
             ) : null}
 
-            <OpenCodeConnection
+            <OpenCodeConnectionMenuItems
               onStatusChange={handleConnected}
-              onTriggerClick={() => {
-                setActionsMenuOpen(false);
-              }}
-              triggerVariant="menu-item"
             />
             {hasConnection ? (
-              <DropdownMenuItem
-                onSelect={(e) => {
-                  e.preventDefault();
-                  setActionsMenuOpen(false);
-                  setProviderSettingsOpen(true);
-                }}
-              >
-                <Settings className="size-4" />
-                Provider Settings
-              </DropdownMenuItem>
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    setActionsMenuOpen(false);
+                    setProviderSettingsOpen(true);
+                  }}
+                >
+                  <Settings className="size-4" />
+                  Provider Settings
+                </DropdownMenuItem>
+              </>
             ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
