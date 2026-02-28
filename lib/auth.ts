@@ -73,19 +73,19 @@ const schema = {
 function getBaseURL() {
   // Priority 1: Explicit BETTER_AUTH_URL (set manually for production/dev)
   if (process.env.BETTER_AUTH_URL) {
-    return process.env.BETTER_AUTH_URL;
+    return process.env.BETTER_AUTH_URL.trim();
   }
 
   // Priority 2: NEXT_PUBLIC_APP_URL
   if (process.env.NEXT_PUBLIC_APP_URL) {
-    return process.env.NEXT_PUBLIC_APP_URL;
+    return process.env.NEXT_PUBLIC_APP_URL.trim();
   }
 
   // Priority 3: Check if we're on Vercel (for preview deployments)
   if (process.env.VERCEL_URL) {
     // VERCEL_URL doesn't include protocol, so add it
     // Use https for Vercel deployments (both production and preview)
-    return `https://${process.env.VERCEL_URL}`;
+    return `https://${process.env.VERCEL_URL.trim()}`;
   }
 
   // Fallback: Local development
@@ -279,6 +279,7 @@ const plugins = [
 
 export const auth = betterAuth({
   baseURL: getBaseURL(),
+  trustedOrigins: ["http://localhost:3000"],
   database: drizzleAdapter(db, {
     provider: "pg",
     schema,
