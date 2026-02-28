@@ -8,6 +8,7 @@ import { useAiAgentPageContext } from "@/lib/ai-agent/page-context/use-ai-agent-
 import {
   aiAgentWindowStateAtom,
   setAiAgentSessionForContextAtom,
+  setLastActiveSessionAtom,
 } from "@/lib/ai-agent/window-state";
 
 function areContextsEquivalent(left: unknown, right: unknown): boolean {
@@ -28,6 +29,7 @@ function AIAgentFullPageContent() {
   const routeContext = useAiAgentPageContext();
   const [windowState, setWindowState] = useAtom(aiAgentWindowStateAtom);
   const setSessionForContext = useSetAtom(setAiAgentSessionForContextAtom);
+  const setLastActiveSession = useSetAtom(setLastActiveSessionAtom);
   const shouldStartEmpty = searchParams.get("chatStart") === "empty";
 
   useEffect(() => {
@@ -57,7 +59,9 @@ function AIAgentFullPageContent() {
   const persistedSessionId = activeContextKey
     ? (windowState.sessionByContextKey[activeContextKey] ?? null)
     : null;
-  const initialSessionId = shouldStartEmpty ? null : persistedSessionId;
+  const initialSessionId = shouldStartEmpty
+    ? null
+    : (persistedSessionId ?? windowState.lastActiveSessionId ?? null);
 
   const handleSessionLinked = useCallback(
     (sessionId: string) => {
@@ -70,6 +74,13 @@ function AIAgentFullPageContent() {
       });
     },
     [activeContextKey, setSessionForContext]
+  );
+
+  const handleActiveSessionChange = useCallback(
+    (sessionId: string | null) => {
+      setLastActiveSession(sessionId);
+    },
+    [setLastActiveSession]
   );
 
   const handleMinimize = useCallback(() => {
@@ -97,6 +108,7 @@ function AIAgentFullPageContent() {
         className="h-full"
         initialSessionId={initialSessionId}
         mode="fullpage"
+        onActiveSessionChange={handleActiveSessionChange}
         onMinimize={handleMinimize}
         onOpenFullpage={handleOpenFullpage}
         onSessionLinked={handleSessionLinked}

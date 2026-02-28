@@ -13,6 +13,7 @@ type AiAgentWindowContentProps = {
   autoSelectFirstSessionOnConnect?: boolean;
   minimizedView?: AiAgentMinimizedView;
   onSessionLinked: (sessionId: string) => void;
+  onActiveSessionChange?: (sessionId: string | null) => void;
   onMinimize: () => void;
   onOpenFullpage: () => void;
   onToggleMinimizedView?: () => void;
@@ -26,6 +27,7 @@ export function AIAgentWindowContent({
   autoSelectFirstSessionOnConnect,
   minimizedView = "input-only",
   onSessionLinked,
+  onActiveSessionChange,
   onMinimize,
   onOpenFullpage,
   onToggleMinimizedView,
@@ -47,6 +49,7 @@ export function AIAgentWindowContent({
           className={isInputOnlyMinimized ? undefined : "h-full"}
           initialSessionId={initialSessionId}
           minimizedDisplayMode={isMinimized ? minimizedView : "thread"}
+          onActiveSessionChange={onActiveSessionChange}
           onSessionLinked={onSessionLinked}
           pageContext={pageContext}
           uiVariant={isMinimized ? "minimized" : "default"}

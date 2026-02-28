@@ -13,6 +13,7 @@ export type AiAgentWindowState = {
   activeContextKey: string | null;
   activeContext: AiAgentContextEnvelope | null;
   sessionByContextKey: Record<string, string>;
+  lastActiveSessionId: string | null;
 };
 
 const AI_AGENT_WINDOW_STATE_STORAGE_KEY = "superr:ai-agent:window-state:v1";
@@ -25,6 +26,7 @@ const DEFAULT_AI_AGENT_WINDOW_STATE: AiAgentWindowState = {
   activeContextKey: null,
   activeContext: null,
   sessionByContextKey: {},
+  lastActiveSessionId: null,
 };
 
 function sanitizePath(value: unknown): string | null {
@@ -123,6 +125,11 @@ function sanitizeWindowState(raw: unknown): AiAgentWindowState {
         : null,
     activeContext: sanitizeContext(input.activeContext),
     sessionByContextKey: sanitizeSessionMap(input.sessionByContextKey),
+    lastActiveSessionId:
+      typeof input.lastActiveSessionId === "string" &&
+      input.lastActiveSessionId.trim()
+        ? input.lastActiveSessionId.trim()
+        : null,
   };
 }
 
@@ -284,6 +291,17 @@ export const setAiAgentSessionForContextAtom = atom(
     set(aiAgentWindowStateAtom, {
       ...previous,
       sessionByContextKey: nextSessionMap,
+      lastActiveSessionId: normalizedSessionId ?? previous.lastActiveSessionId,
+    });
+  }
+);
+
+export const setLastActiveSessionAtom = atom(
+  null,
+  (get, set, sessionId: string | null) => {
+    set(aiAgentWindowStateAtom, {
+      ...get(aiAgentWindowStateAtom),
+      lastActiveSessionId: sessionId?.trim() || null,
     });
   }
 );

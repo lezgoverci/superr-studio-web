@@ -189,6 +189,7 @@ export type AIAgentChatProps = {
   initialSessionId?: string | null;
   autoSelectFirstSessionOnConnect?: boolean;
   onSessionLinked?: (sessionId: string) => void;
+  onActiveSessionChange?: (sessionId: string | null) => void;
   pageContext?: AiAgentContextEnvelope | null;
   uiVariant?: "default" | "minimized";
   minimizedDisplayMode?: "thread" | "input-only";
@@ -656,6 +657,7 @@ export function AIAgentChat({
   initialSessionId,
   autoSelectFirstSessionOnConnect = true,
   onSessionLinked,
+  onActiveSessionChange,
   pageContext: pageContextOverride,
   uiVariant = "default",
   minimizedDisplayMode = "input-only",
@@ -701,9 +703,15 @@ export function AIAgentChat({
 
   const prevConnectionKeyRef = useRef<string | null>(null);
 
+  const onActiveSessionChangeRef = useRef(onActiveSessionChange);
+  useEffect(() => {
+    onActiveSessionChangeRef.current = onActiveSessionChange;
+  }, [onActiveSessionChange]);
+
   const setActiveSession = useCallback((sessionId: string | null) => {
     activeSessionIdRef.current = sessionId;
     setActiveSessionId(sessionId);
+    onActiveSessionChangeRef.current?.(sessionId);
   }, []);
 
   const handleConnectClick = useCallback(() => {

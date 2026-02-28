@@ -11,6 +11,7 @@ import {
   loadAiAgentWindowStateFromStorage,
   saveAiAgentWindowStateToStorage,
   setAiAgentSessionForContextAtom,
+  setLastActiveSessionAtom,
 } from "@/lib/ai-agent/window-state";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +26,7 @@ export function AIAgentWindowManager() {
   const [windowState, setWindowState] = useAtom(aiAgentWindowStateAtom);
   const hydrateWindowState = useSetAtom(hydrateAiAgentWindowStateAtom);
   const setSessionForContext = useSetAtom(setAiAgentSessionForContextAtom);
+  const setLastActiveSession = useSetAtom(setLastActiveSessionAtom);
   const [hydrated, setHydrated] = useState(false);
 
   const isAppRoute = pathname.startsWith("/app");
@@ -134,7 +136,7 @@ export function AIAgentWindowManager() {
   const activeSessionId =
     activeContextKey && windowState.sessionByContextKey[activeContextKey]
       ? windowState.sessionByContextKey[activeContextKey]
-      : null;
+      : (windowState.lastActiveSessionId ?? null);
 
   const handleSessionLinked = useCallback(
     (sessionId: string) => {
@@ -147,6 +149,13 @@ export function AIAgentWindowManager() {
       });
     },
     [activeContextKey, setSessionForContext]
+  );
+
+  const handleActiveSessionChange = useCallback(
+    (sessionId: string | null) => {
+      setLastActiveSession(sessionId);
+    },
+    [setLastActiveSession]
   );
 
   const handleMinimize = useCallback(() => {
@@ -212,6 +221,7 @@ export function AIAgentWindowManager() {
               initialSessionId={activeSessionId}
               minimizedView={windowState.minimizedView}
               mode="minimized"
+              onActiveSessionChange={handleActiveSessionChange}
               onMinimize={handleMinimize}
               onOpenFullpage={handleOpenFullpage}
               onSessionLinked={handleSessionLinked}
