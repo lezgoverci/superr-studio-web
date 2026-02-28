@@ -118,14 +118,33 @@ export type OpencodeConnectionMode =
   | "dedicated";
 
 export type OpencodeConnection = {
+  id: string;
+  name: string | null;
   mode: OpencodeConnectionMode;
   url: string;
   username: string;
+  isActive: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
 };
 
 export type OpencodeConnectionResponse = {
   configured: boolean;
   connection: OpencodeConnection | null;
+  activeConnectionId: string | null;
+  connections?: OpencodeConnection[];
+};
+
+export type OpencodeConnectionsListResponse = {
+  configured: boolean;
+  connections: OpencodeConnection[];
+  activeConnectionId: string | null;
+};
+
+export type ActivateConnectionResponse = {
+  success: boolean;
+  activeConnectionId: string;
+  connections: OpencodeConnection[];
 };
 
 // Integration API
@@ -666,22 +685,34 @@ export const aiGatewayApi = {
 
 export const opencodeApi = {
   getConnection: () =>
-    apiCall<OpencodeConnectionResponse>("/api/opencode/connection"),
+    apiCall<OpencodeConnectionsListResponse>("/api/opencode/connection"),
 
   saveConnection: (data: {
     url: string;
     username: string;
     password?: string;
+    name?: string;
   }) =>
     apiCall<OpencodeConnectionResponse>("/api/opencode/connection", {
       method: "PUT",
       body: JSON.stringify(data),
     }),
 
-  deleteConnection: () =>
-    apiCall<{ success: boolean }>("/api/opencode/connection", {
-      method: "DELETE",
-    }),
+  deleteConnection: (connectionId?: string) =>
+    apiCall<{ success: boolean }>(
+      `/api/opencode/connection${connectionId ? `?id=${connectionId}` : ""}`,
+      {
+        method: "DELETE",
+      }
+    ),
+
+  activateConnection: (connectionId: string) =>
+    apiCall<ActivateConnectionResponse>(
+      `/api/opencode-settings/connections/${connectionId}/activate`,
+      {
+        method: "PUT",
+      }
+    ),
 };
 
 // Export all APIs as a single object

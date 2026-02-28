@@ -54,15 +54,30 @@ export function OpenCodeProvider({ children }: { children: ReactNode }) {
     useCallback(async (): Promise<OpenCodeConnectionConfig | null> => {
       try {
         const response = await api.opencode.getConnection();
-        if (!(response.configured && response.connection)) {
+        if (
+          !response.configured ||
+          !response.connections ||
+          response.connections.length === 0
+        ) {
+          clearConnectionConfig();
+          setConnectionConfig(null);
+          return null;
+        }
+
+        const activeId = response.activeConnectionId;
+        const activeConnection =
+          response.connections.find((c) => c.id === activeId) ??
+          response.connections[0];
+
+        if (!activeConnection) {
           clearConnectionConfig();
           setConnectionConfig(null);
           return null;
         }
 
         saveConnectionConfig({
-          url: response.connection.url,
-          username: response.connection.username,
+          url: activeConnection.url,
+          username: activeConnection.username,
         });
 
         const config = getConnectionConfig();
@@ -101,7 +116,7 @@ export function OpenCodeProvider({ children }: { children: ReactNode }) {
     } finally {
       isVerifyingRef.current = false;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadConnectionConfigFromServer]);
 
   useEffect(() => {

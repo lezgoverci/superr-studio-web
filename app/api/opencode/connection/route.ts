@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import {
+  deleteOpencodeConnection,
   deleteOpencodeConnectionForUser,
+  getAllOpencodeConnectionsForUser,
   getResolvedOpencodeConnectionForUser,
   upsertOpencodeConnectionForUser,
 } from "@/lib/db/opencode-connections";
@@ -15,6 +17,7 @@ type UpsertConnectionRequest = {
   url?: string;
   username?: string;
   password?: string;
+  name?: string;
 };
 
 function isAuthError(error: unknown): boolean {
@@ -45,27 +48,37 @@ export async function GET(request: Request) {
   }
 
   try {
-    const connection =
-      await getResolvedOpencodeConnectionForUser(userIdOrError);
+    const connections = await getAllOpencodeConnectionsForUser(userIdOrError);
+    const activeConnection = connections.find((c) => c.isActive);
 
-    if (!connection) {
-      return NextResponse.json({ configured: false, connection: null });
+    if (connections.length === 0) {
+      return NextResponse.json({
+        configured: false,
+        connections: [],
+        activeConnectionId: null,
+      });
     }
 
     return NextResponse.json({
       configured: true,
-      connection: {
-        mode: connection.mode,
-        url: connection.url,
-        username: connection.username,
-      },
+      connections: connections.map((c) => ({
+        id: c.id,
+        name: c.name,
+        mode: c.mode,
+        url: c.url,
+        username: c.username,
+        isActive: c.isActive,
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+      })),
+      activeConnectionId: activeConnection?.id ?? connections[0]?.id ?? null,
     });
   } catch (error) {
     return NextResponse.json(
       {
         error: isAuthError(error)
           ? "Server encryption is not configured."
-          : "Failed to load OpenCode connection.",
+          : "Failed to load OpenCode connections.",
       },
       { status: 500 }
     );
@@ -85,6 +98,7 @@ export async function PUT(request: Request) {
   const urlInput = body?.url?.trim() ?? "";
   const username = body?.username?.trim() || DEFAULT_OPENCODE_USERNAME;
   const passwordInput = body?.password?.trim() ?? "";
+  const name = body?.name?.trim() ?? null;
 
   if (!urlInput) {
     return NextResponse.json({ error: "URL is required." }, { status: 400 });
@@ -114,19 +128,30 @@ export async function PUT(request: Request) {
 
     const saved = await upsertOpencodeConnectionForUser({
       userId: userIdOrError,
+      name,
       mode: "self_hosted",
       url: normalizeOpencodeBaseUrl(parsedUrl),
       username,
       password,
     });
 
+    const allConnections =
+      await getAllOpencodeConnectionsForUser(userIdOrError);
+
     return NextResponse.json({
       configured: true,
       connection: {
+        id: saved.id,
+        name: saved.name,
         mode: saved.mode,
         url: saved.url,
         username: saved.username,
+        isActive: saved.isActive,
       },
+      activeConnectionId:
+        allConnections.find((c) => c.isActive)?.id ??
+        allConnections[0]?.id ??
+        null,
     });
   } catch (error) {
     return NextResponse.json(
@@ -146,8 +171,15 @@ export async function DELETE(request: Request) {
     return userIdOrError;
   }
 
+  const url = new URL(request.url);
+  const connectionId = url.searchParams.get("id");
+
   try {
-    await deleteOpencodeConnectionForUser(userIdOrError);
+    if (connectionId) {
+      await deleteOpencodeConnection(userIdOrError, connectionId);
+    } else {
+      await deleteOpencodeConnectionForUser(userIdOrError);
+    }
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json(

@@ -314,7 +314,19 @@ export async function POST(request: Request) {
       messages: await convertToModelMessages(messagesWithoutId),
     });
 
-    return result.toUIMessageStreamResponse();
+    const streamResponse = result.toUIMessageStreamResponse();
+    const headers = new Headers(streamResponse.headers);
+    headers.set("X-OpenCode-Server-Id", connection.id);
+    headers.set("X-OpenCode-Server-Url", connection.url);
+    if (connection.name) {
+      headers.set("X-OpenCode-Server-Name", connection.name);
+    }
+
+    return new Response(streamResponse.body, {
+      status: streamResponse.status,
+      statusText: streamResponse.statusText,
+      headers,
+    });
   } catch (error) {
     return NextResponse.json(
       {

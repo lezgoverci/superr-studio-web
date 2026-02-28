@@ -176,6 +176,11 @@ async function handleProxy(request: Request, context: RouteContext) {
 
     const responseHeaders = new Headers(upstreamResponse.headers);
     responseHeaders.delete("content-encoding");
+    responseHeaders.set("X-OpenCode-Server-Id", connection.id);
+    responseHeaders.set("X-OpenCode-Server-Url", connection.url);
+    if (connection.name) {
+      responseHeaders.set("X-OpenCode-Server-Name", connection.name);
+    }
 
     return new Response(upstreamResponse.body, {
       status: upstreamResponse.status,

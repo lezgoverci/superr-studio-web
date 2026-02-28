@@ -23,6 +23,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { OpenCodeConnection } from "@/components/ai-elements/opencode-connection";
+import { useOpenCodeConnection } from "@/components/ai-elements/opencode-provider";
 import {
   Conversation,
   ConversationContent,
@@ -267,6 +268,8 @@ function isCurrentWorkflowPlaceholder(name: string): boolean {
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Sessions page coordinates connection, listing, linking, and thread rendering.
 function SessionsPageContent() {
   const router = useRouter();
+  const { connectionConfig, status: connectionStatus } =
+    useOpenCodeConnection();
   const [connected, setConnected] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
@@ -395,6 +398,21 @@ function SessionsPageContent() {
     },
     [loadSessions]
   );
+
+  useEffect(() => {
+    if (connectionStatus === "connected" && connectionConfig) {
+      setConnected(true);
+      loadSessions();
+    } else if (
+      connectionStatus === "disconnected" ||
+      connectionStatus === "not-configured"
+    ) {
+      setConnected(false);
+      setSessions([]);
+      setSelectedSessionId(null);
+      setMessages([]);
+    }
+  }, [connectionStatus, connectionConfig, loadSessions]);
 
   const openSessionInWorkflow = useCallback(
     (session: Session, workflowId: string) => {
@@ -685,6 +703,11 @@ function SessionsPageContent() {
           <div className="border-b p-4">
             <div className="mb-3 flex items-center gap-2">
               <h1 className="flex-1 font-semibold text-lg">Sessions</h1>
+              {connectionConfig && connectionStatus === "connected" && (
+                <span className="inline-flex max-w-[150px] items-center truncate rounded-full bg-emerald-500/10 px-2 py-0.5 font-medium text-emerald-500 text-xs">
+                  {connectionConfig.url}
+                </span>
+              )}
               <OpenCodeConnection onStatusChange={handleConnectionChange} />
             </div>
             <div className="relative mb-3">

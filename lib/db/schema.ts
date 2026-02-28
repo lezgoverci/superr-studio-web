@@ -127,6 +127,7 @@ export const opencodeConnections = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name"),
     mode: text("mode")
       .notNull()
       .default("self_hosted")
@@ -134,13 +135,12 @@ export const opencodeConnections = pgTable(
     baseUrl: text("base_url").notNull(),
     username: text("username").notNull(),
     passwordEncrypted: text("password_encrypted").notNull(),
+    isActive: boolean("is_active").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => ({
-    userIdUnique: uniqueIndex("opencode_connections_user_id_unique").on(
-      table.userId
-    ),
+    userIdIdx: index("opencode_connections_user_id_idx").on(table.userId),
   })
 );
 
