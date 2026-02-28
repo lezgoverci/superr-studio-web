@@ -81,6 +81,7 @@ import {
   MoreHorizontal,
   Plus,
   Trash2,
+  X,
   Bot,
   Unplug,
 } from "lucide-react";
@@ -665,6 +666,7 @@ export function AIAgentChat({
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [initialMessages, setInitialMessages] = useState<UIMessage[]>([]);
   const [sessionSelectorOpen, setSessionSelectorOpen] = useState(false);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const [chatSurfaceKey, setChatSurfaceKey] = useState(0);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
@@ -1144,8 +1146,6 @@ export function AIAgentChat({
     windowControls?.mode === "minimized" &&
     Boolean(windowControls.onToggleMinimizedView);
   const isShowingThread = minimizedDisplayMode === "thread";
-  const hasDeleteSessionOption = hasConnection && activeSessionId;
-  const hasWindowModeSection = Boolean(windowControls);
 
   const handleNewMessages = useCallback(
     (count: number) => {
@@ -1201,6 +1201,7 @@ export function AIAgentChat({
           <DropdownMenuContent
             align="start"
             className="w-64 max-h-72 overflow-y-auto"
+            onCloseAutoFocus={() => setConfirmingDeleteId(null)}
           >
             <DropdownMenuItem
               disabled={isCreatingSession}
@@ -1216,22 +1217,76 @@ export function AIAgentChat({
               New Session
             </DropdownMenuItem>
             {sessions.length > 0 ? <DropdownMenuSeparator /> : null}
-            {sessions.map((session) => (
-              <DropdownMenuItem
-                key={session.id}
-                onSelect={() => {
-                  void handleSelectSession(session.id);
-                }}
-              >
-                <MessageSquare className="size-4 shrink-0" />
-                <span className="flex-1 truncate">
-                  {getSessionTitle(session)}
-                </span>
-                {activeSessionId === session.id ? (
-                  <Check className="size-4 shrink-0 ml-auto" />
-                ) : null}
-              </DropdownMenuItem>
-            ))}
+            {sessions.map((session) => {
+              const isConfirming = confirmingDeleteId === session.id;
+              const isActive = activeSessionId === session.id;
+              return (
+                <DropdownMenuItem
+                  key={session.id}
+                  className={cn("group", isActive && "bg-accent font-medium")}
+                  onSelect={(e) => {
+                    if (isConfirming) {
+                      e.preventDefault();
+                      return;
+                    }
+                    void handleSelectSession(session.id);
+                  }}
+                >
+                  <MessageSquare className="size-4 shrink-0" />
+                  <span className="flex-1 truncate">
+                    {getSessionTitle(session)}
+                  </span>
+                  {isConfirming ? (
+                    <div className="ml-auto flex items-center gap-1 shrink-0">
+                      <span className="text-[11px] font-medium text-destructive">Delete?</span>
+                      <button
+                        type="button"
+                        className="rounded p-0.5 hover:bg-muted transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          setConfirmingDeleteId(null);
+                        }}
+                        title="Cancel"
+                      >
+                        <X className="size-3.5 text-muted-foreground" />
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded p-0.5 hover:bg-destructive/10 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          setConfirmingDeleteId(null);
+                          void handleDeleteSession(session.id);
+                        }}
+                        title="Confirm delete"
+                      >
+                        <Check className="size-3.5 text-destructive" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="ml-1 shrink-0 rounded p-0.5 opacity-0 transition-opacity hover:bg-destructive/10 group-hover:opacity-100 focus:opacity-100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setConfirmingDeleteId(session.id);
+                        setTimeout(() => {
+                          setConfirmingDeleteId((prev) =>
+                            prev === session.id ? null : prev,
+                          );
+                        }, 3000);
+                      }}
+                      title="Delete session"
+                    >
+                      <Trash2 className="size-3.5 text-destructive" />
+                    </button>
+                  )}
+                </DropdownMenuItem>
+              );
+            })}
           </DropdownMenuContent>
         </DropdownMenu>
         <div className="flex-1" />
@@ -1285,28 +1340,8 @@ export function AIAgentChat({
                     Minimize
                   </DropdownMenuItem>
                 )}
+                <DropdownMenuSeparator />
               </>
-            ) : null}
-
-            {hasDeleteSessionOption ? (
-              <>
-                {hasWindowModeSection ? <DropdownMenuSeparator /> : null}
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onSelect={() => {
-                    if (activeSessionId) {
-                      void handleDeleteSession(activeSessionId);
-                    }
-                  }}
-                >
-                  <Trash2 className="size-4" />
-                  Delete Session
-                </DropdownMenuItem>
-              </>
-            ) : null}
-
-            {hasWindowModeSection || hasDeleteSessionOption ? (
-              <DropdownMenuSeparator />
             ) : null}
 
             <OpenCodeConnectionMenuItems
