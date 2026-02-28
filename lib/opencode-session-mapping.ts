@@ -16,7 +16,7 @@ export type SessionWorkflowMappingEntry = {
   lastOpenedAt: number;
 };
 
-const DEFAULT_USERNAME = "superr";
+const DEFAULT_USERNAME = "opencode";
 const TRAILING_SLASH_REGEX = /\/+$/;
 
 function readStore(): MappingStore {

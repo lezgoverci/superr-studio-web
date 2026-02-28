@@ -9,9 +9,20 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { type OpenCodeConnectionConfig, getConnectionConfig, pingOpenCodeWithRetry } from "@/lib/opencode-client";
+import { api } from "@/lib/api-client";
+import {
+  clearConnectionConfig,
+  getConnectionConfig,
+  pingOpenCodeWithRetry,
+  saveConnectionConfig,
+  type OpenCodeConnectionConfig,
+} from "@/lib/opencode-client";
 
-export type ConnectionStatus = "checking" | "connected" | "disconnected" | "not-configured";
+export type ConnectionStatus =
+  | "checking"
+  | "connected"
+  | "disconnected"
+  | "not-configured";
 
 type OpenCodeContextType = {
   status: ConnectionStatus;
@@ -21,59 +32,93 @@ type OpenCodeContextType = {
   updateConnectionConfig: (config: OpenCodeConnectionConfig | null) => void;
 };
 
-const OpenCodeContext = createContext<OpenCodeContextType | undefined>(undefined);
+const OpenCodeContext = createContext<OpenCodeContextType | undefined>(
+  undefined,
+);
 
 export function OpenCodeProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<ConnectionStatus>("checking");
   const [connected, setConnected] = useState(false);
-  const [connectionConfig, setConnectionConfig] = useState<OpenCodeConnectionConfig | null>(null);
-
+  const [connectionConfig, setConnectionConfig] =
+    useState<OpenCodeConnectionConfig | null>(null);
   const isVerifyingRef = useRef(false);
 
-  const verifyConnection = useCallback(async () => {
-    if (isVerifyingRef.current) return;
-    
-    const config = getConnectionConfig();
-    setConnectionConfig(config);
+  const loadConnectionConfigFromServer =
+    useCallback(async (): Promise<OpenCodeConnectionConfig | null> => {
+      try {
+        const response = await api.opencode.getConnection();
+        if (!(response.configured && response.connection)) {
+          clearConnectionConfig();
+          setConnectionConfig(null);
+          return null;
+        }
 
-    if (!config) {
-      setStatus("not-configured");
-      setConnected(false);
+        saveConnectionConfig({
+          url: response.connection.url,
+          username: response.connection.username,
+        });
+
+        const config = getConnectionConfig();
+        setConnectionConfig(config);
+        return config;
+      } catch {
+        const cachedConfig = getConnectionConfig();
+        setConnectionConfig(cachedConfig);
+        return cachedConfig;
+      }
+    }, []);
+
+  const verifyConnection = useCallback(async () => {
+    if (isVerifyingRef.current) {
       return;
     }
 
     isVerifyingRef.current = true;
+
     try {
       if (status !== "connected") {
         setStatus("checking");
       }
-      
+
+      const config = await loadConnectionConfigFromServer();
+      if (!config) {
+        setStatus("not-configured");
+        setConnected(false);
+        return;
+      }
+
       const ok = await pingOpenCodeWithRetry(2, 200);
-      
-      const nextStatus: ConnectionStatus = ok ? "connected" : "disconnected";
-      setStatus(nextStatus);
+      setStatus(ok ? "connected" : "disconnected");
       setConnected(ok);
     } finally {
       isVerifyingRef.current = false;
     }
-  }, [status]);
+  }, [loadConnectionConfigFromServer, status]);
 
   useEffect(() => {
-    void verifyConnection();
-    
-    // Poll every 30 seconds
+    verifyConnection().catch(() => {});
+
     const interval = setInterval(() => {
-      void verifyConnection();
+      verifyConnection().catch(() => {});
     }, 30_000);
-    
+
     return () => clearInterval(interval);
   }, [verifyConnection]);
 
-  // Use this when connection config changes (e.g. user connects/disconnects explicitly)
-  const updateConnectionConfig = useCallback((config: OpenCodeConnectionConfig | null) => {
-    setConnectionConfig(config);
-    void verifyConnection();
-  }, [verifyConnection]);
+  const updateConnectionConfig = useCallback(
+    (config: OpenCodeConnectionConfig | null) => {
+      if (config) {
+        saveConnectionConfig(config);
+        setConnectionConfig(getConnectionConfig());
+      } else {
+        clearConnectionConfig();
+        setConnectionConfig(null);
+      }
+
+      verifyConnection().catch(() => {});
+    },
+    [verifyConnection],
+  );
 
   return (
     <OpenCodeContext.Provider
@@ -93,7 +138,9 @@ export function OpenCodeProvider({ children }: { children: ReactNode }) {
 export function useOpenCodeConnection() {
   const context = useContext(OpenCodeContext);
   if (context === undefined) {
-    throw new Error("useOpenCodeConnection must be used within an OpenCodeProvider");
+    throw new Error(
+      "useOpenCodeConnection must be used within an OpenCodeProvider",
+    );
   }
   return context;
 }

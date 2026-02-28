@@ -8,6 +8,7 @@ import {
   artifactPublications,
   artifacts,
   integrations,
+  opencodeConnections,
   sessions,
   users,
   verifications,
@@ -31,6 +32,7 @@ const schema = {
   artifactPublications,
   apiKeys,
   integrations,
+  opencodeConnections,
 };
 
 const connectionString = resolveDatabaseUrlWithFallback();
@@ -78,7 +80,7 @@ const dbClient =
   globalForDb.dbClient ?? postgres(connectionString, buildPostgresOptions(10));
 
 // For queries - reuse DB instance in development
-export const db = globalForDb.db ?? drizzle(dbClient as any, { schema });
+export const db = globalForDb.db ?? drizzle(dbClient, { schema });
 
 if (process.env.NODE_ENV !== "production") {
   globalForDb.dbClient = dbClient;

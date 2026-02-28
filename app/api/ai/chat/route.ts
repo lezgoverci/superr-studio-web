@@ -3,9 +3,9 @@ import { createOpencode } from "ai-sdk-provider-opencode-sdk";
 import { NextResponse } from "next/server";
 import type { AiAgentContextEnvelope } from "@/lib/ai-agent/page-context/types";
 import { auth } from "@/lib/auth";
+import { getResolvedOpencodeConnectionForUser } from "@/lib/db/opencode-connections";
 import {
   createBasicAuthHeader,
-  DEFAULT_OPENCODE_USERNAME,
   normalizeOpencodeBaseUrl,
   parseOpencodeUrl,
   parsePromptModel,
@@ -16,9 +16,6 @@ export const dynamic = "force-dynamic";
 
 type ChatRequestBody = {
   messages?: UIMessage[];
-  opencodeUrl?: string;
-  opencodeToken?: string;
-  opencodeUsername?: string;
   sessionId?: string;
   pageContext?: unknown;
 };
@@ -247,8 +244,6 @@ export async function POST(request: Request) {
     const rawBody = await request.json().catch(() => null);
     const body = parseRequestBody(rawBody);
     const messages = Array.isArray(body.messages) ? body.messages : [];
-    const opencodeUrl = body.opencodeUrl?.trim() ?? "";
-    const opencodeToken = body.opencodeToken?.trim() ?? "";
     const pageContext = sanitizePageContext(body.pageContext);
     const pageContextPrompt = buildPageContextSystemPrompt(pageContext);
 
@@ -259,14 +254,21 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!(opencodeUrl && opencodeToken)) {
+    const connection = await getResolvedOpencodeConnectionForUser(
+      session.user.id
+    );
+
+    if (!connection) {
       return NextResponse.json(
-        { error: "Agent URL and token are required." },
+        {
+          error:
+            "Agent server is not configured. Open Settings > AI Agent to add your OpenCode server.",
+        },
         { status: 400 }
       );
     }
 
-    const parsedUrl = parseOpencodeUrl(opencodeUrl);
+    const parsedUrl = parseOpencodeUrl(connection.url);
     if (!parsedUrl) {
       return NextResponse.json(
         {
@@ -282,16 +284,14 @@ export async function POST(request: Request) {
       return model;
     }
 
-    const normalizedUsername =
-      body.opencodeUsername?.trim() || DEFAULT_OPENCODE_USERNAME;
     const provider = createOpencode({
       autoStartServer: false,
       baseUrl: normalizeOpencodeBaseUrl(parsedUrl),
       clientOptions: {
         headers: {
           Authorization: createBasicAuthHeader(
-            opencodeToken,
-            normalizedUsername
+            connection.password,
+            connection.username
           ),
         },
       },

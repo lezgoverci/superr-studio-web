@@ -56,14 +56,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useRouter } from "next/navigation";
 import type { AiAgentContextEnvelope } from "@/lib/ai-agent/page-context/types";
 import { useAiAgentPageContext } from "@/lib/ai-agent/page-context/use-ai-agent-page-context";
-import {
-  getConnectionConfig,
-  getOpenCodeClient,
-  type OpenCodeConnectionConfig,
-} from "@/lib/opencode-client";
-import { useOpencode } from "@/hooks/use-opencode";
+import { getOpenCodeClient } from "@/lib/opencode-client";
 import { useOpenCodeConnection } from "@/components/ai-elements/opencode-provider";
 import { mapOpenCodeHistoryToUIMessages } from "@/lib/opencode-chat-adapter";
 import {
@@ -134,7 +130,9 @@ function parseQuestionToolInput(input: unknown): QuestionToolInput | null {
 
     const questionRecord = rawQuestion as Record<string, unknown>;
     const question =
-      typeof questionRecord.question === "string" ? questionRecord.question : "";
+      typeof questionRecord.question === "string"
+        ? questionRecord.question
+        : "";
     if (!question) {
       return [];
     }
@@ -163,7 +161,9 @@ function parseQuestionToolInput(input: unknown): QuestionToolInput | null {
       {
         question,
         header:
-          typeof questionRecord.header === "string" ? questionRecord.header : "",
+          typeof questionRecord.header === "string"
+            ? questionRecord.header
+            : "",
         options,
         ...(typeof questionRecord.multiple === "boolean"
           ? { multiple: questionRecord.multiple }
@@ -434,7 +434,6 @@ type ChatSurfaceProps = {
   activeSessionId: string;
   initialMessages: UIMessage[];
   isLoadingMessages: boolean;
-  connection: OpenCodeConnectionConfig;
   pageContext: AiAgentContextEnvelope | null;
   onAbortSession: (sessionId: string) => Promise<void>;
   onNewMessages?: (count: number) => void;
@@ -446,7 +445,6 @@ function ChatSurface({
   activeSessionId,
   initialMessages,
   isLoadingMessages,
-  connection,
   pageContext,
   onAbortSession,
   onNewMessages,
@@ -471,22 +469,13 @@ function ChatSurface({
               ...body,
               id,
               messages,
-              opencodeToken: connection.token,
-              opencodeUrl: connection.url,
-              opencodeUsername: connection.username,
               sessionId: activeSessionIdRef.current,
               pageContext,
             },
           };
         },
       }),
-    [
-      activeSessionId,
-      connection.token,
-      connection.url,
-      connection.username,
-      pageContext,
-    ],
+    [activeSessionId, pageContext],
   );
 
   const { messages, sendMessage, addToolOutput, status, stop } = useChat({
@@ -672,6 +661,7 @@ export function AIAgentChat({
   minimizedDisplayMode = "input-only",
   windowControls,
 }: AIAgentChatProps) {
+  const router = useRouter();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [initialMessages, setInitialMessages] = useState<UIMessage[]>([]);
@@ -681,16 +671,9 @@ export function AIAgentChat({
   const [chatSurfaceKey, setChatSurfaceKey] = useState(0);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const { connectViaDaemon } = useOpencode();
   const [hasLoadedSessions, setHasLoadedSessions] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const {
-    connected,
-    connectionConfig: connection,
-    updateConnectionConfig,
-    verifyConnection,
-  } = useOpenCodeConnection();
+  const { connected, connectionConfig: connection } = useOpenCodeConnection();
   const initialSessionAppliedRef = useRef<string | null>(null);
   const activeSessionIdRef = useRef<string | null>(null);
   const connectedRef = useRef(false);
@@ -721,55 +704,9 @@ export function AIAgentChat({
     setActiveSessionId(sessionId);
   }, []);
 
-  const handleConnectClick = async () => {
-    if (isConnecting) {
-      return;
-    }
-
-    setIsConnecting(true);
-    try {
-      const result = await connectViaDaemon();
-      if (result.connected) {
-        updateConnectionConfig(result.config);
-        toast.success(
-          result.startedOpencode
-            ? "Local AI Agent started and connected."
-            : "Connected to local AI Agent.",
-        );
-        return;
-      }
-
-      void verifyConnection();
-
-      if (result.reason === "bridge_unavailable") {
-        toast.error(
-          "Desktop bridge is not running. Start superr-bridge and retry.",
-        );
-        return;
-      }
-      if (result.reason === "not_installed") {
-        toast.error(
-          "Agent is not installed locally. Install it from the desktop bridge.",
-        );
-        return;
-      }
-      if (result.reason === "missing_config") {
-        toast.error("Desktop bridge did not provide connection details.");
-        return;
-      }
-      if (result.reason === "start_failed") {
-        toast.error(result.error || "Failed to start local Agent server.");
-        return;
-      }
-      if (result.reason === "ping_failed") {
-        toast.error("Agent started but is not reachable yet. Please retry.");
-        return;
-      }
-      toast.error(result.error || "Failed to connect to local AI Agent.");
-    } finally {
-      setIsConnecting(false);
-    }
-  };
+  const handleConnectClick = useCallback(() => {
+    router.push("/app/settings?tab=agent-server");
+  }, [router]);
 
   const cancelPendingMessageLoads = useCallback(() => {
     messageLoadRequestIdRef.current += 1;
@@ -1375,7 +1312,6 @@ export function AIAgentChat({
             {activeSessionId && connection ? (
               <ChatSurface
                 activeSessionId={activeSessionId}
-                connection={connection}
                 initialMessages={initialMessages}
                 isLoadingMessages={isLoadingMessages}
                 key={chatSurfaceKey}
@@ -1436,14 +1372,8 @@ export function AIAgentChat({
           <p className="flex-1 text-muted-foreground text-xs">
             AI Agent not connected
           </p>
-          <Button
-            onClick={handleConnectClick}
-            disabled={isConnecting}
-            size="sm"
-            variant="secondary"
-          >
-            {isConnecting && <Loader2 className="mr-2 size-4 animate-spin" />}
-            Connect
+          <Button onClick={handleConnectClick} size="sm" variant="secondary">
+            Configure
           </Button>
         </div>
       ) : (
@@ -1454,16 +1384,12 @@ export function AIAgentChat({
           <div className="space-y-1">
             <p className="font-medium">AI Agent not connected</p>
             <p className="text-muted-foreground text-sm">
-              Connect Agent to start chatting and create workflows.
+              Configure your OpenCode server to start chatting and create
+              workflows.
             </p>
           </div>
-          <Button
-            onClick={handleConnectClick}
-            disabled={isConnecting}
-            size="sm"
-          >
-            {isConnecting && <Loader2 className="mr-2 size-4 animate-spin" />}
-            Connect Agent
+          <Button onClick={handleConnectClick} size="sm">
+            Configure Agent
           </Button>
         </div>
       )}

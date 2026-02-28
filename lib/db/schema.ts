@@ -113,6 +113,37 @@ export const integrations = pgTable("integrations", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export type OpencodeConnectionMode =
+  | "self_hosted"
+  | "managed_shared"
+  | "dedicated";
+
+export const opencodeConnections = pgTable(
+  "opencode_connections",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    mode: text("mode")
+      .notNull()
+      .default("self_hosted")
+      .$type<OpencodeConnectionMode>(),
+    baseUrl: text("base_url").notNull(),
+    username: text("username").notNull(),
+    passwordEncrypted: text("password_encrypted").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdUnique: uniqueIndex("opencode_connections_user_id_unique").on(
+      table.userId
+    ),
+  })
+);
+
 // Workflow executions table to track workflow runs
 export const workflowExecutions = pgTable(
   "workflow_executions",
@@ -344,6 +375,8 @@ export type Workflow = typeof workflows.$inferSelect;
 export type NewWorkflow = typeof workflows.$inferInsert;
 export type Integration = typeof integrations.$inferSelect;
 export type NewIntegration = typeof integrations.$inferInsert;
+export type OpencodeConnection = typeof opencodeConnections.$inferSelect;
+export type NewOpencodeConnection = typeof opencodeConnections.$inferInsert;
 export type WorkflowExecution = typeof workflowExecutions.$inferSelect;
 export type NewWorkflowExecution = typeof workflowExecutions.$inferInsert;
 export type WorkflowExecutionLog = typeof workflowExecutionLogs.$inferSelect;

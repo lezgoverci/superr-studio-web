@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { getResolvedOpencodeConnectionForUser } from "@/lib/db/opencode-connections";
 import {
   createBasicAuthHeader,
-  DEFAULT_OPENCODE_USERNAME,
   parseOpencodeUrl,
   parsePromptModel,
 } from "@/lib/opencode-server-utils";
@@ -82,7 +82,7 @@ function buildTargetPath(basePathname: string, segments: string[]): string {
 
 function buildUpstreamHeaders(
   request: Request,
-  token: string,
+  password: string,
   username: string
 ): Headers {
   const headers = new Headers();
@@ -95,6 +95,7 @@ function buildUpstreamHeaders(
       lowerName === "host" ||
       lowerName === "content-length" ||
       lowerName === "origin" ||
+      lowerName === "accept-encoding" ||
       lowerName.startsWith("x-opencode-")
     ) {
       continue;
@@ -103,7 +104,10 @@ function buildUpstreamHeaders(
     headers.set(name, value);
   }
 
-  headers.set("Authorization", createBasicAuthHeader(token, username));
+  headers.set("Authorization", createBasicAuthHeader(password, username));
+  // Request uncompressed responses so we can stream the body through without
+  // needing to decompress it server-side (after stripping content-encoding).
+  headers.set("Accept-Encoding", "identity");
 
   return headers;
 }
@@ -122,20 +126,18 @@ async function handleProxy(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const baseUrlHeader = request.headers.get("x-opencode-url");
-  const token = request.headers.get("x-opencode-token")?.trim();
-  const username =
-    request.headers.get("x-opencode-username")?.trim() ||
-    DEFAULT_OPENCODE_USERNAME;
+  const connection = await getResolvedOpencodeConnectionForUser(
+    session.user.id
+  );
 
-  if (!(baseUrlHeader && token)) {
+  if (!connection) {
     return NextResponse.json(
       { error: "Agent connection is not configured." },
       { status: 400 }
     );
   }
 
-  const targetBaseUrl = parseOpencodeUrl(baseUrlHeader);
+  const targetBaseUrl = parseOpencodeUrl(connection.url);
   if (!targetBaseUrl) {
     return NextResponse.json(
       {
@@ -163,7 +165,11 @@ async function handleProxy(request: Request, context: RouteContext) {
   try {
     const upstreamResponse = await fetch(targetBaseUrl, {
       method: request.method,
-      headers: buildUpstreamHeaders(request, token, username),
+      headers: buildUpstreamHeaders(
+        request,
+        connection.password,
+        connection.username
+      ),
       body,
       redirect: "follow",
     });

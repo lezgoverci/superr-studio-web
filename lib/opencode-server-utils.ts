@@ -3,7 +3,7 @@ const TRAILING_SLASH_REGEX = /\/+$/;
 const LEADING_IPV6_BRACKET_REGEX = /^\[/;
 const TRAILING_IPV6_BRACKET_REGEX = /\]$/;
 
-export const DEFAULT_OPENCODE_USERNAME = "superr";
+export const DEFAULT_OPENCODE_USERNAME = "opencode";
 
 export type PromptModel = {
   providerID: string;
@@ -66,11 +66,11 @@ export function normalizeOpencodeBaseUrl(url: URL | string): string {
 }
 
 export function createBasicAuthHeader(
-  token: string,
+  password: string,
   username?: string
 ): string {
   const normalizedUsername = username?.trim() || DEFAULT_OPENCODE_USERNAME;
-  const value = Buffer.from(`${normalizedUsername}:${token}`).toString(
+  const value = Buffer.from(`${normalizedUsername}:${password}`).toString(
     "base64"
   );
   return `Basic ${value}`;

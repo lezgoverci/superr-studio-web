@@ -1,5 +1,5 @@
-import { AIAgentFullPage } from "@/components/ai-agent/ai-agent-full-page";
 import { Suspense } from "react";
+import { AIAgentFullPage } from "@/components/ai-agent/ai-agent-full-page";
 
 export default function ChatPage() {
   return (

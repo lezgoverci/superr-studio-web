@@ -491,7 +491,7 @@ function SessionsPageContent() {
   const handleCreateSession = useCallback(async () => {
     const client = getOpenCodeClient();
     if (!client) {
-      toast.error("Agent not connected");
+      toast.error("Agent server is not configured");
       return;
     }
 
@@ -522,7 +522,7 @@ function SessionsPageContent() {
 
     const client = getOpenCodeClient();
     if (!client) {
-      toast.error("Agent not connected");
+      toast.error("Agent server is not configured");
       return;
     }
 
@@ -663,9 +663,10 @@ function SessionsPageContent() {
             <Unplug className="size-8 text-destructive" />
           </div>
           <div className="space-y-1">
-            <p className="font-medium">Agent is not connected</p>
+            <p className="font-medium">Agent server is not connected</p>
             <p className="text-muted-foreground text-sm">
-              Connect Agent to browse local sessions and reopen threads.
+              Configure your OpenCode server to browse sessions and reopen
+              threads.
             </p>
           </div>
           <OpenCodeConnection onStatusChange={handleConnectionChange} />

@@ -112,6 +112,22 @@ export type AiGatewayConnectResponse = {
   redirect: boolean;
 };
 
+export type OpencodeConnectionMode =
+  | "self_hosted"
+  | "managed_shared"
+  | "dedicated";
+
+export type OpencodeConnection = {
+  mode: OpencodeConnectionMode;
+  url: string;
+  username: string;
+};
+
+export type OpencodeConnectionResponse = {
+  configured: boolean;
+  connection: OpencodeConnection | null;
+};
+
 // Integration API
 export const integrationApi = {
   // List all integrations
@@ -648,12 +664,33 @@ export const aiGatewayApi = {
     }),
 };
 
+export const opencodeApi = {
+  getConnection: () =>
+    apiCall<OpencodeConnectionResponse>("/api/opencode/connection"),
+
+  saveConnection: (data: {
+    url: string;
+    username: string;
+    password?: string;
+  }) =>
+    apiCall<OpencodeConnectionResponse>("/api/opencode/connection", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  deleteConnection: () =>
+    apiCall<{ success: boolean }>("/api/opencode/connection", {
+      method: "DELETE",
+    }),
+};
+
 // Export all APIs as a single object
 export const api = {
   artifact: artifactApi,
   aiGateway: aiGatewayApi,
   agentWorkflow: agentWorkflowApi,
   integration: integrationApi,
+  opencode: opencodeApi,
   user: userApi,
   workflow: workflowApi,
 };

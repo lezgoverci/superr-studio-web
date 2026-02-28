@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { PageContainer } from "@/components/app-shell/page-container";
@@ -13,6 +14,7 @@ import { AiProvidersSection } from "@/components/settings/ai-providers-section";
 import { ApiKeysSection } from "@/components/settings/api-keys-section";
 import { AppearanceSection } from "@/components/settings/appearance-section";
 import { ConnectionsSection } from "@/components/settings/connections-section";
+import { OpenCodeServerSection } from "@/components/settings/opencode-server-section";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,6 +23,24 @@ import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Integration } from "@/lib/api-client";
 import { api } from "@/lib/api-client";
+
+const SETTINGS_TAB_VALUES = [
+  "account",
+  "connections",
+  "api-keys",
+  "providers",
+  "agent-server",
+  "appearance",
+  "permissions",
+] as const;
+
+function isSettingsTabValue(
+  value: string
+): value is (typeof SETTINGS_TAB_VALUES)[number] {
+  return SETTINGS_TAB_VALUES.includes(
+    value as (typeof SETTINGS_TAB_VALUES)[number]
+  );
+}
 
 function AccountSection() {
   const [loading, setLoading] = useState(true);
@@ -102,7 +122,17 @@ function AccountSection() {
 }
 
 export default function SettingsPage() {
+  const searchParams = useSearchParams();
   const { push } = useOverlay();
+  const [activeTab, setActiveTab] =
+    useState<(typeof SETTINGS_TAB_VALUES)[number]>("account");
+
+  useEffect(() => {
+    const requestedTab = searchParams.get("tab")?.trim();
+    if (requestedTab && isSettingsTabValue(requestedTab)) {
+      setActiveTab(requestedTab);
+    }
+  }, [searchParams]);
 
   const handleOpenAddConnection = () => {
     push(AddConnectionOverlay, {
@@ -143,12 +173,21 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        <Tabs className="w-full" defaultValue="account">
-          <TabsList className="grid w-full grid-cols-6">
+        <Tabs
+          className="w-full"
+          onValueChange={(value) => {
+            if (isSettingsTabValue(value)) {
+              setActiveTab(value);
+            }
+          }}
+          value={activeTab}
+        >
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="connections">Connections</TabsTrigger>
             <TabsTrigger value="api-keys">API Keys</TabsTrigger>
             <TabsTrigger value="providers">AI Providers</TabsTrigger>
+            <TabsTrigger value="agent-server">AI Agent</TabsTrigger>
             <TabsTrigger value="appearance">Appearance</TabsTrigger>
             <TabsTrigger value="permissions">Permissions</TabsTrigger>
           </TabsList>
@@ -171,6 +210,10 @@ export default function SettingsPage() {
 
           <TabsContent className="mt-6 space-y-4" value="providers">
             <AiProvidersSection />
+          </TabsContent>
+
+          <TabsContent className="mt-6 space-y-4" value="agent-server">
+            <OpenCodeServerSection />
           </TabsContent>
 
           <TabsContent className="mt-6 space-y-4" value="appearance">
