@@ -681,6 +681,9 @@ export async function buildExportPayload(workflow: WorkflowForExport): Promise<{
   // package.json so the shipped lockfile would be stale and cause
   // ERR_PNPM_OUTDATED_LOCKFILE on Vercel's frozen-lockfile install.
   delete boilerplateFiles["pnpm-lock.yaml"];
+  // Remove favicon.ico – binary files can't be deployed correctly
+  // through the Vercel file-based deployment API as plain strings.
+  delete boilerplateFiles["app/favicon.ico"];
   const templateFiles = await readDirectoryRecursive(CODEGEN_TEMPLATES_PATH);
   const usedActionTypes = collectUsedActionTypes(workflow.nodes);
   const { stepFiles, usedIntegrationTypes, diagnostics } =
@@ -749,7 +752,13 @@ export async function buildExportPayload(workflow: WorkflowForExport): Promise<{
   allFiles["next.config.ts"] = `import { withWorkflow } from "workflow/next";
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {};
+const nextConfig: NextConfig = {
+  serverExternalPackages: [
+    "just-bash",
+    "bash-tool",
+    "@mongodb-js/zstd",
+  ],
+};
 
 export default withWorkflow(nextConfig);
 `;
