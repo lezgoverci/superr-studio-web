@@ -677,6 +677,10 @@ export async function buildExportPayload(workflow: WorkflowForExport): Promise<{
   usedIntegrationTypes: Set<IntegrationType>;
 }> {
   const boilerplateFiles = await readDirectoryRecursive(BOILERPLATE_PATH);
+  // Remove the boilerplate lockfile – we dynamically add dependencies to
+  // package.json so the shipped lockfile would be stale and cause
+  // ERR_PNPM_OUTDATED_LOCKFILE on Vercel's frozen-lockfile install.
+  delete boilerplateFiles["pnpm-lock.yaml"];
   const templateFiles = await readDirectoryRecursive(CODEGEN_TEMPLATES_PATH);
   const usedActionTypes = collectUsedActionTypes(workflow.nodes);
   const { stepFiles, usedIntegrationTypes, diagnostics } =

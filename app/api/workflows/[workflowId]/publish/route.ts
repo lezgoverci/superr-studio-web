@@ -139,6 +139,7 @@ export async function POST(
       files: vercelFiles,
       projectSettings: {
         framework: "nextjs",
+        installCommand: "pnpm install --no-frozen-lockfile",
       },
     };
 
