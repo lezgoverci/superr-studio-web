@@ -11,8 +11,10 @@ import { getIntegration } from "@/plugins";
 
 /**
  * Set environment variables on a Vercel project via the project env API.
- * Uses POST /v10/projects/{projectId}/env to create encrypted env vars
- * for production, preview, and development targets.
+ * Fetches existing env vars first, then:
+ *  - PATCHes env vars that already exist (by key)
+ *  - POSTs env vars that are new
+ * This avoids the "duplicate environment variable" error on redeployment.
  */
 async function setProjectEnvVars(params: {
   projectName: string;
@@ -22,34 +24,89 @@ async function setProjectEnvVars(params: {
 }): Promise<void> {
   const { projectName, envVars, vercelToken, teamParam } = params;
 
-  const envPayload = Object.entries(envVars).map(([key, value]) => ({
-    key,
-    value,
-    type: "encrypted",
-    target: ["production", "preview", "development"],
-  }));
-
-  if (envPayload.length === 0) {
+  const entries = Object.entries(envVars);
+  if (entries.length === 0) {
     return;
   }
 
-  const response = await fetch(
-    `https://api.vercel.com/v10/projects/${encodeURIComponent(projectName)}/env${teamParam}`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${vercelToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(envPayload),
-    }
+  const encodedProject = encodeURIComponent(projectName);
+  const authHeaders = {
+    Authorization: `Bearer ${vercelToken}`,
+    "Content-Type": "application/json",
+  };
+
+  // 1. Fetch existing env vars for this project
+  const existingRes = await fetch(
+    `https://api.vercel.com/v9/projects/${encodedProject}/env${teamParam}`,
+    { headers: authHeaders }
   );
 
-  if (!response.ok) {
-    const result = await response.json();
-    throw new Error(
-      result.error?.message || "Failed to set environment variables on Vercel project"
+  const existingByKey = new Map<string, string>(); // key → env id
+  if (existingRes.ok) {
+    const existingData = await existingRes.json();
+    for (const env of existingData.envs ?? []) {
+      existingByKey.set(env.key, env.id);
+    }
+  }
+
+  // 2. Separate into updates (PATCH) vs creates (POST)
+  const toCreate: Array<{ key: string; value: string; type: string; target: string[] }> = [];
+  const toUpdate: Array<{ id: string; key: string; value: string }> = [];
+
+  for (const [key, value] of entries) {
+    const existingId = existingByKey.get(key);
+    if (existingId) {
+      toUpdate.push({ id: existingId, key, value });
+    } else {
+      toCreate.push({
+        key,
+        value,
+        type: "encrypted",
+        target: ["production", "preview", "development"],
+      });
+    }
+  }
+
+  // 3. PATCH existing env vars
+  await Promise.all(
+    toUpdate.map(async ({ id, key, value }) => {
+      const res = await fetch(
+        `https://api.vercel.com/v9/projects/${encodedProject}/env/${id}${teamParam}`,
+        {
+          method: "PATCH",
+          headers: authHeaders,
+          body: JSON.stringify({
+            value,
+            type: "encrypted",
+            target: ["production", "preview", "development"],
+          }),
+        }
+      );
+      if (!res.ok) {
+        const result = await res.json();
+        throw new Error(
+          result.error?.message || `Failed to update env var "${key}" on Vercel project`
+        );
+      }
+    })
+  );
+
+  // 4. POST new env vars (batch)
+  if (toCreate.length > 0) {
+    const res = await fetch(
+      `https://api.vercel.com/v10/projects/${encodedProject}/env${teamParam}`,
+      {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify(toCreate),
+      }
     );
+    if (!res.ok) {
+      const result = await res.json();
+      throw new Error(
+        result.error?.message || "Failed to set environment variables on Vercel project"
+      );
+    }
   }
 }
 
