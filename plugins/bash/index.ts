@@ -12,6 +12,11 @@ const bashPlugin: IntegrationPlugin = {
 
   formFields: [],
 
+  dependencies: {
+    "bash-tool": "^1.3.14",
+    "just-bash": "^2.9.8",
+  },
+
   actions: [
     {
       slug: "run-command",

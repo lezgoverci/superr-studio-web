@@ -13,6 +13,7 @@ import {
   Play,
   Plus,
   Redo2,
+  Rocket,
   Save,
   Settings2,
   Sparkles,
@@ -77,6 +78,7 @@ import {
 import { ConfigurationOverlay } from "../overlays/configuration-overlay";
 import { ConfirmOverlay } from "../overlays/confirm-overlay";
 import { ExportWorkflowOverlay } from "../overlays/export-workflow-overlay";
+import { PublishWorkflowOverlay } from "../overlays/publish-workflow-overlay";
 import { MakePublicOverlay } from "../overlays/make-public-overlay";
 import { useOverlay } from "../overlays/overlay-provider";
 import { WorkflowIssuesOverlay } from "../overlays/workflow-issues-overlay";
@@ -1312,6 +1314,7 @@ function ToolbarActions({
         <ToolbarGroupSeparator orientation="horizontal" />
         <SaveButton handleSave={actions.handleSave} state={state} />
         <ExportButton actions={actions} state={state} />
+        <PublishButton state={state} />
         <JsonImportButton actions={actions} state={state} />
         <ToolbarGroupSeparator orientation="horizontal" />
         <VisibilityButton actions={actions} state={state} />
@@ -1363,6 +1366,7 @@ function ToolbarActions({
         <ToolbarGroupSeparator />
         <SaveButton handleSave={actions.handleSave} state={state} />
         <ExportButton actions={actions} state={state} />
+        <PublishButton state={state} />
         <JsonImportButton actions={actions} state={state} />
         <ToolbarGroupSeparator />
         <VisibilityButton actions={actions} state={state} />
@@ -1403,6 +1407,41 @@ function SaveButton({
       {state.hasUnsavedChanges && !state.isSaving && (
         <div className="absolute top-1.5 right-1.5 size-2 rounded-full bg-primary" />
       )}
+    </Button>
+  );
+}
+
+// Publish Button Component
+function PublishButton({
+  state,
+}: {
+  state: ReturnType<typeof useWorkflowState>;
+}) {
+  const { open: openOverlay } = useOverlay();
+
+  const handleClick = () => {
+    if (state.currentWorkflowId) {
+      openOverlay(PublishWorkflowOverlay, {
+        workflowId: state.currentWorkflowId,
+      });
+    }
+  };
+
+  return (
+    <Button
+      className={TOOLBAR_BUTTON_CLASSNAME}
+      disabled={
+        state.nodes.length === 0 ||
+        state.isGenerating ||
+        !state.currentWorkflowId
+      }
+      onClick={handleClick}
+      size="icon"
+      style={TOOLBAR_BUTTON_STYLE}
+      title="Publish to Vercel"
+      variant="secondary"
+    >
+      <Rocket className="size-4" />
     </Button>
   );
 }
