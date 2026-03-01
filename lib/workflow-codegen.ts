@@ -67,7 +67,7 @@ export function generateWorkflowCode(
 
   // Generate function signature
   const functionSignature = inputIsUsed
-    ? `export async function ${functionName}<TInput>(input: TInput) {`
+    ? `export async function ${functionName}(input: Record<string, unknown>) {`
     : `export async function ${functionName}() {`;
   codeLines.push(functionSignature);
   codeLines.push(`  "use workflow";`);
