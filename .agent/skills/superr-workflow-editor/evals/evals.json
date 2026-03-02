@@ -1,0 +1,41 @@
+{
+  "skill_name": "superr-workflow-editor",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Add a Slack notification step after the generate-summary action in my workflow",
+      "expected_output": "The skill fetches the workflow, adds a new Slack notification node connected to the generate-summary node, and updates the workflow via PATCH API",
+      "expectations": [
+        "Fetches workflow using GET /api/agent/workflows/:id",
+        "Adds new node with actionType: slack/send-message",
+        "Creates new edge from generate-summary to the new node",
+        "Saves changes via PATCH /api/agent/workflows/:id",
+        "Reports changes to user with workflow link"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Remove the second action node from this workflow - I don't need it anymore",
+      "expected_output": "The skill removes the specified node and its connected edges, then updates the workflow",
+      "expectations": [
+        "Fetches current workflow first",
+        "Removes the target node from nodes array",
+        "Removes all edges connected to/from that node",
+        "Saves changes via PATCH API",
+        "Confirms removal to user"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Change the AI model in my text-generation node from GPT-4 to Claude Sonnet",
+      "expected_output": "The skill updates the config of the specified node and saves the workflow",
+      "expectations": [
+        "Fetches the workflow to find the node",
+        "Locates the node by label",
+        "Updates aiModel in config",
+        "Saves via PATCH API",
+        "Reports the change to user"
+      ]
+    }
+  ]
+}
