@@ -645,7 +645,7 @@ export function buildReadme(
     "```bash",
     `curl -X POST http://localhost:3000/api/workflows/${workflowFileName} \\`,
     '  -H "Content-Type: application/json" \\',
-    "  -d '{\"key\": \"value\"}'",
+    '  -d \'{"key": "value"}\'',
     "```",
     "",
     "## Deployment",

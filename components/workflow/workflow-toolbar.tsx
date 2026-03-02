@@ -78,9 +78,9 @@ import {
 import { ConfigurationOverlay } from "../overlays/configuration-overlay";
 import { ConfirmOverlay } from "../overlays/confirm-overlay";
 import { ExportWorkflowOverlay } from "../overlays/export-workflow-overlay";
-import { PublishWorkflowOverlay } from "../overlays/publish-workflow-overlay";
 import { MakePublicOverlay } from "../overlays/make-public-overlay";
 import { useOverlay } from "../overlays/overlay-provider";
+import { PublishWorkflowOverlay } from "../overlays/publish-workflow-overlay";
 import { WorkflowIssuesOverlay } from "../overlays/workflow-issues-overlay";
 
 type WorkflowToolbarProps = {

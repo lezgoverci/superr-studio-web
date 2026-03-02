@@ -50,7 +50,12 @@ async function setProjectEnvVars(params: {
   }
 
   // 2. Separate into updates (PATCH) vs creates (POST)
-  const toCreate: Array<{ key: string; value: string; type: string; target: string[] }> = [];
+  const toCreate: Array<{
+    key: string;
+    value: string;
+    type: string;
+    target: string[];
+  }> = [];
   const toUpdate: Array<{ id: string; key: string; value: string }> = [];
 
   for (const [key, value] of entries) {
@@ -85,7 +90,8 @@ async function setProjectEnvVars(params: {
       if (!res.ok) {
         const result = await res.json();
         throw new Error(
-          result.error?.message || `Failed to update env var "${key}" on Vercel project`
+          result.error?.message ||
+            `Failed to update env var "${key}" on Vercel project`
         );
       }
     })
@@ -104,7 +110,8 @@ async function setProjectEnvVars(params: {
     if (!res.ok) {
       const result = await res.json();
       throw new Error(
-        result.error?.message || "Failed to set environment variables on Vercel project"
+        result.error?.message ||
+          "Failed to set environment variables on Vercel project"
       );
     }
   }
@@ -170,9 +177,7 @@ export async function POST(
       if (integration && plugin) {
         for (const field of plugin.formFields) {
           if (field.envVar && integration.config[field.configKey]) {
-            envVars[field.envVar] = String(
-              integration.config[field.configKey]
-            );
+            envVars[field.envVar] = String(integration.config[field.configKey]);
           }
         }
       }
@@ -185,7 +190,7 @@ export async function POST(
     // 5. Deploy to Vercel
     const vercelFiles = Object.entries(files).map(([path, data]) => ({
       file: path,
-      data: data,
+      data,
     }));
 
     const projectName = `workflow-${workflowId.toLowerCase()}`;
@@ -215,9 +220,7 @@ export async function POST(
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(
-        result.error?.message || "Failed to deploy to Vercel"
-      );
+      throw new Error(result.error?.message || "Failed to deploy to Vercel");
     }
 
     // 6. Set env vars on the project (separate API call)
@@ -262,9 +265,7 @@ export async function POST(
       {
         success: false,
         error:
-          error instanceof Error
-            ? error.message
-            : "Failed to publish workflow",
+          error instanceof Error ? error.message : "Failed to publish workflow",
       },
       { status: 500 }
     );
