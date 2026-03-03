@@ -26,6 +26,10 @@ Do NOT use this skill when:
 - The user wants to create a NEW workflow (use `superr-workflow-generator` instead)
 - The user is not viewing a specific workflow
 
+## How It Works
+
+Changes are broadcast in real-time to the user's canvas via Server-Sent Events (SSE). The user sees updates instantly as you make them. The changes are NOT saved to the database automatically — the user must manually save when satisfied.
+
 ## Workflow Editing Process
 
 ### Step 1: Get the workflow ID
@@ -37,21 +41,14 @@ The `pageContext` contains the workflow ID when viewing the canvas:
 
 If the ID is not available, ask the user which workflow to edit.
 
-### Step 2: Fetch the current workflow
+### Step 2: Understand the current workflow
 
-```bash
-curl -s "${WORKFLOW_APP_URL}/api/agent/workflows/${workflowId}" \
-  -H "Authorization: Bearer ${WORKFLOW_AGENT_KEY}"
-```
+You can either:
 
-Response contains: `id`, `name`, `description`, `nodes`, `edges`, `createdAt`, `updatedAt`.
+- **Fetch the workflow**: Use GET to understand the current structure
+- **Ask the user**: What does your workflow currently look like?
 
-### Step 3: Understand the structure
-
-- **Nodes**: `{ id, type, position: {x, y}, data: { label, description, config, status } }`
-- **Edges**: `{ id, source, target, type }`
-
-### Step 4: Find available actions (when adding nodes)
+### Step 3: Find available actions (when adding nodes)
 
 Read `resources/actions.json` to discover action types. Each entry has:
 
@@ -59,42 +56,67 @@ Read `resources/actions.json` to discover action types. Each entry has:
 - `label` — human-readable name
 - `configFields` — required and optional fields
 
-### Step 5: Make modifications
+### Step 4: Make modifications (broadcast to canvas)
 
-**Adding a node:**
-
-1. Create new node with unique ID (e.g., `action-3`)
-2. Position at `x + 300` from previous node
-3. Add edge connecting to/from
-
-**Removing a node:**
-
-1. Remove from `nodes` array
-2. Remove all connected edges
-
-**Editing a node:**
-
-- Update `data.label`, `data.description`, or `data.config`
-
-**Reconnecting edges:**
-
-- Change `source` or `target` to different node IDs
-
-### Step 6: Save changes
+Send operations via PATCH. Each operation is broadcast instantly to the canvas:
 
 ```bash
 curl -s -X PATCH "${WORKFLOW_APP_URL}/api/agent/workflows/${workflowId}" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer ${WORKFLOW_AGENT_KEY}" \
-  -d '{"nodes": [...], "edges": [...]}'
+  -d '{
+    "operations": [
+      { "op": "addNode", "node": { ... } },
+      { "op": "addEdge", "edge": { ... } }
+    ]
+  }'
 ```
 
-### Step 7: Report to user
+**Available Operations:**
+
+| Operation    | Description                           |
+| ------------ | ------------------------------------- |
+| `addNode`    | Add a new node to the canvas          |
+| `addEdge`    | Connect two nodes                     |
+| `removeNode` | Remove a node and its connected edges |
+| `removeEdge` | Remove a specific edge                |
+| `updateNode` | Update node position or data          |
+| `updateEdge` | Update edge source/target             |
+| `replaceAll` | Replace entire nodes/edges arrays     |
+
+**Operation Examples:**
+
+```json
+// Add a node
+{ "op": "addNode", "node": { "id": "action-3", "type": "action", "position": { "x": 700, "y": 200 }, "data": { ... } } }
+
+// Add an edge
+{ "op": "addEdge", "edge": { "id": "edge-3", "source": "action-2", "target": "action-3" } }
+
+// Remove a node
+{ "op": "removeNode", "nodeId": "action-1" }
+
+// Update node position
+{ "op": "updateNode", "nodeId": "action-1", "updates": { "position": { "x": 500, "y": 300 } } }
+
+// Update node data
+{ "op": "updateNode", "nodeId": "action-1", "updates": { "data": { "label": "New Label" } } }
+
+// Replace all (full refresh)
+{ "op": "replaceAll", "nodes": [...], "edges": [...] }
+```
+
+### Step 5: Real-time updates
+
+The canvas updates automatically via SSE. The user sees changes instantly as you broadcast operations.
+
+### Step 6: Report to user
 
 Tell the user:
 
 - What changed (added/removed/modified nodes)
-- Link: `${WORKFLOW_APP_URL}/workflow/${workflowId}`
+- Remind them to save the workflow when satisfied
+- Provide the link: `${WORKFLOW_APP_URL}/workflow/${workflowId}`
 
 ## Node Reference
 
@@ -156,6 +178,8 @@ Tell the user:
 
 ## Important Notes
 
-- Always fetch the latest workflow before editing (may have changed)
+- Operations are broadcast in real-time via SSE — the user sees changes instantly
+- Changes are NOT saved to the database automatically — the user must click Save
 - Validate edge references point to existing node IDs
 - Use `{{NodeLabel.fieldName}}` for referencing previous node outputs
+- If the user refreshes the page, changes are lost unless they saved

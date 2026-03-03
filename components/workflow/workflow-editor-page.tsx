@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { NodeConfigPanel } from "@/components/workflow/node-config-panel";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useWorkflowExecutionStreams } from "@/hooks/use-workflow-execution-streams";
+import { useWorkflowStream } from "@/hooks/use-workflow-stream";
 import {
   clearAiAgentPageContextDetailsAtom,
   setAiAgentPageContextDetailsAtom,
@@ -166,6 +167,8 @@ function WorkflowEditor({ params }: WorkflowPageProps) {
     selectedExecutionId,
     workflowId,
   });
+
+  useWorkflowStream(workflowId);
 
   useEffect(() => {
     if (requestedTab === "ai") {

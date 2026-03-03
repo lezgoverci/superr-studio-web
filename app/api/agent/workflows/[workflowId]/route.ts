@@ -4,10 +4,15 @@ import { AGENT_SCOPES, authenticateAgentRequest } from "@/lib/agent-auth";
 import { db } from "@/lib/db";
 import { validateWorkflowIntegrations } from "@/lib/db/integrations";
 import { workflows } from "@/lib/db/schema";
+import { diffWorkflow } from "@/lib/workflow-diff";
 import {
   normalizeWorkflowVisibility,
   serializeWorkflowDates,
 } from "@/lib/workflow-route-utils";
+import {
+  broadcastBatch,
+  type WorkflowOperation,
+} from "@/lib/workflow-subscriptions";
 
 type ApiError = {
   status: number;
@@ -16,6 +21,26 @@ type ApiError = {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isWorkflowOperation(value: unknown): value is WorkflowOperation {
+  if (!isRecord(value)) return false;
+  const op = value.op;
+  return (
+    op === "addNode" ||
+    op === "addEdge" ||
+    op === "removeNode" ||
+    op === "removeEdge" ||
+    op === "updateNode" ||
+    op === "updateEdge" ||
+    op === "replaceAll"
+  );
+}
+
+function isWorkflowOperationArray(
+  value: unknown
+): value is WorkflowOperation[] {
+  return Array.isArray(value) && value.every(isWorkflowOperation);
 }
 
 function parseUiPayload(value: unknown): Record<string, unknown> | null {
@@ -197,6 +222,19 @@ export async function PATCH(
       );
     }
 
+    // Handle operations (broadcast only, no DB write)
+    if (isWorkflowOperationArray(body.operations)) {
+      // Broadcast operations to subscribers
+      broadcastBatch(workflowId, body.operations);
+
+      return NextResponse.json({
+        success: true,
+        message: "Operations broadcasted",
+        operations: body.operations,
+      });
+    }
+
+    // Existing behavior: save full workflow to DB
     const validationError = await validatePatchBody(body, agentAuth.userId);
     if (validationError) {
       return errorResponse(validationError);
@@ -215,6 +253,21 @@ export async function PATCH(
         { error: "Workflow not found" },
         { status: 404 }
       );
+    }
+
+    // Compute fine-grained operations by diffing old vs new workflow.
+    // This lets the canvas animate individual add/remove/update operations
+    // even when the agent sends the complete nodes/edges.
+    if (Array.isArray(body.nodes) && Array.isArray(body.edges)) {
+      const ops = diffWorkflow(
+        existingWorkflow.nodes as unknown[],
+        existingWorkflow.edges as unknown[],
+        body.nodes as unknown[],
+        body.edges as unknown[]
+      );
+      if (ops.length > 0) {
+        broadcastBatch(workflowId, ops);
+      }
     }
 
     return NextResponse.json(serializeWorkflowDates(updatedWorkflow));
