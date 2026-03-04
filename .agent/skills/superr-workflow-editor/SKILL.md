@@ -91,7 +91,7 @@ curl -s -X PATCH "${WORKFLOW_APP_URL}/api/agent/workflows/${workflowId}" \
 { "op": "addNode", "node": { "id": "action-3", "type": "action", "position": { "x": 700, "y": 200 }, "data": { ... } } }
 
 // Add an edge
-{ "op": "addEdge", "edge": { "id": "edge-3", "source": "action-2", "target": "action-3" } }
+{ "op": "addEdge", "edge": { "id": "edge-3", "source": "action-2", "target": "action-3", "type": "animated" } }
 
 // Remove a node
 { "op": "removeNode", "nodeId": "action-1" }
@@ -166,7 +166,7 @@ Tell the user:
   "id": "edge-1",
   "source": "trigger-1",
   "target": "action-1",
-  "type": "default"
+  "type": "animated"
 }
 ```
 

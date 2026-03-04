@@ -95,7 +95,7 @@ Edges connect nodes source → target:
   "id": "edge-1",
   "source": "trigger-1",
   "target": "action-1",
-  "type": "default"
+  "type": "animated"
 }
 ```
 
@@ -196,8 +196,8 @@ Tell the user:
     }
   ],
   "edges": [
-    { "id": "edge-1", "source": "trigger-1", "target": "action-1", "type": "default" },
-    { "id": "edge-2", "source": "action-1", "target": "action-2", "type": "default" }
+    { "id": "edge-1", "source": "trigger-1", "target": "action-1", "type": "animated" },
+    { "id": "edge-2", "source": "action-1", "target": "action-2", "type": "animated" }
   ]
 }
 ```

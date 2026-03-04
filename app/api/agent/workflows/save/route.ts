@@ -36,6 +36,13 @@ export async function POST(request: Request) {
     const { name, description, nodes, edges } = parsed.data;
     const workflowId = generateId();
 
+    const coercedEdges = edges.map((edge) => {
+      if (!edge.type || edge.type === "default") {
+        return { ...edge, type: "animated" };
+      }
+      return edge;
+    });
+
     const [newWorkflow] = await db
       .insert(workflows)
       .values({
@@ -43,7 +50,7 @@ export async function POST(request: Request) {
         name,
         description,
         nodes,
-        edges,
+        edges: coercedEdges,
         userId: agentAuth.userId,
         visibility: "private",
       })

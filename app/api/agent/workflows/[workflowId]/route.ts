@@ -110,7 +110,12 @@ function buildPatchUpdateData(
   }
 
   if (Array.isArray(body.edges)) {
-    updateData.edges = body.edges;
+    updateData.edges = body.edges.map((edge) => {
+      if (isRecord(edge) && (!edge.type || edge.type === "default")) {
+        return { ...edge, type: "animated" };
+      }
+      return edge;
+    });
   }
 
   if (body.visibility !== undefined) {
@@ -224,6 +229,22 @@ export async function PATCH(
 
     // Handle operations (broadcast only, no DB write)
     if (isWorkflowOperationArray(body.operations)) {
+      body.operations.forEach((op) => {
+        if (op.op === "addEdge" && op.edge && typeof op.edge === "object") {
+          const edge = op.edge as Record<string, any>;
+          if (!edge.type || edge.type === "default") {
+            edge.type = "animated";
+          }
+        } else if (op.op === "replaceAll" && Array.isArray(op.edges)) {
+          op.edges = op.edges.map((edge) => {
+            if (isRecord(edge) && (!edge.type || edge.type === "default")) {
+              return { ...edge, type: "animated" };
+            }
+            return edge;
+          });
+        }
+      });
+
       // Broadcast operations to subscribers
       broadcastBatch(workflowId, body.operations);
 
