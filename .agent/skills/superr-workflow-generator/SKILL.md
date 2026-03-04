@@ -9,8 +9,9 @@ This skill lets you create automation workflows for the superr-workflow-builder 
 
 ## Prerequisites
 
-- A `wfb_` API key with `workflow:compose` and `workflow:write` scopes (set as `WORKFLOW_AGENT_KEY` in your environment, or ask the user for it).
-- The app must be running or deployed (set `WORKFLOW_APP_URL` to the base URL, e.g. `http://localhost:3000`).
+- `WORKFLOW_APP_URL` and `WORKFLOW_AGENT_KEY` are already provided to you in the system context.
+  Look for the lines "App URL (WORKFLOW_APP_URL)" and "Agent API Key (WORKFLOW_AGENT_KEY)" in the page context.
+- Use these values directly in your curl commands — do NOT read `.env` files or ask the user for them.
 
 ## How to Generate a Workflow
 

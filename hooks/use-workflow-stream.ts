@@ -54,7 +54,10 @@ export function useWorkflowStream(workflowId: string | null) {
     (operation: WorkflowOperation) => {
       // Skip the initial replaceAll sent by the SSE endpoint on connect —
       // loadExistingWorkflow already sets the correct state with idle statuses.
-      if (operation.op === "replaceAll" && !hasReceivedInitialStateRef.current) {
+      if (
+        operation.op === "replaceAll" &&
+        !hasReceivedInitialStateRef.current
+      ) {
         hasReceivedInitialStateRef.current = true;
         return;
       }
@@ -139,7 +142,7 @@ export function useWorkflowStream(workflowId: string | null) {
     console.log("[Workflow Stream] useEffect running, workflowId:", workflowId);
     if (!workflowId) return;
 
-    const MAX_RECONNECT_DELAY = 30000;
+    const MAX_RECONNECT_DELAY = 30_000;
     const BASE_RECONNECT_DELAY = 1000;
 
     // Reset the initial state flag when the workflow changes

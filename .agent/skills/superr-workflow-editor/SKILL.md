@@ -9,8 +9,9 @@ Edit existing workflows on the Superr canvas. The user must already have a workf
 
 ## Prerequisites
 
-- A `wfb_` API key with `workflow:write` scope. Set as `WORKFLOW_AGENT_KEY` in your environment, or ask the user for it.
-- The app URL. Set `WORKFLOW_APP_URL` (e.g., `http://localhost:3000`).
+- `WORKFLOW_APP_URL` and `WORKFLOW_AGENT_KEY` are already provided to you in the system context.
+  Look for the lines "App URL (WORKFLOW_APP_URL)" and "Agent API Key (WORKFLOW_AGENT_KEY)" in the page context.
+- Use these values directly in your curl commands — do NOT read `.env` files or ask the user for them.
 
 ## When to Use This Skill
 

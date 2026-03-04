@@ -185,7 +185,8 @@ function sanitizePageContext(raw: unknown): AiAgentContextEnvelope | null {
 }
 
 function buildPageContextSystemPrompt(
-  pageContext: AiAgentContextEnvelope | null
+  pageContext: AiAgentContextEnvelope | null,
+  request: Request
 ): string | undefined {
   if (!pageContext) {
     return;
@@ -224,6 +225,19 @@ function buildPageContextSystemPrompt(
     );
   }
 
+  const appUrl =
+    process.env.WORKFLOW_APP_URL ||
+    process.env.BETTER_AUTH_URL ||
+    `${request.headers.get("x-forwarded-proto") || "http"}://${request.headers.get("host")}`;
+  const agentKey = process.env.WORKFLOW_AGENT_KEY;
+
+  if (appUrl) {
+    contextLines.push(`- App URL (WORKFLOW_APP_URL): ${appUrl}`);
+  }
+  if (agentKey) {
+    contextLines.push(`- Agent API Key (WORKFLOW_AGENT_KEY): ${agentKey}`);
+  }
+
   contextLines.push(
     "Use this context to make answers relevant. If user intent conflicts with context, ask a clarification question."
   );
@@ -245,7 +259,10 @@ export async function POST(request: Request) {
     const body = parseRequestBody(rawBody);
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const pageContext = sanitizePageContext(body.pageContext);
-    const pageContextPrompt = buildPageContextSystemPrompt(pageContext);
+    const pageContextPrompt = buildPageContextSystemPrompt(
+      pageContext,
+      request
+    );
 
     if (messages.length === 0) {
       return NextResponse.json(

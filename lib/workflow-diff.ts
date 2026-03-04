@@ -131,8 +131,7 @@ export function diffWorkflow(
     // Check position change
     if (
       newNode.position &&
-      (!oldNode.position ||
-        !shallowEqual(oldNode.position, newNode.position))
+      !(oldNode.position && shallowEqual(oldNode.position, newNode.position))
     ) {
       updates.position = newNode.position;
       hasUpdates = true;
