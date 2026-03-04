@@ -144,6 +144,29 @@ export const opencodeConnections = pgTable(
   })
 );
 
+// User preferences table for per-user settings
+export const userPreferences = pgTable(
+  "user_preferences",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    workflowOperationDelayMs: integer("workflow_operation_delay_ms")
+      .notNull()
+      .default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdUnique: uniqueIndex("user_preferences_user_id_unique").on(
+      table.userId
+    ),
+  })
+);
+
 // Workflow executions table to track workflow runs
 export const workflowExecutions = pgTable(
   "workflow_executions",
@@ -387,3 +410,5 @@ export type Artifact = typeof artifacts.$inferSelect;
 export type NewArtifact = typeof artifacts.$inferInsert;
 export type ArtifactPublication = typeof artifactPublications.$inferSelect;
 export type NewArtifactPublication = typeof artifactPublications.$inferInsert;
+export type UserPreference = typeof userPreferences.$inferSelect;
+export type NewUserPreference = typeof userPreferences.$inferInsert;

@@ -50,6 +50,12 @@ export function useWorkflowStream(workflowId: string | null) {
   // since loadExistingWorkflow already loaded the workflow
   const hasReceivedInitialStateRef = useRef(false);
 
+  // Operation delay queue refs
+  const delayMsRef = useRef(0);
+  const operationQueueRef = useRef<WorkflowOperation[]>([]);
+  const processingRef = useRef(false);
+  const processingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const applyOperation = useCallback(
     (operation: WorkflowOperation) => {
       // Skip the initial replaceAll sent by the SSE endpoint on connect —
@@ -138,6 +144,95 @@ export function useWorkflowStream(workflowId: string | null) {
     [setEdges, setNodes, setSelectedNode, setHasUnsavedChanges]
   );
 
+  // Process the operation queue one item at a time with delay
+  const processQueue = useCallback(() => {
+    if (processingRef.current) return;
+    if (operationQueueRef.current.length === 0) return;
+
+    processingRef.current = true;
+
+    const drainNext = () => {
+      const next = operationQueueRef.current.shift();
+      if (!next) {
+        processingRef.current = false;
+        return;
+      }
+
+      applyOperation(next);
+
+      if (operationQueueRef.current.length > 0 && delayMsRef.current > 0) {
+        processingTimeoutRef.current = setTimeout(
+          drainNext,
+          delayMsRef.current
+        );
+      } else if (operationQueueRef.current.length > 0) {
+        // No delay — apply remaining immediately
+        drainNext();
+      } else {
+        processingRef.current = false;
+      }
+    };
+
+    drainNext();
+  }, [applyOperation]);
+
+  // Enqueue an operation (or apply immediately if no delay)
+  const enqueueOperation = useCallback(
+    (operation: WorkflowOperation) => {
+      // Skip the initial replaceAll regardless of delay — no need to queue it
+      if (
+        operation.op === "replaceAll" &&
+        !hasReceivedInitialStateRef.current
+      ) {
+        hasReceivedInitialStateRef.current = true;
+        return;
+      }
+
+      if (delayMsRef.current <= 0) {
+        // No delay — apply directly, bypass queue
+        applyOperation(operation);
+        return;
+      }
+
+      operationQueueRef.current.push(operation);
+      processQueue();
+    },
+    [applyOperation, processQueue]
+  );
+
+  // Fetch user preferences for delay on mount
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchDelay() {
+      try {
+        const res = await fetch("/api/user/preferences");
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled) {
+            delayMsRef.current = data.workflowOperationDelayMs ?? 0;
+            console.log(
+              "[Workflow Stream] Operation delay set to:",
+              delayMsRef.current,
+              "ms"
+            );
+          }
+        }
+      } catch (error) {
+        console.warn(
+          "[Workflow Stream] Failed to fetch operation delay preference:",
+          error
+        );
+      }
+    }
+
+    fetchDelay();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   useEffect(() => {
     console.log("[Workflow Stream] useEffect running, workflowId:", workflowId);
     if (!workflowId) return;
@@ -168,7 +263,7 @@ export function useWorkflowStream(workflowId: string | null) {
         try {
           const operation = JSON.parse(event.data) as WorkflowOperation;
           console.log("[Workflow Stream] Received operation:", operation.op);
-          applyOperation(operation);
+          enqueueOperation(operation);
         } catch (error) {
           console.error("[Workflow Stream] Failed to parse operation:", error);
         }
@@ -212,9 +307,16 @@ export function useWorkflowStream(workflowId: string | null) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
       }
+      if (processingTimeoutRef.current) {
+        clearTimeout(processingTimeoutRef.current);
+        processingTimeoutRef.current = null;
+      }
+      // Clear the queue on unmount
+      operationQueueRef.current = [];
+      processingRef.current = false;
       reconnectAttemptsRef.current = 0;
     };
-  }, [workflowId, applyOperation]);
+  }, [workflowId, enqueueOperation]);
 
   return { applyOperation };
 }

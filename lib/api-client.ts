@@ -715,6 +715,17 @@ export const opencodeApi = {
     ),
 };
 
+export const userPreferencesApi = {
+  get: () =>
+    apiCall<{ workflowOperationDelayMs: number }>("/api/user/preferences"),
+
+  update: (data: { workflowOperationDelayMs: number }) =>
+    apiCall<{ workflowOperationDelayMs: number }>("/api/user/preferences", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+};
+
 // Export all APIs as a single object
 export const api = {
   artifact: artifactApi,
@@ -723,5 +734,6 @@ export const api = {
   integration: integrationApi,
   opencode: opencodeApi,
   user: userApi,
+  userPreferences: userPreferencesApi,
   workflow: workflowApi,
 };
