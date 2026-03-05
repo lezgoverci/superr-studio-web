@@ -133,6 +133,7 @@ export const opencodeConnections = pgTable(
       .default("self_hosted")
       .$type<OpencodeConnectionMode>(),
     baseUrl: text("base_url").notNull(),
+    directory: text("directory"),
     username: text("username").notNull(),
     passwordEncrypted: text("password_encrypted").notNull(),
     isActive: boolean("is_active").notNull().default(false),
@@ -163,6 +164,43 @@ export const userPreferences = pgTable(
   (table) => ({
     userIdUnique: uniqueIndex("user_preferences_user_id_unique").on(
       table.userId
+    ),
+  })
+);
+
+// User skills table to track installed AI agent skills per user
+export type SkillStatus = "installed" | "installing" | "failed";
+
+export const userSkills = pgTable(
+  "user_skills",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    skillName: text("skill_name").notNull(),
+    description: text("description"),
+    source: text("source").notNull(),
+    sourceType: text("source_type")
+      .notNull()
+      .$type<"github" | "local" | "well-known">(),
+    version: text("version"),
+    status: text("status")
+      .notNull()
+      .$type<SkillStatus>()
+      .default("installed"),
+    // biome-ignore lint/suspicious/noExplicitAny: JSONB type - skill metadata from frontmatter
+    metadata: jsonb("metadata").$type<Record<string, any> | null>(),
+    installedAt: timestamp("installed_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index("user_skills_user_id_idx").on(table.userId),
+    userSkillUnique: uniqueIndex("user_skills_user_skill_unique").on(
+      table.userId,
+      table.skillName
     ),
   })
 );
@@ -412,3 +450,5 @@ export type ArtifactPublication = typeof artifactPublications.$inferSelect;
 export type NewArtifactPublication = typeof artifactPublications.$inferInsert;
 export type UserPreference = typeof userPreferences.$inferSelect;
 export type NewUserPreference = typeof userPreferences.$inferInsert;
+export type UserSkill = typeof userSkills.$inferSelect;
+export type NewUserSkill = typeof userSkills.$inferInsert;

@@ -80,6 +80,29 @@ function buildTargetPath(basePathname: string, segments: string[]): string {
   return `${normalizedBase}/${appendedPath}`.replace(MULTIPLE_SLASH_REGEX, "/");
 }
 
+function decodeDirectoryHeaderValue(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    const decoded = decodeURIComponent(trimmed).trim();
+    return decoded || null;
+  } catch {
+    return trimmed;
+  }
+}
+
+function getRequestDirectory(request: Request): string | null {
+  const headerValue = request.headers.get("x-opencode-directory");
+  if (!headerValue) {
+    return null;
+  }
+
+  return decodeDirectoryHeaderValue(headerValue);
+}
+
 function buildUpstreamHeaders(
   request: Request,
   password: string,
@@ -156,6 +179,10 @@ async function handleProxy(request: Request, context: RouteContext) {
     pathSegments
   );
   targetBaseUrl.search = currentUrl.search;
+  const requestDirectory = getRequestDirectory(request);
+  if (requestDirectory && !targetBaseUrl.searchParams.has("directory")) {
+    targetBaseUrl.searchParams.set("directory", requestDirectory);
+  }
 
   const hasRequestBody = !["GET", "HEAD"].includes(request.method);
   const body = hasRequestBody

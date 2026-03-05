@@ -16,6 +16,7 @@ type SavedConnection = {
   id: string;
   name: string | null;
   url: string;
+  directory: string | null;
   username: string;
   isActive: boolean;
 };
@@ -89,6 +90,7 @@ export function OpenCodeServerSection() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [newUrl, setNewUrl] = useState("");
+  const [newDirectory, setNewDirectory] = useState("");
   const [newUsername, setNewUsername] = useState(DEFAULT_OPENCODE_USERNAME);
   const [newPassword, setNewPassword] = useState("");
 
@@ -122,6 +124,7 @@ export function OpenCodeServerSection() {
 
   const handleAddConnection = useCallback(async () => {
     const trimmedUrl = newUrl.trim();
+    const trimmedDirectory = newDirectory.trim();
     const trimmedUsername = newUsername.trim() || DEFAULT_OPENCODE_USERNAME;
     const trimmedPassword = newPassword.trim();
     const trimmedName = newName.trim() || null;
@@ -140,6 +143,7 @@ export function OpenCodeServerSection() {
     try {
       const response = await api.opencode.saveConnection({
         url: trimmedUrl,
+        directory: trimmedDirectory || undefined,
         username: trimmedUsername,
         password: trimmedPassword || undefined,
         name: trimmedName || undefined,
@@ -152,6 +156,7 @@ export function OpenCodeServerSection() {
       setShowAddForm(false);
       setNewName("");
       setNewUrl("");
+      setNewDirectory("");
       setNewUsername(DEFAULT_OPENCODE_USERNAME);
       setNewPassword("");
 
@@ -161,6 +166,7 @@ export function OpenCodeServerSection() {
       updateConnectionConfig({
         url: activeConn.url,
         username: activeConn.username,
+        ...(activeConn.directory ? { directory: activeConn.directory } : {}),
       });
       await verifyConnection();
       toast.success("OpenCode server added");
@@ -174,6 +180,7 @@ export function OpenCodeServerSection() {
     }
   }, [
     newUrl,
+    newDirectory,
     newUsername,
     newPassword,
     newName,
@@ -194,6 +201,9 @@ export function OpenCodeServerSection() {
           updateConnectionConfig({
             url: newActive.url,
             username: newActive.username,
+            ...(newActive.directory
+              ? { directory: newActive.directory }
+              : {}),
           });
           await verifyConnection();
         } else if (remaining.length === 0) {
@@ -231,6 +241,9 @@ export function OpenCodeServerSection() {
           updateConnectionConfig({
             url: activeConn.url,
             username: activeConn.username,
+            ...(activeConn.directory
+              ? { directory: activeConn.directory }
+              : {}),
           });
           await verifyConnection();
         }
@@ -249,6 +262,7 @@ export function OpenCodeServerSection() {
     setShowAddForm(false);
     setNewName("");
     setNewUrl("");
+    setNewDirectory("");
     setNewUsername(DEFAULT_OPENCODE_USERNAME);
     setNewPassword("");
   }, []);
@@ -305,6 +319,11 @@ export function OpenCodeServerSection() {
                         <p className="mt-0.5 truncate text-muted-foreground text-xs">
                           {conn.url}
                         </p>
+                        {conn.directory ? (
+                          <p className="mt-0.5 truncate text-muted-foreground text-xs">
+                            Directory: {conn.directory}
+                          </p>
+                        ) : null}
                       </div>
                       <div className="ml-2 flex items-center gap-1">
                         {!conn.isActive && (
@@ -365,6 +384,18 @@ export function OpenCodeServerSection() {
                     onChange={(e) => setNewUsername(e.target.value)}
                     placeholder={DEFAULT_OPENCODE_USERNAME}
                     value={newUsername}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="opencode-server-directory">
+                    Working Directory (optional)
+                  </Label>
+                  <Input
+                    id="opencode-server-directory"
+                    onChange={(e) => setNewDirectory(e.target.value)}
+                    placeholder="e.g., /Users/you/projects/your-repo"
+                    value={newDirectory}
                   />
                 </div>
 

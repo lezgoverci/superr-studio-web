@@ -11,6 +11,7 @@ import {
   opencodeConnections,
   sessions,
   userPreferences,
+  userSkills,
   users,
   verifications,
   workflowExecutionLogs,
@@ -35,6 +36,7 @@ const schema = {
   integrations,
   opencodeConnections,
   userPreferences,
+  userSkills,
 };
 
 const connectionString = resolveDatabaseUrlWithFallback();

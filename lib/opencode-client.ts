@@ -12,6 +12,7 @@ const OPENCODE_PROXY_BASE_URL = "/api/opencode";
 export type OpenCodeConnectionConfig = {
   url: string;
   username: string;
+  directory?: string;
 };
 
 let client: OpencodeClient | null = null;
@@ -23,6 +24,9 @@ function normalizeConnectionConfig(
   return {
     url: normalizeOpencodeBaseUrl(config.url),
     username: config.username.trim() || DEFAULT_OPENCODE_USERNAME,
+    ...(config.directory?.trim()
+      ? { directory: config.directory.trim() }
+      : {}),
   };
 }
 
@@ -51,6 +55,9 @@ export function getOpenCodeClient(): OpencodeClient | null {
 
   client = createOpencodeClient({
     baseUrl: OPENCODE_PROXY_BASE_URL,
+    ...(connectionConfig.directory
+      ? { directory: connectionConfig.directory }
+      : {}),
   });
 
   return client;

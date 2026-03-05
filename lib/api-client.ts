@@ -122,6 +122,7 @@ export type OpencodeConnection = {
   name: string | null;
   mode: OpencodeConnectionMode;
   url: string;
+  directory: string | null;
   username: string;
   isActive: boolean;
   createdAt?: Date;
@@ -145,6 +146,14 @@ export type ActivateConnectionResponse = {
   success: boolean;
   activeConnectionId: string;
   connections: OpencodeConnection[];
+};
+
+export type OpencodePathInfo = {
+  home: string;
+  state: string;
+  config: string;
+  worktree: string;
+  directory: string;
 };
 
 // Integration API
@@ -692,6 +701,7 @@ export const opencodeApi = {
     username: string;
     password?: string;
     name?: string;
+    directory?: string;
   }) =>
     apiCall<OpencodeConnectionResponse>("/api/opencode/connection", {
       method: "PUT",
@@ -713,6 +723,16 @@ export const opencodeApi = {
         method: "PUT",
       }
     ),
+
+  getPath: () => apiCall<OpencodePathInfo>("/api/opencode/path"),
+
+  disposeInstance: (options?: { directory?: string }) =>
+    apiCall<boolean>(
+      `/api/opencode/instance/dispose${options?.directory ? `?directory=${encodeURIComponent(options.directory)}` : ""}`,
+      {
+        method: "POST",
+      }
+    ),
 };
 
 export const userPreferencesApi = {
@@ -726,6 +746,60 @@ export const userPreferencesApi = {
     }),
 };
 
+// Skills types
+export type SkillStatus = "installed" | "installing" | "failed";
+
+export type UserSkillRecord = {
+  id: string;
+  userId: string;
+  skillName: string;
+  description: string | null;
+  source: string;
+  sourceType: "github" | "local" | "well-known";
+  version: string | null;
+  status: SkillStatus;
+  metadata: Record<string, unknown> | null;
+  installedAt: string;
+  updatedAt: string;
+};
+
+export type MarketplaceSearchResult = {
+  name: string;
+  slug: string;
+  source: string;
+  installs: number;
+};
+
+export type InstallSkillResult = {
+  success: true;
+  skillId: string;
+  skillName: string;
+  description: string | null;
+  source: string;
+  sourceType: "github" | "local" | "well-known";
+};
+
+export const skillsApi = {
+  list: () => apiCall<UserSkillRecord[]>("/api/skills"),
+
+  install: (data: { source: string; skillName?: string; agentCwd?: string }) =>
+    apiCall<InstallSkillResult>("/api/skills", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  uninstall: (id: string, data?: { agentCwd?: string }) =>
+    apiCall<{ success: boolean }>(`/api/skills/${id}`, {
+      method: "DELETE",
+      ...(data ? { body: JSON.stringify(data) } : {}),
+    }),
+
+  search: (query: string) =>
+    apiCall<{ skills: MarketplaceSearchResult[] }>(
+      `/api/skills/search?q=${encodeURIComponent(query)}`
+    ),
+};
+
 // Export all APIs as a single object
 export const api = {
   artifact: artifactApi,
@@ -733,6 +807,7 @@ export const api = {
   agentWorkflow: agentWorkflowApi,
   integration: integrationApi,
   opencode: opencodeApi,
+  skills: skillsApi,
   user: userApi,
   userPreferences: userPreferencesApi,
   workflow: workflowApi,

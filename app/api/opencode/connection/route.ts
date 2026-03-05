@@ -8,6 +8,7 @@ import {
   upsertOpencodeConnectionForUser,
 } from "@/lib/db/opencode-connections";
 import {
+  createBasicAuthHeader,
   DEFAULT_OPENCODE_USERNAME,
   normalizeOpencodeBaseUrl,
   parseOpencodeUrl,
@@ -18,7 +19,58 @@ type UpsertConnectionRequest = {
   username?: string;
   password?: string;
   name?: string;
+  directory?: string;
 };
+
+const TRAILING_SLASH_REGEX = /\/+$/;
+const MULTIPLE_SLASH_REGEX = /\/+/g;
+
+function buildTargetPath(basePathname: string, segments: string[]): string {
+  const normalizedBase = basePathname.replace(TRAILING_SLASH_REGEX, "");
+  const encodedSegments = segments.map((segment) =>
+    encodeURIComponent(segment)
+  );
+  const appendedPath = encodedSegments.join("/");
+  return `${normalizedBase}/${appendedPath}`.replace(MULTIPLE_SLASH_REGEX, "/");
+}
+
+async function resolveOpencodeDirectory(
+  url: string,
+  username: string,
+  password: string
+): Promise<string | null> {
+  const targetBaseUrl = parseOpencodeUrl(url);
+  if (!targetBaseUrl) {
+    return null;
+  }
+
+  targetBaseUrl.pathname = buildTargetPath(targetBaseUrl.pathname, ["path"]);
+
+  try {
+    const response = await fetch(targetBaseUrl, {
+      method: "GET",
+      headers: {
+        Authorization: createBasicAuthHeader(password, username),
+        "Accept-Encoding": "identity",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response
+      .json()
+      .catch(() => null)) as { directory?: unknown } | null;
+    const directory =
+      typeof payload?.directory === "string" ? payload.directory.trim() : "";
+
+    return directory || null;
+  } catch {
+    return null;
+  }
+}
 
 function isAuthError(error: unknown): boolean {
   return (
@@ -66,6 +118,7 @@ export async function GET(request: Request) {
         name: c.name,
         mode: c.mode,
         url: c.url,
+        directory: c.directory,
         username: c.username,
         isActive: c.isActive,
         createdAt: c.createdAt,
@@ -99,6 +152,7 @@ export async function PUT(request: Request) {
   const username = body?.username?.trim() || DEFAULT_OPENCODE_USERNAME;
   const passwordInput = body?.password?.trim() ?? "";
   const name = body?.name?.trim() ?? null;
+  const directoryInput = body?.directory?.trim() ?? "";
 
   if (!urlInput) {
     return NextResponse.json({ error: "URL is required." }, { status: 400 });
@@ -118,6 +172,7 @@ export async function PUT(request: Request) {
   try {
     const existing = await getResolvedOpencodeConnectionForUser(userIdOrError);
     const password = passwordInput || existing?.password;
+    const normalizedUrl = normalizeOpencodeBaseUrl(parsedUrl);
 
     if (!password) {
       return NextResponse.json(
@@ -126,11 +181,16 @@ export async function PUT(request: Request) {
       );
     }
 
+    const resolvedDirectory =
+      directoryInput ||
+      (await resolveOpencodeDirectory(normalizedUrl, username, password));
+
     const saved = await upsertOpencodeConnectionForUser({
       userId: userIdOrError,
       name,
       mode: "self_hosted",
-      url: normalizeOpencodeBaseUrl(parsedUrl),
+      url: normalizedUrl,
+      directory: resolvedDirectory,
       username,
       password,
     });
@@ -145,6 +205,7 @@ export async function PUT(request: Request) {
         name: saved.name,
         mode: saved.mode,
         url: saved.url,
+        directory: saved.directory,
         username: saved.username,
         isActive: saved.isActive,
       },

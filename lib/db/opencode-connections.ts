@@ -15,6 +15,7 @@ export type SavedOpencodeConnection = {
   name: string | null;
   mode: OpencodeConnectionMode;
   url: string;
+  directory: string | null;
   username: string;
   isActive: boolean;
   createdAt: Date;
@@ -30,6 +31,7 @@ type UpsertOpencodeConnectionInput = {
   name?: string | null;
   mode?: OpencodeConnectionMode;
   url: string;
+  directory?: string | null;
   username: string;
   password: string;
 };
@@ -43,6 +45,7 @@ function mapConnection(
     name: row.name,
     mode: row.mode,
     url: row.baseUrl,
+    directory: row.directory,
     username: row.username,
     isActive: row.isActive,
     createdAt: row.createdAt,
@@ -210,6 +213,7 @@ export async function upsertOpencodeConnectionForUser(
   const encryptedPassword = encrypt(input.password);
   const now = new Date();
   const name = input.name ?? null;
+  const directory = input.directory?.trim() || null;
 
   const allConnections = await db.query.opencodeConnections.findMany({
     where: eq(opencodeConnections.userId, input.userId),
@@ -223,6 +227,7 @@ export async function upsertOpencodeConnectionForUser(
       name,
       mode,
       baseUrl: normalizedUrl,
+      directory,
       username: input.username,
       passwordEncrypted: encryptedPassword,
       isActive: isFirstConnection,

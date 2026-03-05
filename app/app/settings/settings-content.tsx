@@ -15,6 +15,7 @@ import { ApiKeysSection } from "@/components/settings/api-keys-section";
 import { AppearanceSection } from "@/components/settings/appearance-section";
 import { ConnectionsSection } from "@/components/settings/connections-section";
 import { OpenCodeServerSection } from "@/components/settings/opencode-server-section";
+import { SkillsSection } from "@/components/settings/skills-section";
 import { WorkflowSection } from "@/components/settings/workflow-section";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +32,7 @@ const SETTINGS_TAB_VALUES = [
   "api-keys",
   "providers",
   "agent-server",
+  "skills",
   "workflow",
   "appearance",
   "permissions",
@@ -184,12 +186,13 @@ export default function SettingsContent() {
           }}
           value={activeTab}
         >
-          <TabsList className="grid w-full grid-cols-8">
+          <TabsList className="grid w-full grid-cols-9">
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="connections">Connections</TabsTrigger>
             <TabsTrigger value="api-keys">API Keys</TabsTrigger>
             <TabsTrigger value="providers">AI Providers</TabsTrigger>
             <TabsTrigger value="agent-server">AI Agent</TabsTrigger>
+            <TabsTrigger value="skills">Skills</TabsTrigger>
             <TabsTrigger value="workflow">Workflow</TabsTrigger>
             <TabsTrigger value="appearance">Appearance</TabsTrigger>
             <TabsTrigger value="permissions">Permissions</TabsTrigger>
@@ -217,6 +220,10 @@ export default function SettingsContent() {
 
           <TabsContent className="mt-6 space-y-4" value="agent-server">
             <OpenCodeServerSection />
+          </TabsContent>
+
+          <TabsContent className="mt-6 space-y-4" value="skills">
+            <SkillsSection />
           </TabsContent>
 
           <TabsContent className="mt-6 space-y-4" value="workflow">

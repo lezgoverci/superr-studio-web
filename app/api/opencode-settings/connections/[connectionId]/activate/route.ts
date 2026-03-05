@@ -61,6 +61,7 @@ export async function PUT(
         name: c.name,
         mode: c.mode,
         url: c.url,
+        directory: c.directory,
         username: c.username,
         isActive: c.isActive,
         createdAt: c.createdAt,

@@ -78,6 +78,9 @@ export function OpenCodeProvider({ children }: { children: ReactNode }) {
         saveConnectionConfig({
           url: activeConnection.url,
           username: activeConnection.username,
+          ...(activeConnection.directory
+            ? { directory: activeConnection.directory }
+            : {}),
         });
 
         const config = getConnectionConfig();

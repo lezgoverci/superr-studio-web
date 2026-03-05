@@ -78,6 +78,20 @@
       "when": 1772585583578,
       "tag": "0010_lumpy_omega_sentinel",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1772697597942,
+      "tag": "0011_sudden_zeigeist",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1772706620413,
+      "tag": "0012_salty_whizzer",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,1 @@
+ALTER TABLE "opencode_connections" ADD COLUMN "directory" text;

@@ -77,9 +77,9 @@ import {
   Maximize2,
   MessageSquare,
   Minimize2,
-  Minus,
   MoreHorizontal,
   Plus,
+  RefreshCw,
   Trash2,
   X,
   Bot,
@@ -201,6 +201,7 @@ const QUICK_SUGGESTIONS = [
   "Explain what this workflow does",
   "Add an HTTP request step after the trigger",
 ] as const;
+const SKILLS_UPDATED_EVENT = "superr:skills-updated";
 
 function isToolPart(
   part: UIMessage["parts"][number],
@@ -675,6 +676,10 @@ export function AIAgentChat({
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [hasLoadedSessions, setHasLoadedSessions] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [staleSessionIds, setStaleSessionIds] = useState<Set<string>>(
+    new Set<string>()
+  );
+  const [isReloadingSession, setIsReloadingSession] = useState(false);
   const { connected, connectionConfig: connection } = useOpenCodeConnection();
   const initialSessionAppliedRef = useRef<string | null>(null);
   const activeSessionIdRef = useRef<string | null>(null);
@@ -699,7 +704,8 @@ export function AIAgentChat({
       return null;
     }
     return getOpenCodeSessionConnectionKey(connection);
-  }, [connection?.url, connection?.username]);
+  }, [connection?.directory, connection?.url, connection?.username]);
+  const sessionsRef = useRef<Session[]>([]);
 
   const prevConnectionKeyRef = useRef<string | null>(null);
 
@@ -847,6 +853,77 @@ export function AIAgentChat({
     connectionKeyRef.current = connectionKey;
   }, [connectionKey]);
 
+  useEffect(() => {
+    sessionsRef.current = sessions;
+  }, [sessions]);
+
+  useEffect(() => {
+    if (sessions.length === 0) {
+      setStaleSessionIds((previous) => {
+        if (previous.size === 0) {
+          return previous;
+        }
+        return new Set<string>();
+      });
+      return;
+    }
+
+    setStaleSessionIds((previous) => {
+      if (previous.size === 0) {
+        return previous;
+      }
+
+      const sessionIds = new Set(sessions.map((session) => session.id));
+      let changed = false;
+      const next = new Set<string>();
+      for (const sessionId of previous) {
+        if (sessionIds.has(sessionId)) {
+          next.add(sessionId);
+        } else {
+          changed = true;
+        }
+      }
+
+      return changed ? next : previous;
+    });
+  }, [sessions]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const handleSkillsUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<{ connectionKey?: string }>;
+      const eventConnectionKey = customEvent.detail?.connectionKey;
+      const currentConnectionKey = connectionKeyRef.current;
+      if (
+        eventConnectionKey &&
+        currentConnectionKey &&
+        eventConnectionKey !== currentConnectionKey
+      ) {
+        return;
+      }
+
+      if (sessionsRef.current.length === 0) {
+        return;
+      }
+
+      setStaleSessionIds((previous) => {
+        const next = new Set(previous);
+        for (const session of sessionsRef.current) {
+          next.add(session.id);
+        }
+        return next;
+      });
+    };
+
+    window.addEventListener(SKILLS_UPDATED_EVENT, handleSkillsUpdated);
+    return () => {
+      window.removeEventListener(SKILLS_UPDATED_EVENT, handleSkillsUpdated);
+    };
+  }, []);
+
   const applyInitialSessionIfNeeded = useCallback(
     async (sessionList: Session[]): Promise<boolean> => {
       const normalizedInitialSessionId = initialSessionIdRef.current?.trim();
@@ -902,6 +979,7 @@ export function AIAgentChat({
       if (!isConnected) {
         setHasLoadedSessions(false);
         setSessions([]);
+        setStaleSessionIds(new Set<string>());
         setActiveSession(null);
         setUnreadCount(0);
         resetInactiveSession();
@@ -984,6 +1062,7 @@ export function AIAgentChat({
       if (connected && hasLoadedSessions) {
         setHasLoadedSessions(false);
         setSessions([]);
+        setStaleSessionIds(new Set<string>());
         setActiveSessionId(null);
         setUnreadCount(0);
         resetInactiveSession();
@@ -1049,6 +1128,14 @@ export function AIAgentChat({
       }
 
       setSessions((previous) => [session, ...previous]);
+      setStaleSessionIds((previous) => {
+        if (!previous.has(session.id)) {
+          return previous;
+        }
+        const next = new Set(previous);
+        next.delete(session.id);
+        return next;
+      });
       setActiveSession(session.id);
       cancelPendingMessageLoads();
       setInitialMessages([]);
@@ -1081,6 +1168,14 @@ export function AIAgentChat({
           (session) => session.id !== sessionId,
         );
         setSessions(remainingSessions);
+        setStaleSessionIds((previous) => {
+          if (!previous.has(sessionId)) {
+            return previous;
+          }
+          const next = new Set(previous);
+          next.delete(sessionId);
+          return next;
+        });
         const currentConnectionKey = connectionKeyRef.current;
         if (currentConnectionKey) {
           removeSessionWorkflowMapping(currentConnectionKey, sessionId);
@@ -1135,6 +1230,55 @@ export function AIAgentChat({
     }
   }, []);
 
+  const handleReloadActiveSession = useCallback(async () => {
+    const currentSessionId = activeSessionIdRef.current;
+    if (!currentSessionId) {
+      return;
+    }
+
+    const client = getOpenCodeClient();
+    if (!client) {
+      toast.error("Agent not connected");
+      return;
+    }
+
+    setIsReloadingSession(true);
+    try {
+      const response = await client.session.create();
+      const session = response.data;
+      if (!session) {
+        throw new Error("No session created");
+      }
+
+      setSessions((previous) => [session, ...previous]);
+      setStaleSessionIds((previous) => {
+        if (!previous.has(session.id)) {
+          return previous;
+        }
+        const next = new Set(previous);
+        next.delete(session.id);
+        return next;
+      });
+      setActiveSession(session.id);
+      cancelPendingMessageLoads();
+      setInitialMessages([]);
+      setUnreadCount(0);
+      setChatSurfaceKey((previous) => previous + 1);
+      linkSessionToWorkflow(session.id, getSessionTitle(session));
+      const currentConnectionKey = connectionKeyRef.current;
+      if (currentConnectionKey) {
+        markSessionWorkflowMappingOpened(currentConnectionKey, session.id);
+      }
+      toast.success("Session reloaded with latest skills");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to reload session";
+      toast.error(message);
+    } finally {
+      setIsReloadingSession(false);
+    }
+  }, [cancelPendingMessageLoads, linkSessionToWorkflow, setActiveSession]);
+
   const activeSession = useMemo(() => {
     if (!activeSessionId) {
       return null;
@@ -1154,6 +1298,9 @@ export function AIAgentChat({
     windowControls?.mode === "minimized" &&
     Boolean(windowControls.onToggleMinimizedView);
   const isShowingThread = minimizedDisplayMode === "thread";
+  const activeSessionIsStale = activeSessionId
+    ? staleSessionIds.has(activeSessionId)
+    : false;
 
   const handleNewMessages = useCallback(
     (count: number) => {
@@ -1358,6 +1505,28 @@ export function AIAgentChat({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      {hasConnection && activeSessionId && activeSessionIsStale ? (
+        <div className="flex items-center justify-between gap-2 border-b bg-amber-50/70 px-3 py-2 text-amber-900 text-xs dark:bg-amber-900/20 dark:text-amber-300">
+          <p className="truncate">
+            Skills changed. Reload this session to use the latest skill set.
+          </p>
+          <Button
+            disabled={isReloadingSession}
+            onClick={() => {
+              void handleReloadActiveSession();
+            }}
+            size="sm"
+            variant="outline"
+          >
+            {isReloadingSession ? (
+              <RefreshCw className="mr-1 size-3 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-1 size-3" />
+            )}
+            Reload
+          </Button>
+        </div>
+      ) : null}
 
       {hasConnection ? (
         <div className="flex min-h-0 flex-1 overflow-hidden">
