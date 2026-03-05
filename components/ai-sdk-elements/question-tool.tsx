@@ -120,7 +120,7 @@ export function QuestionToolUI({
         </p>
 
         <div className="mb-4 space-y-2">
-          {currentQuestion.options?.map((option, idx) => (
+          {currentQuestion.options?.map((option) => (
             <label
               className={cn(
                 "flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors",
@@ -128,7 +128,7 @@ export function QuestionToolUI({
                   ? "border-yellow-500 bg-yellow-100/50"
                   : "border-border hover:bg-muted/50"
               )}
-              key={idx}
+              key={`${option.label}-${option.description}`}
             >
               <input
                 checked={currentAnswer.includes(option.label)}
@@ -153,11 +153,15 @@ export function QuestionToolUI({
 
         {currentQuestion.custom !== false && (
           <div className="mb-4">
-            <label className="font-medium text-xs text-yellow-800">
+            <label
+              className="font-medium text-xs text-yellow-800"
+              htmlFor={`custom-answer-${currentIndex}`}
+            >
               Or enter your own answer
             </label>
             <input
               className="mt-1 w-full rounded-md border border-yellow-300 bg-white px-3 py-2 text-sm text-yellow-900 placeholder:text-yellow-600 focus:border-yellow-500 focus:outline-none focus:ring-1 focus:ring-yellow-500"
+              id={`custom-answer-${currentIndex}`}
               onChange={(e) => handleCustomInput(e.target.value)}
               placeholder="Type your answer..."
               type="text"

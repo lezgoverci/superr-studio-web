@@ -8,10 +8,10 @@ import {
   readFile,
   rm,
   stat,
-} from "fs/promises";
+} from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { basename, dirname, join, normalize, resolve, sep } from "node:path";
 import matter from "gray-matter";
-import { tmpdir } from "os";
-import { basename, dirname, join, normalize, resolve, sep } from "path";
 import simpleGit from "simple-git";
 
 // ---------- Types ----------
@@ -46,6 +46,7 @@ export type MarketplaceSkill = {
 // ---------- SKILL.md parsing (modeled on vercel skills source) ----------
 
 const SKIP_DIRS = ["node_modules", ".git", "dist", "build", "__pycache__"];
+const ignoreCleanupError = () => undefined;
 
 async function hasSkillMd(dir: string): Promise<boolean> {
   try {
@@ -89,7 +90,9 @@ async function findSkillDirs(
   depth = 0,
   maxDepth = 5
 ): Promise<string[]> {
-  if (depth > maxDepth) return [];
+  if (depth > maxDepth) {
+    return [];
+  }
 
   try {
     const [hasSkill, entries] = await Promise.all([
@@ -115,25 +118,51 @@ async function findSkillDirs(
   }
 }
 
-export async function discoverSkills(
-  basePath: string,
-  subpath?: string
-): Promise<ParsedSkill[]> {
-  const skills: ParsedSkill[] = [];
-  const seenNames = new Set<string>();
-  const searchPath = subpath ? join(basePath, subpath) : basePath;
+function addSkillIfNew(
+  skills: ParsedSkill[],
+  seenNames: Set<string>,
+  skill: ParsedSkill | null
+): void {
+  if (!(skill && !seenNames.has(skill.name))) {
+    return;
+  }
+  skills.push(skill);
+  seenNames.add(skill.name);
+}
 
-  // If pointing directly at a skill, add it
-  if (await hasSkillMd(searchPath)) {
-    const skill = await parseSkillMd(join(searchPath, "SKILL.md"));
-    if (skill) {
-      skills.push(skill);
-      seenNames.add(skill.name);
-      return skills;
+async function discoverSkillsInDirectory(
+  dir: string,
+  seenNames: Set<string>
+): Promise<ParsedSkill[]> {
+  const discovered: ParsedSkill[] = [];
+
+  try {
+    const entries = await readdir(dir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+
+      const skillDir = join(dir, entry.name);
+      if (!(await hasSkillMd(skillDir))) {
+        continue;
+      }
+
+      const skill = await parseSkillMd(join(skillDir, "SKILL.md"));
+      addSkillIfNew(discovered, seenNames, skill);
     }
+  } catch {
+    // Directory doesn't exist or can't be read.
   }
 
-  // Search common skill locations
+  return discovered;
+}
+
+async function discoverPrioritySkills(
+  searchPath: string,
+  seenNames: Set<string>
+): Promise<ParsedSkill[]> {
   const prioritySearchDirs = [
     searchPath,
     join(searchPath, "skills"),
@@ -143,38 +172,53 @@ export async function discoverSkills(
     join(searchPath, ".opencode/skills"),
   ];
 
+  const discovered: ParsedSkill[] = [];
   for (const dir of prioritySearchDirs) {
-    try {
-      const entries = await readdir(dir, { withFileTypes: true });
+    const dirSkills = await discoverSkillsInDirectory(dir, seenNames);
+    discovered.push(...dirSkills);
+  }
 
-      for (const entry of entries) {
-        if (entry.isDirectory()) {
-          const skillDir = join(dir, entry.name);
-          if (await hasSkillMd(skillDir)) {
-            const skill = await parseSkillMd(join(skillDir, "SKILL.md"));
-            if (skill && !seenNames.has(skill.name)) {
-              skills.push(skill);
-              seenNames.add(skill.name);
-            }
-          }
-        }
-      }
-    } catch {
-      // Directory doesn't exist
+  return discovered;
+}
+
+async function discoverFallbackSkills(
+  searchPath: string,
+  seenNames: Set<string>
+): Promise<ParsedSkill[]> {
+  const discovered: ParsedSkill[] = [];
+  const allSkillDirs = await findSkillDirs(searchPath);
+
+  for (const skillDir of allSkillDirs) {
+    const skill = await parseSkillMd(join(skillDir, "SKILL.md"));
+    addSkillIfNew(discovered, seenNames, skill);
+  }
+
+  return discovered;
+}
+
+export async function discoverSkills(
+  basePath: string,
+  subpath?: string
+): Promise<ParsedSkill[]> {
+  const skills: ParsedSkill[] = [];
+  const seenNames = new Set<string>();
+  const searchPath = subpath ? join(basePath, subpath) : basePath;
+
+  // If pointing directly at a skill, return it immediately.
+  if (await hasSkillMd(searchPath)) {
+    const skill = await parseSkillMd(join(searchPath, "SKILL.md"));
+    if (skill) {
+      skills.push(skill);
+      seenNames.add(skill.name);
+      return skills;
     }
   }
 
-  // Fall back to recursive search if nothing found
-  if (skills.length === 0) {
-    const allSkillDirs = await findSkillDirs(searchPath);
+  skills.push(...(await discoverPrioritySkills(searchPath, seenNames)));
 
-    for (const skillDir of allSkillDirs) {
-      const skill = await parseSkillMd(join(skillDir, "SKILL.md"));
-      if (skill && !seenNames.has(skill.name)) {
-        skills.push(skill);
-        seenNames.add(skill.name);
-      }
-    }
+  // Fall back to recursive search if nothing was found in priority locations.
+  if (skills.length === 0) {
+    skills.push(...(await discoverFallbackSkills(searchPath, seenNames)));
   }
 
   return skills;
@@ -248,7 +292,9 @@ export async function cloneRepo(url: string, ref?: string): Promise<string> {
     await git.clone(url, tempDir, cloneOptions);
     return tempDir;
   } catch (error) {
-    await rm(tempDir, { recursive: true, force: true }).catch(() => {});
+    await rm(tempDir, { recursive: true, force: true }).catch(
+      ignoreCleanupError
+    );
     const errorMessage = error instanceof Error ? error.message : String(error);
     throw new Error(`Failed to clone ${url}: ${errorMessage}`);
   }
@@ -331,7 +377,9 @@ export async function searchMarketplace(
     const url = `${SEARCH_API_BASE}/api/search?q=${encodeURIComponent(query)}&limit=${limit}`;
     const res = await fetch(url);
 
-    if (!res.ok) return [];
+    if (!res.ok) {
+      return [];
+    }
 
     const data = (await res.json()) as {
       skills: Array<{
@@ -377,6 +425,121 @@ export type InstallError = {
   error: string;
 };
 
+type SkillSelectionResult =
+  | {
+      success: true;
+      skill: ParsedSkill;
+    }
+  | InstallError;
+
+type SourceDiscoveryResult =
+  | {
+      success: true;
+      skills: ParsedSkill[];
+      tempDir: string | null;
+    }
+  | InstallError;
+
+function formatAvailableSkillNames(skills: ParsedSkill[]): string {
+  return skills.map((skill) => skill.name).join(", ");
+}
+
+function selectSkillForInstall(
+  skills: ParsedSkill[],
+  requestedSkillName?: string
+): SkillSelectionResult {
+  if (requestedSkillName) {
+    const normalizedRequestedName = requestedSkillName.toLowerCase();
+    const matchedSkill = skills.find(
+      (skill) => skill.name.toLowerCase() === normalizedRequestedName
+    );
+    if (!matchedSkill) {
+      return {
+        success: false,
+        error: `Skill "${requestedSkillName}" not found. Available skills: ${formatAvailableSkillNames(skills)}`,
+      };
+    }
+    return { success: true, skill: matchedSkill };
+  }
+
+  if (skills.length === 1) {
+    return { success: true, skill: skills[0] };
+  }
+
+  return {
+    success: false,
+    error: `Multiple skills found. Please specify a skill name. Available: ${formatAvailableSkillNames(skills)}`,
+  };
+}
+
+async function discoverSkillsFromSource(
+  source: ParsedSource
+): Promise<SourceDiscoveryResult> {
+  switch (source.type) {
+    case "github": {
+      const repoUrl = `https://github.com/${source.owner}/${source.repo}.git`;
+      const tempDir = await cloneRepo(repoUrl, source.ref);
+      const skills = await discoverSkills(tempDir, source.subpath);
+      return { success: true, skills, tempDir };
+    }
+    case "local": {
+      const skills = await discoverSkills(source.path);
+      return { success: true, skills, tempDir: null };
+    }
+    case "well-known": {
+      return {
+        success: false,
+        error: "Well-known URL sources are not yet supported.",
+      };
+    }
+    default: {
+      return {
+        success: false,
+        error: "Unsupported skill source.",
+      };
+    }
+  }
+}
+
+function resolveSourceString(source: ParsedSource): string {
+  if (source.type === "github") {
+    return `${source.owner}/${source.repo}`;
+  }
+  if (source.type === "local") {
+    return source.path;
+  }
+  return source.url;
+}
+
+function resolveSourceVersion(source: ParsedSource): string | undefined {
+  if (source.type === "github") {
+    return source.ref || "main";
+  }
+  return;
+}
+
+async function installSkillArtifacts(params: {
+  skillId: string;
+  skill: ParsedSkill;
+  installBaseDirectory: string;
+}): Promise<InstallError | null> {
+  const { skillId, skill, installBaseDirectory } = params;
+
+  try {
+    await installSkillToDirectory(skill, installBaseDirectory);
+    await updateSkillStatus(skillId, "installed");
+    return null;
+  } catch (fsError) {
+    await updateSkillStatus(skillId, "failed");
+    const message =
+      fsError instanceof Error ? fsError.message : "Unknown error";
+    return {
+      success: false,
+      error: `Skill saved to DB but failed to write to agent filesystem at "${installBaseDirectory}": ${message}`,
+    };
+  }
+}
+
 export async function installSkillFromSource(
   userId: string,
   sourceInput: string,
@@ -386,27 +549,13 @@ export async function installSkillFromSource(
   let tempDir: string | null = null;
 
   try {
-    let skills: ParsedSkill[] = [];
-
-    switch (source.type) {
-      case "github": {
-        const repoUrl = `https://github.com/${source.owner}/${source.repo}.git`;
-        tempDir = await cloneRepo(repoUrl, source.ref);
-        skills = await discoverSkills(tempDir, source.subpath);
-        break;
-      }
-      case "local": {
-        skills = await discoverSkills(source.path);
-        break;
-      }
-      case "well-known": {
-        return {
-          success: false,
-          error: "Well-known URL sources are not yet supported.",
-        };
-      }
+    const discoveryResult = await discoverSkillsFromSource(source);
+    if (!discoveryResult.success) {
+      return discoveryResult;
     }
+    tempDir = discoveryResult.tempDir;
 
+    const { skills } = discoveryResult;
     if (skills.length === 0) {
       return {
         success: false,
@@ -414,31 +563,11 @@ export async function installSkillFromSource(
       };
     }
 
-    // If a specific skill name is requested, filter
-    let skill: ParsedSkill | undefined;
-    if (options?.skillName) {
-      skill = skills.find(
-        (s) => s.name.toLowerCase() === options.skillName!.toLowerCase()
-      );
-      if (!skill) {
-        const available = skills.map((s) => s.name).join(", ");
-        return {
-          success: false,
-          error: `Skill "${options.skillName}" not found. Available skills: ${available}`,
-        };
-      }
-    } else {
-      // Use the first skill if only one found, otherwise require a name
-      if (skills.length === 1) {
-        skill = skills[0];
-      } else {
-        const available = skills.map((s) => s.name).join(", ");
-        return {
-          success: false,
-          error: `Multiple skills found. Please specify a skill name. Available: ${available}`,
-        };
-      }
+    const selectionResult = selectSkillForInstall(skills, options?.skillName);
+    if (!selectionResult.success) {
+      return selectionResult;
     }
+    const { skill } = selectionResult;
 
     // Check for existing install
     const existing = await getUserSkill(userId, skill.name);
@@ -450,32 +579,25 @@ export async function installSkillFromSource(
     }
 
     // Save to DB
-    const sourceString =
-      source.type === "github" ? `${source.owner}/${source.repo}` : source.path;
-
     const dbSkill = await upsertUserSkill({
       userId,
       skillName: skill.name,
       description: skill.description,
-      source: sourceString,
+      source: resolveSourceString(source),
       sourceType: source.type,
-      version: source.type === "github" ? source.ref || "main" : undefined,
+      version: resolveSourceVersion(source),
       status: "installing",
       metadata: skill.metadata ?? null,
     });
 
     const installBaseDirectory = resolveInstallBaseDirectory(options?.agentCwd);
-
-    try {
-      await installSkillToDirectory(skill, installBaseDirectory);
-      await updateSkillStatus(dbSkill.id, "installed");
-    } catch (fsError) {
-      await updateSkillStatus(dbSkill.id, "failed");
-      const msg = fsError instanceof Error ? fsError.message : "Unknown error";
-      return {
-        success: false,
-        error: `Skill saved to DB but failed to write to agent filesystem at "${installBaseDirectory}": ${msg}`,
-      };
+    const installResult = await installSkillArtifacts({
+      skillId: dbSkill.id,
+      skill,
+      installBaseDirectory,
+    });
+    if (installResult) {
+      return installResult;
     }
 
     return {
@@ -488,7 +610,7 @@ export async function installSkillFromSource(
     };
   } finally {
     if (tempDir) {
-      await cleanupTempDir(tempDir).catch(() => {});
+      await cleanupTempDir(tempDir).catch(ignoreCleanupError);
     }
   }
 }

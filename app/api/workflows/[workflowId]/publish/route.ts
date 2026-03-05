@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getIntegrations } from "@/lib/db/integrations";
 import { workflows } from "@/lib/db/schema";
+import type { IntegrationType } from "@/lib/types/integration";
 import { generateId } from "@/lib/utils/id";
 import { buildExportPayload } from "@/lib/workflow-export-utils";
 import type { WorkflowEdge, WorkflowNode } from "@/lib/workflow-store";
@@ -117,13 +118,137 @@ async function setProjectEnvVars(params: {
   }
 }
 
+type PublishRequestBody = {
+  vercelToken?: string;
+  vercelTeamId?: string;
+};
+
+function getTeamQueryParam(vercelTeamId?: string): string {
+  return vercelTeamId ? `?teamId=${vercelTeamId}` : "";
+}
+
+function buildDeploymentPayload(params: {
+  projectName: string;
+  files: Record<string, string>;
+}) {
+  const { projectName, files } = params;
+  return {
+    name: projectName,
+    files: Object.entries(files).map(([path, data]) => ({
+      file: path,
+      data,
+    })),
+    projectSettings: {
+      framework: "nextjs",
+      installCommand: "pnpm install --no-frozen-lockfile",
+    },
+  };
+}
+
+function assertVercelApiSuccess(
+  ok: boolean,
+  result: { error?: { message?: string } },
+  fallbackMessage: string
+): void {
+  if (ok) {
+    return;
+  }
+
+  throw new Error(result.error?.message || fallbackMessage);
+}
+
+async function createVercelDeployment(params: {
+  vercelToken: string;
+  teamParam: string;
+  payload: ReturnType<typeof buildDeploymentPayload>;
+}): Promise<{ id: string; url: string }> {
+  const response = await fetch(
+    `https://api.vercel.com/v13/deployments${params.teamParam}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${params.vercelToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(params.payload),
+    }
+  );
+
+  const result = await response.json();
+  assertVercelApiSuccess(response.ok, result, "Failed to deploy to Vercel");
+  return result as { id: string; url: string };
+}
+
+async function triggerVercelRedeploy(params: {
+  vercelToken: string;
+  teamParam: string;
+  projectName: string;
+  deploymentId: string;
+}): Promise<{ id: string; url: string } | null> {
+  const response = await fetch(
+    `https://api.vercel.com/v13/deployments${params.teamParam}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${params.vercelToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: params.projectName,
+        deploymentId: params.deploymentId,
+        target: "production",
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    return null;
+  }
+
+  return (await response.json()) as { id: string; url: string };
+}
+
+function collectWorkflowEnvVars(params: {
+  usedIntegrationTypes: Set<IntegrationType>;
+  userIntegrations: Awaited<ReturnType<typeof getIntegrations>>;
+  workflowApiKey: string;
+}): Record<string, string> {
+  const envVars: Record<string, string> = {};
+
+  for (const integrationType of params.usedIntegrationTypes) {
+    const integration = params.userIntegrations.find(
+      (record) => record.type === integrationType
+    );
+    const plugin = getIntegration(integrationType);
+    if (!(integration && plugin)) {
+      continue;
+    }
+
+    for (const field of plugin.formFields) {
+      if (field.envVar && integration.config[field.configKey]) {
+        envVars[field.envVar] = String(integration.config[field.configKey]);
+      }
+    }
+  }
+
+  envVars.WORKFLOW_API_KEY = params.workflowApiKey;
+  return envVars;
+}
+
+async function getAuthenticatedUser(request: Request) {
+  const session = await auth.api.getSession({
+    headers: request.headers,
+  });
+  return session?.user ?? null;
+}
+
 export async function POST(
   request: Request,
   context: { params: Promise<{ workflowId: string }> }
 ) {
   try {
     const { workflowId } = await context.params;
-    const body = await request.json();
+    const body = (await request.json()) as PublishRequestBody;
     const { vercelToken, vercelTeamId } = body;
 
     if (!vercelToken) {
@@ -133,20 +258,14 @@ export async function POST(
       );
     }
 
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    });
-
-    if (!session?.user) {
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // 1. Get workflow
     const workflow = await db.query.workflows.findFirst({
-      where: and(
-        eq(workflows.id, workflowId),
-        eq(workflows.userId, session.user.id)
-      ),
+      where: and(eq(workflows.id, workflowId), eq(workflows.userId, user.id)),
     });
 
     if (!workflow) {
@@ -165,63 +284,24 @@ export async function POST(
 
     // 3. Gather integration credentials using plugin formFields
     //    to correctly map configKey → envVar
-    const userIntegrations = await getIntegrations(session.user.id);
-    const envVars: Record<string, string> = {};
-
-    for (const integrationType of usedIntegrationTypes) {
-      const integration = userIntegrations.find(
-        (i) => i.type === integrationType
-      );
-      const plugin = getIntegration(integrationType);
-
-      if (integration && plugin) {
-        for (const field of plugin.formFields) {
-          if (field.envVar && integration.config[field.configKey]) {
-            envVars[field.envVar] = String(integration.config[field.configKey]);
-          }
-        }
-      }
-    }
+    const userIntegrations = await getIntegrations(user.id);
 
     // 4. Add Workflow API Key
     const workflowApiKey = `wfb_${generateId()}`;
-    envVars["WORKFLOW_API_KEY"] = workflowApiKey;
+    const envVars = collectWorkflowEnvVars({
+      usedIntegrationTypes,
+      userIntegrations,
+      workflowApiKey,
+    });
 
     // 5. Deploy to Vercel
-    const vercelFiles = Object.entries(files).map(([path, data]) => ({
-      file: path,
-      data,
-    }));
-
     const projectName = `workflow-${workflowId.toLowerCase()}`;
-    const teamParam = vercelTeamId ? `?teamId=${vercelTeamId}` : "";
-
-    const deploymentPayload = {
-      name: projectName,
-      files: vercelFiles,
-      projectSettings: {
-        framework: "nextjs",
-        installCommand: "pnpm install --no-frozen-lockfile",
-      },
-    };
-
-    const response = await fetch(
-      `https://api.vercel.com/v13/deployments${teamParam}`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${vercelToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(deploymentPayload),
-      }
-    );
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error?.message || "Failed to deploy to Vercel");
-    }
+    const teamParam = getTeamQueryParam(vercelTeamId);
+    const deployment = await createVercelDeployment({
+      vercelToken,
+      teamParam,
+      payload: buildDeploymentPayload({ projectName, files }),
+    });
 
     // 6. Set env vars on the project (separate API call)
     //    The deployment creates/uses the project; now we configure its env vars.
@@ -233,29 +313,18 @@ export async function POST(
     });
 
     // 7. Trigger a redeployment so environment variables take effect
-    const redeployResponse = await fetch(
-      `https://api.vercel.com/v13/deployments${teamParam}`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${vercelToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: projectName,
-          deploymentId: result.id,
-          target: "production",
-        }),
-      }
-    );
-
-    const redeployResult = await redeployResponse.json();
-    const finalUrl = redeployResponse.ok ? redeployResult.url : result.url;
+    const redeployment = await triggerVercelRedeploy({
+      vercelToken,
+      teamParam,
+      projectName,
+      deploymentId: deployment.id,
+    });
+    const finalUrl = redeployment?.url ?? deployment.url;
 
     return NextResponse.json({
       success: true,
       url: finalUrl,
-      deploymentId: redeployResponse.ok ? redeployResult.id : result.id,
+      deploymentId: redeployment?.id ?? deployment.id,
       projectName,
       workflowApiKey,
     });

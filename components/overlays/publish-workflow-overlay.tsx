@@ -32,8 +32,12 @@ export function PublishWorkflowOverlay({
   useEffect(() => {
     const savedToken = localStorage.getItem("vercel_token");
     const savedTeamId = localStorage.getItem("vercel_team_id");
-    if (savedToken) setVercelToken(savedToken);
-    if (savedTeamId) setVercelTeamId(savedTeamId);
+    if (savedToken) {
+      setVercelToken(savedToken);
+    }
+    if (savedTeamId) {
+      setVercelTeamId(savedTeamId);
+    }
   }, []);
 
   const handlePublish = async () => {

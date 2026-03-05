@@ -1,6 +1,7 @@
 "use client";
 
 import { defineRegistry, useBoundProp } from "@json-render/react";
+import type { ReactNode } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button as UIButton } from "@/components/ui/button";
 import {
@@ -22,11 +23,81 @@ import {
 } from "@/components/ui/select";
 import { workflowRunCatalog } from "./catalog";
 
+type BindingMap = Record<string, string> | undefined;
+type EmitHandler = (eventName: string) => void;
+type SelectOption = {
+  value: string;
+  label: string;
+};
+
+type StackComponentProps = {
+  direction?: "horizontal" | "vertical" | null;
+  gap?: "sm" | "md" | "lg" | null;
+};
+
+type CardComponentProps = {
+  title?: string | null;
+  description?: string | null;
+};
+
+type HeadingComponentProps = {
+  text: string;
+  level?: "h1" | "h2" | "h3" | "h4" | null;
+};
+
+type TextComponentProps = {
+  content: string;
+  muted?: boolean | null;
+};
+
+type AlertComponentProps = {
+  title: string;
+  description?: string | null;
+  variant?: "default" | "destructive" | null;
+};
+
+type InputComponentProps = {
+  label?: string | null;
+  value?: string | number | Record<string, unknown> | null;
+  placeholder?: string | null;
+  type?: "text" | "email" | "password" | "number" | "tel" | null;
+};
+
+type SelectComponentProps = {
+  label?: string | null;
+  value?: string | null;
+  placeholder?: string | null;
+  options: SelectOption[];
+};
+
+type CheckboxComponentProps = {
+  label?: string | null;
+  checked?: boolean | null;
+};
+
+type ButtonComponentProps = {
+  label: string;
+  variant?:
+    | "default"
+    | "secondary"
+    | "destructive"
+    | "outline"
+    | "ghost"
+    | null;
+  disabled?: boolean | null;
+};
+
 export const { registry: workflowRunRegistry } = defineRegistry(
   workflowRunCatalog,
   {
     components: {
-      Stack: ({ props, children }: any) => {
+      Stack: ({
+        props,
+        children,
+      }: {
+        props: StackComponentProps;
+        children?: ReactNode;
+      }) => {
         const gapClasses = { sm: "gap-2", md: "gap-4", lg: "gap-6" };
         const gapClass =
           gapClasses[(props.gap ?? "md") as keyof typeof gapClasses] ?? "gap-4";
@@ -40,7 +111,13 @@ export const { registry: workflowRunRegistry } = defineRegistry(
         );
       },
 
-      Card: ({ props, children }: any) => (
+      Card: ({
+        props,
+        children,
+      }: {
+        props: CardComponentProps;
+        children?: ReactNode;
+      }) => (
         <Card>
           {(props.title || props.description) && (
             <CardHeader>
@@ -54,7 +131,7 @@ export const { registry: workflowRunRegistry } = defineRegistry(
         </Card>
       ),
 
-      Heading: ({ props }: any) => {
+      Heading: ({ props }: { props: HeadingComponentProps }) => {
         const Tag = (props.level ?? "h2") as "h1" | "h2" | "h3" | "h4";
         const hClasses = {
           h1: "text-3xl font-bold tracking-tight",
@@ -69,13 +146,13 @@ export const { registry: workflowRunRegistry } = defineRegistry(
         return <Tag className={className}>{props.text}</Tag>;
       },
 
-      Text: ({ props }: any) => (
+      Text: ({ props }: { props: TextComponentProps }) => (
         <p className={props.muted ? "text-muted-foreground" : ""}>
           {props.content}
         </p>
       ),
 
-      Alert: ({ props }: any) => (
+      Alert: ({ props }: { props: AlertComponentProps }) => (
         <Alert variant={props.variant ?? "default"}>
           <AlertTitle>{props.title}</AlertTitle>
           {props.description ? (
@@ -84,23 +161,34 @@ export const { registry: workflowRunRegistry } = defineRegistry(
         </Alert>
       ),
 
-      Form: ({ children, emit }: any) => (
+      Form: ({
+        children,
+        emit,
+      }: {
+        children?: ReactNode;
+        emit?: EmitHandler;
+      }) => (
         <form
           className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault();
-            emit("submit");
+            emit?.("submit");
           }}
         >
           {children}
         </form>
       ),
 
-      Input: ({ props, bindings }: any) => {
-        const [value, setValue] = useBoundProp<string | number | undefined>(
-          props.value as string | number | undefined,
-          bindings?.value
-        );
+      Input: ({
+        props,
+        bindings,
+      }: {
+        props: InputComponentProps;
+        bindings?: BindingMap;
+      }) => {
+        const [value, setValue] = useBoundProp<
+          string | number | Record<string, unknown> | undefined
+        >(props.value ?? undefined, bindings?.value);
 
         return (
           <div className="flex flex-col gap-2">
@@ -121,9 +209,15 @@ export const { registry: workflowRunRegistry } = defineRegistry(
         );
       },
 
-      Select: ({ props, bindings }: any) => {
+      Select: ({
+        props,
+        bindings,
+      }: {
+        props: SelectComponentProps;
+        bindings?: BindingMap;
+      }) => {
         const [value, setValue] = useBoundProp<string | undefined>(
-          props.value as string | undefined,
+          props.value ?? undefined,
           bindings?.value
         );
 
@@ -138,7 +232,7 @@ export const { registry: workflowRunRegistry } = defineRegistry(
                 <SelectValue placeholder={props.placeholder ?? "Select..."} />
               </SelectTrigger>
               <SelectContent>
-                {props.options.map((option: any) => (
+                {props.options.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
@@ -149,9 +243,15 @@ export const { registry: workflowRunRegistry } = defineRegistry(
         );
       },
 
-      Checkbox: ({ props, bindings }: any) => {
+      Checkbox: ({
+        props,
+        bindings,
+      }: {
+        props: CheckboxComponentProps;
+        bindings?: BindingMap;
+      }) => {
         const [checked, setChecked] = useBoundProp<boolean | undefined>(
-          props.checked as boolean | undefined,
+          props.checked ?? undefined,
           bindings?.checked
         );
 
@@ -172,10 +272,18 @@ export const { registry: workflowRunRegistry } = defineRegistry(
         );
       },
 
-      Button: ({ props, emit, loading }: any) => (
+      Button: ({
+        props,
+        emit,
+        loading,
+      }: {
+        props: ButtonComponentProps;
+        emit?: EmitHandler;
+        loading?: boolean;
+      }) => (
         <UIButton
           disabled={loading || (props.disabled ?? false)}
-          onClick={() => emit("press")}
+          onClick={() => emit?.("press")}
           variant={props.variant ?? "default"}
         >
           {props.label}

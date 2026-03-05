@@ -18,11 +18,14 @@ import { Spinner } from "@/components/ui/spinner";
 import {
   api,
   type MarketplaceSearchResult,
+  type OpencodeConnection,
+  type OpencodeConnectionsListResponse,
   type UserSkillRecord,
 } from "@/lib/api-client";
 import { getOpenCodeSessionConnectionKey } from "@/lib/opencode-session-mapping";
 
 const SKILLS_UPDATED_EVENT = "superr:skills-updated";
+const TRAILING_ZERO_DECIMAL_REGEX = /\.0$/;
 
 type SkillMutationContext = {
   agentCwd?: string;
@@ -30,20 +33,28 @@ type SkillMutationContext = {
 };
 
 function formatInstalls(count: number): string {
-  if (!count || count <= 0) return "";
-  if (count >= 1_000_000)
-    return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
-  if (count >= 1000) return `${(count / 1000).toFixed(1).replace(/\.0$/, "")}K`;
+  if (!count || count <= 0) {
+    return "";
+  }
+  if (count >= 1_000_000) {
+    return `${(count / 1_000_000).toFixed(1).replace(TRAILING_ZERO_DECIMAL_REGEX, "")}M`;
+  }
+  if (count >= 1000) {
+    return `${(count / 1000).toFixed(1).replace(TRAILING_ZERO_DECIMAL_REGEX, "")}K`;
+  }
   return String(count);
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const colorClass =
-    status === "installed"
-      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-      : status === "installing"
-        ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-        : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
+  let colorClass =
+    "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
+  if (status === "installed") {
+    colorClass =
+      "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
+  } else if (status === "installing") {
+    colorClass =
+      "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400";
+  }
   return (
     <span
       className={`inline-flex items-center rounded-full px-2 py-0.5 font-medium text-xs ${colorClass}`}
@@ -51,6 +62,45 @@ function StatusBadge({ status }: { status: string }) {
       {status}
     </span>
   );
+}
+
+function resolveActiveConnection(
+  response: OpencodeConnectionsListResponse
+): OpencodeConnection | null {
+  if (!(response.configured && response.connections.length > 0)) {
+    return null;
+  }
+
+  return (
+    response.connections.find(
+      (connection) => connection.id === response.activeConnectionId
+    ) ?? response.connections[0]
+  );
+}
+
+function buildConnectionKey(connection: OpencodeConnection): string {
+  return getOpenCodeSessionConnectionKey({
+    url: connection.url,
+    username: connection.username,
+    ...(connection.directory ? { directory: connection.directory } : {}),
+  });
+}
+
+async function resolveConnectionDirectory(
+  connection: OpencodeConnection
+): Promise<string | null> {
+  const directDirectory = connection.directory?.trim();
+  if (directDirectory) {
+    return directDirectory;
+  }
+
+  try {
+    const pathInfo = await api.opencode.getPath();
+    const discoveredDirectory = pathInfo.directory?.trim();
+    return discoveredDirectory || null;
+  } catch {
+    return null;
+  }
 }
 
 function InstalledSkillsList({
@@ -393,51 +443,20 @@ export function SkillsSection() {
   const resolveSkillMutationContext = useCallback(async () => {
     try {
       const response = await api.opencode.getConnection();
-      if (
-        !(
-          response.configured &&
-          Array.isArray(response.connections) &&
-          response.connections.length > 0
-        )
-      ) {
-        return {};
-      }
-
-      const activeConnection =
-        response.connections.find(
-          (connection) => connection.id === response.activeConnectionId
-        ) ?? response.connections[0];
-
+      const activeConnection = resolveActiveConnection(response);
       if (!activeConnection) {
         return {};
       }
 
-      const connectionKey = getOpenCodeSessionConnectionKey({
-        url: activeConnection.url,
-        username: activeConnection.username,
-        ...(activeConnection.directory
-          ? { directory: activeConnection.directory }
-          : {}),
-      });
+      const connectionKey = buildConnectionKey(activeConnection);
+      const resolvedDirectory =
+        await resolveConnectionDirectory(activeConnection);
 
-      if (activeConnection.directory?.trim()) {
+      if (resolvedDirectory) {
         return {
-          agentCwd: activeConnection.directory.trim(),
+          agentCwd: resolvedDirectory,
           connectionKey,
         };
-      }
-
-      try {
-        const pathInfo = await api.opencode.getPath();
-        const discoveredDirectory = pathInfo.directory?.trim();
-        if (discoveredDirectory) {
-          return {
-            agentCwd: discoveredDirectory,
-            connectionKey,
-          };
-        }
-      } catch {
-        // Ignore lookup failures; skill install/uninstall can still proceed.
       }
 
       return { connectionKey };
