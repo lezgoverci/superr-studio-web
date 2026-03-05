@@ -29,9 +29,7 @@ type UpsertUserSkillInput = {
   metadata?: Record<string, unknown> | null;
 };
 
-function mapSkill(
-  row: typeof userSkills.$inferSelect
-): SavedUserSkill {
+function mapSkill(row: typeof userSkills.$inferSelect): SavedUserSkill {
   return {
     id: row.id,
     userId: row.userId,
@@ -47,9 +45,7 @@ function mapSkill(
   };
 }
 
-export async function getUserSkills(
-  userId: string
-): Promise<SavedUserSkill[]> {
+export async function getUserSkills(userId: string): Promise<SavedUserSkill[]> {
   const rows = await db.query.userSkills.findMany({
     where: eq(userSkills.userId, userId),
     orderBy: (table, { desc }) => [desc(table.installedAt)],
@@ -77,10 +73,7 @@ export async function getUserSkillById(
   skillId: string
 ): Promise<SavedUserSkill | null> {
   const row = await db.query.userSkills.findFirst({
-    where: and(
-      eq(userSkills.id, skillId),
-      eq(userSkills.userId, userId)
-    ),
+    where: and(eq(userSkills.id, skillId), eq(userSkills.userId, userId)),
   });
 
   return row ? mapSkill(row) : null;

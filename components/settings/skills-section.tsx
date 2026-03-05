@@ -1,16 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 import {
   Download,
+  ExternalLink,
   Loader2,
   Package,
   Search,
   Trash2,
   TrendingUp,
-  ExternalLink,
 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -33,8 +33,7 @@ function formatInstalls(count: number): string {
   if (!count || count <= 0) return "";
   if (count >= 1_000_000)
     return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
-  if (count >= 1_000)
-    return `${(count / 1_000).toFixed(1).replace(/\.0$/, "")}K`;
+  if (count >= 1000) return `${(count / 1000).toFixed(1).replace(/\.0$/, "")}K`;
   return String(count);
 }
 
@@ -46,7 +45,9 @@ function StatusBadge({ status }: { status: string }) {
         ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
         : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${colorClass}`}>
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 font-medium text-xs ${colorClass}`}
+    >
       {status}
     </span>
   );
@@ -85,8 +86,8 @@ function InstalledSkillsList({
     <div className="space-y-2">
       {skills.map((skill) => (
         <div
-          key={skill.id}
           className="flex items-center justify-between rounded-lg border p-3"
+          key={skill.id}
         >
           <div className="flex-1 space-y-1">
             <div className="flex items-center gap-2">
@@ -94,7 +95,7 @@ function InstalledSkillsList({
               <StatusBadge status={skill.status} />
             </div>
             {skill.description && (
-              <p className="text-muted-foreground text-xs line-clamp-1">
+              <p className="line-clamp-1 text-muted-foreground text-xs">
                 {skill.description}
               </p>
             )}
@@ -185,7 +186,7 @@ function MarketplaceSearch({
   return (
     <div className="space-y-3">
       <div className="relative">
-        <Search className="-translate-y-1/2 absolute top-1/2 left-3 size-4 text-muted-foreground" />
+        <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           className="pl-9"
           onChange={(e) => handleQueryChange(e.target.value)}
@@ -210,8 +211,8 @@ function MarketplaceSearch({
 
             return (
               <div
-                key={skill.slug}
                 className="flex items-center justify-between rounded-lg border p-3"
+                key={skill.slug}
               >
                 <div className="flex-1 space-y-1">
                   <div className="flex items-center gap-2">
@@ -353,38 +354,41 @@ export function SkillsSection() {
     loadSkills().finally(() => setLoading(false));
   }, [loadSkills]);
 
-  const emitSkillsUpdated = useCallback(async (context: SkillMutationContext) => {
-    const connectionKey = context.connectionKey;
-    let refreshFailed = false;
+  const emitSkillsUpdated = useCallback(
+    async (context: SkillMutationContext) => {
+      const connectionKey = context.connectionKey;
+      let refreshFailed = false;
 
-    if (connectionKey) {
-      try {
-        await api.opencode.disposeInstance({
-          ...(context.agentCwd ? { directory: context.agentCwd } : {}),
-        });
-      } catch (error) {
-        refreshFailed = true;
-        console.error("Failed to dispose OpenCode instance:", error);
+      if (connectionKey) {
+        try {
+          await api.opencode.disposeInstance({
+            ...(context.agentCwd ? { directory: context.agentCwd } : {}),
+          });
+        } catch (error) {
+          refreshFailed = true;
+          console.error("Failed to dispose OpenCode instance:", error);
+        }
       }
-    }
 
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(
-        new CustomEvent(SKILLS_UPDATED_EVENT, {
-          detail: {
-            changedAt: Date.now(),
-            ...(connectionKey ? { connectionKey } : {}),
-          },
-        })
-      );
-    }
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent(SKILLS_UPDATED_EVENT, {
+            detail: {
+              changedAt: Date.now(),
+              ...(connectionKey ? { connectionKey } : {}),
+            },
+          })
+        );
+      }
 
-    if (refreshFailed) {
-      toast.error(
-        "Skill updated, but failed to refresh the agent runtime. Reload the session manually."
-      );
-    }
-  }, []);
+      if (refreshFailed) {
+        toast.error(
+          "Skill updated, but failed to refresh the agent runtime. Reload the session manually."
+        );
+      }
+    },
+    []
+  );
 
   const resolveSkillMutationContext = useCallback(async () => {
     try {
@@ -400,9 +404,9 @@ export function SkillsSection() {
       }
 
       const activeConnection =
-        response.connections.find((connection) => {
-          return connection.id === response.activeConnectionId;
-        }) ?? response.connections[0];
+        response.connections.find(
+          (connection) => connection.id === response.activeConnectionId
+        ) ?? response.connections[0];
 
       if (!activeConnection) {
         return {};

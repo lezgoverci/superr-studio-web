@@ -1,6 +1,6 @@
+import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 import { uninstallSkill } from "@/lib/skills/skill-installer";
 
 export async function DELETE(
@@ -18,9 +18,9 @@ export async function DELETE(
   const { id } = await params;
 
   try {
-    const body = (await req
-      .json()
-      .catch(() => null)) as { agentCwd?: unknown } | null;
+    const body = (await req.json().catch(() => null)) as {
+      agentCwd?: unknown;
+    } | null;
     const normalizedAgentCwd =
       typeof body?.agentCwd === "string" && body.agentCwd.trim().length > 0
         ? body.agentCwd.trim()

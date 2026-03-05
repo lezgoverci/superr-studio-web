@@ -60,9 +60,9 @@ async function resolveOpencodeDirectory(
       return null;
     }
 
-    const payload = (await response
-      .json()
-      .catch(() => null)) as { directory?: unknown } | null;
+    const payload = (await response.json().catch(() => null)) as {
+      directory?: unknown;
+    } | null;
     const directory =
       typeof payload?.directory === "string" ? payload.directory.trim() : "";
 

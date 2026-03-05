@@ -201,9 +201,7 @@ export function OpenCodeServerSection() {
           updateConnectionConfig({
             url: newActive.url,
             username: newActive.username,
-            ...(newActive.directory
-              ? { directory: newActive.directory }
-              : {}),
+            ...(newActive.directory ? { directory: newActive.directory } : {}),
           });
           await verifyConnection();
         } else if (remaining.length === 0) {

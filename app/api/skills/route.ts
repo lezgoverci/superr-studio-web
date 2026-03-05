@@ -1,6 +1,6 @@
+import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 import { getUserSkills } from "@/lib/db/user-skills";
 import { installSkillFromSource } from "@/lib/skills/skill-installer";
 

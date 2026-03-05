@@ -1,10 +1,17 @@
 import "server-only";
 
+import {
+  copyFile,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  stat,
+} from "fs/promises";
 import matter from "gray-matter";
-import { readdir, readFile, stat } from "fs/promises";
-import { join, dirname, basename, normalize, resolve, sep } from "path";
 import { tmpdir } from "os";
-import { mkdtemp, rm, mkdir, copyFile } from "fs/promises";
+import { basename, dirname, join, normalize, resolve, sep } from "path";
 import simpleGit from "simple-git";
 
 // ---------- Types ----------
@@ -18,7 +25,14 @@ export type ParsedSkill = {
 };
 
 export type ParsedSource =
-  | { type: "github"; owner: string; repo: string; ref?: string; subpath?: string; skillName?: string }
+  | {
+      type: "github";
+      owner: string;
+      repo: string;
+      ref?: string;
+      subpath?: string;
+      skillName?: string;
+    }
   | { type: "local"; path: string }
   | { type: "well-known"; url: string };
 
@@ -50,7 +64,7 @@ export async function parseSkillMd(
     const content = await readFile(skillMdPath, "utf-8");
     const { data } = matter(content);
 
-    if (!data.name || !data.description) {
+    if (!(data.name && data.description)) {
       return null;
     }
 
@@ -221,10 +235,7 @@ export function parseSource(input: string): ParsedSource {
 
 const CLONE_TIMEOUT_MS = 60_000;
 
-export async function cloneRepo(
-  url: string,
-  ref?: string
-): Promise<string> {
+export async function cloneRepo(url: string, ref?: string): Promise<string> {
   const tempDir = await mkdtemp(join(tmpdir(), "skills-"));
   const git = simpleGit({
     timeout: { block: CLONE_TIMEOUT_MS },
@@ -238,8 +249,7 @@ export async function cloneRepo(
     return tempDir;
   } catch (error) {
     await rm(tempDir, { recursive: true, force: true }).catch(() => {});
-    const errorMessage =
-      error instanceof Error ? error.message : String(error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     throw new Error(`Failed to clone ${url}: ${errorMessage}`);
   }
 }
@@ -284,7 +294,12 @@ export async function installSkillToDirectory(
   skill: ParsedSkill,
   destinationBase: string
 ): Promise<string> {
-  const skillDest = join(destinationBase, ".agents", "skills", basename(skill.path));
+  const skillDest = join(
+    destinationBase,
+    ".agents",
+    "skills",
+    basename(skill.path)
+  );
   await copyRecursive(skill.path, skillDest);
   return skillDest;
 }
@@ -341,11 +356,11 @@ export async function searchMarketplace(
 // ---------- Full install pipeline ----------
 
 import {
-  getUserSkill,
-  upsertUserSkill,
   deleteUserSkill as dbDeleteUserSkill,
+  getUserSkill,
   getUserSkillById,
   updateSkillStatus,
+  upsertUserSkill,
 } from "@/lib/db/user-skills";
 
 export type InstallResult = {
@@ -385,7 +400,10 @@ export async function installSkillFromSource(
         break;
       }
       case "well-known": {
-        return { success: false, error: "Well-known URL sources are not yet supported." };
+        return {
+          success: false,
+          error: "Well-known URL sources are not yet supported.",
+        };
       }
     }
 
@@ -433,9 +451,7 @@ export async function installSkillFromSource(
 
     // Save to DB
     const sourceString =
-      source.type === "github"
-        ? `${source.owner}/${source.repo}`
-        : source.path;
+      source.type === "github" ? `${source.owner}/${source.repo}` : source.path;
 
     const dbSkill = await upsertUserSkill({
       userId,
@@ -455,8 +471,7 @@ export async function installSkillFromSource(
       await updateSkillStatus(dbSkill.id, "installed");
     } catch (fsError) {
       await updateSkillStatus(dbSkill.id, "failed");
-      const msg =
-        fsError instanceof Error ? fsError.message : "Unknown error";
+      const msg = fsError instanceof Error ? fsError.message : "Unknown error";
       return {
         success: false,
         error: `Skill saved to DB but failed to write to agent filesystem at "${installBaseDirectory}": ${msg}`,
@@ -497,16 +512,21 @@ export async function uninstallSkill(
   try {
     const installBaseDirectory = resolveInstallBaseDirectory(options?.agentCwd);
     const agentsSkillsDir = join(installBaseDirectory, ".agents", "skills");
-    
+
     // We use discoverSkills to find exactly where it installed
     const installedSkills = await discoverSkills(agentsSkillsDir);
-    const skillToRemove = installedSkills.find((s) => s.name === skill.skillName);
+    const skillToRemove = installedSkills.find(
+      (s) => s.name === skill.skillName
+    );
 
     if (skillToRemove) {
       await rm(skillToRemove.path, { recursive: true, force: true });
     }
   } catch (fsError) {
-    console.error(`[skills] Failed to remove skill directory for ${skill.skillName}:`, fsError);
+    console.error(
+      `[skills] Failed to remove skill directory for ${skill.skillName}:`,
+      fsError
+    );
     // Continue even if fs deletion fails, as the DB entry was removed
   }
 

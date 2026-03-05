@@ -105,18 +105,15 @@ export function WorkflowSection() {
             <div className="space-y-2">
               <Label>Operation Animation Delay</Label>
               <p className="text-muted-foreground text-xs">
-                When an AI agent builds or edits a workflow, each operation
-                (add node, add edge, etc.) is streamed to the canvas. Set a
-                delay to watch operations applied one at a time instead of all
-                at once. Set to 0 for instant updates.
+                When an AI agent builds or edits a workflow, each operation (add
+                node, add edge, etc.) is streamed to the canvas. Set a delay to
+                watch operations applied one at a time instead of all at once.
+                Set to 0 for instant updates.
               </p>
             </div>
 
             <div className="flex items-center gap-3">
-              <Select
-                onValueChange={handlePresetChange}
-                value={selectedPreset}
-              >
+              <Select onValueChange={handlePresetChange} value={selectedPreset}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue />
                 </SelectTrigger>

@@ -187,10 +187,7 @@ export const userSkills = pgTable(
       .notNull()
       .$type<"github" | "local" | "well-known">(),
     version: text("version"),
-    status: text("status")
-      .notNull()
-      .$type<SkillStatus>()
-      .default("installed"),
+    status: text("status").notNull().$type<SkillStatus>().default("installed"),
     // biome-ignore lint/suspicious/noExplicitAny: JSONB type - skill metadata from frontmatter
     metadata: jsonb("metadata").$type<Record<string, any> | null>(),
     installedAt: timestamp("installed_at").notNull().defaultNow(),

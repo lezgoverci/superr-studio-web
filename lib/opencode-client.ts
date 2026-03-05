@@ -24,9 +24,7 @@ function normalizeConnectionConfig(
   return {
     url: normalizeOpencodeBaseUrl(config.url),
     username: config.username.trim() || DEFAULT_OPENCODE_USERNAME,
-    ...(config.directory?.trim()
-      ? { directory: config.directory.trim() }
-      : {}),
+    ...(config.directory?.trim() ? { directory: config.directory.trim() } : {}),
   };
 }
 
