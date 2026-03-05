@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 import { withWorkflow } from "workflow/next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  serverExternalPackages: ["just-bash", "bash-tool", "@mongodb-js/zstd"],
 };
 
 export default withWorkflow(nextConfig);
