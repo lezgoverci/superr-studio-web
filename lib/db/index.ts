@@ -7,9 +7,6 @@ import {
   apiKeys,
   artifactPublications,
   artifacts,
-  customNodeDefinitions,
-  customNodeSecretValues,
-  customNodeVersions,
   integrations,
   opencodeConnections,
   sessions,
@@ -22,6 +19,7 @@ import {
   workflowExecutionsRelations,
   workflows,
 } from "./schema";
+
 
 // Construct schema object for drizzle
 const schema = {
@@ -37,13 +35,11 @@ const schema = {
   artifactPublications,
   apiKeys,
   integrations,
-  customNodeDefinitions,
-  customNodeVersions,
-  customNodeSecretValues,
   opencodeConnections,
   userPreferences,
   userSkills,
 };
+
 
 const connectionString = resolveDatabaseUrlWithFallback();
 const SUPABASE_POOLER_HOST_PATTERN = /pooler\.supabase\.com$/i;

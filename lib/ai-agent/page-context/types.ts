@@ -6,8 +6,8 @@ export type AiAgentPageType =
   | "library"
   | "settings"
   | "agent"
-  | "build-node"
   | "unknown";
+
 
 export type AiAgentPageContextSeed = {
   pageType: AiAgentPageType;

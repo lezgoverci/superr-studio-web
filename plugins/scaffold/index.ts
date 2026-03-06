@@ -5,47 +5,41 @@ import { ScaffoldIcon } from "./icon";
 const scaffoldPlugin: IntegrationPlugin = {
   type: "scaffold",
   label: "Scaffold",
-  description: "Run reusable custom nodes at runtime",
+  description: "Execute inline JavaScript code in a sandbox",
   icon: ScaffoldIcon,
   formFields: [],
   actions: [
     {
       slug: "execute",
       label: "Execute Custom Node",
-      description: "Execute user-authored custom node code at runtime",
+      description:
+        "Execute inline JavaScript code in a selected sandbox runtime",
       category: "Scaffold",
       stepFunction: "executeScaffoldNodeStep",
       stepImportPath: "execute",
       requiresConnection: false,
       outputFields: [
-        { field: "customNodeId", description: "Executed custom node ID" },
-        { field: "version", description: "Executed custom node version" },
-        { field: "output", description: "Custom node execution output" },
+        { field: "output", description: "Code execution output" },
         { field: "sandboxType", description: "Sandbox used for execution" },
+        { field: "stdout", description: "Standard output from execution" },
       ],
       configFields: [
         {
-          key: "customNodeId",
-          label: "Custom Node ID",
-          type: "template-input",
-          placeholder: "cn_xxxxxxxx",
-          example: "cn_abcd1234",
+          key: "code",
+          label: "Code",
+          type: "template-textarea",
+          defaultValue: `async function handler(payload) {\n  // Your code here\n  return { success: true, data: { result: "hello" } };\n}`,
+          rows: 12,
           required: true,
-        },
-        {
-          key: "customNodeVersion",
-          label: "Version",
-          type: "text",
-          placeholder: "Leave blank for latest",
-          example: "1",
         },
         {
           key: "payloadJson",
           label: "Payload JSON",
           type: "template-textarea",
-          placeholder: '{"text":"hello", "source": "{{@node:Step.value}}"}',
+          placeholder:
+            '{"text":"hello", "source": "{{@node:PreviousStep.value}}"}',
           defaultValue: "{}",
-          rows: 8,
+          rows: 6,
         },
         {
           key: "sandboxType",
@@ -53,15 +47,16 @@ const scaffoldPlugin: IntegrationPlugin = {
           type: "select",
           defaultValue: "just-bash",
           options: [
-            { value: "just-bash", label: "Just Bash (Default)" },
-            { value: "vercel", label: "Vercel Sandbox" },
+            { value: "just-bash", label: "just-bash (local)" },
+            { value: "vercel", label: "Vercel Sandbox (remote)" },
           ],
         },
         {
           key: "oidcToken",
           label: "OIDC Token",
-          type: "template-input",
-          placeholder: "eyJ...",
+          type: "text",
+          placeholder:
+            "OIDC token recommended. For access tokens, set VERCEL_TEAM_ID and VERCEL_PROJECT_ID in server env.",
           showWhen: { field: "sandboxType", equals: "vercel" },
         },
       ],

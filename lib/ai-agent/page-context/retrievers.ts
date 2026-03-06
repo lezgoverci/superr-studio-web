@@ -137,33 +137,7 @@ function createAgentContext(
   };
 }
 
-function createBuildNodeContext(
-  input: AiAgentContextResolveInput
-): AiAgentPageContextSeed | null {
-  if (input.pathname !== "/app/build-node") {
-    return null;
-  }
 
-  const customNodeId = input.searchParams?.get("customNodeId")?.trim();
-  const workflowId = input.searchParams?.get("workflowId")?.trim();
-
-  return {
-    pageType: "build-node",
-    route: "/app/build-node",
-    capabilities: [
-      "build-custom-node",
-      "generate-custom-node-code",
-      "edit-custom-node",
-    ],
-    entities: {
-      ...(customNodeId ? { customNodeId } : {}),
-      ...(workflowId ? { workflowId } : {}),
-    },
-    summary: customNodeId
-      ? `Building custom node ${customNodeId}.`
-      : "Building a reusable custom node.",
-  };
-}
 
 function createFallbackContext(
   input: AiAgentContextResolveInput
@@ -188,6 +162,6 @@ export const AI_AGENT_CONTEXT_RETRIEVERS: AiAgentContextRetriever[] = [
   createSettingsContext,
   createLibraryContext,
   createAgentContext,
-  createBuildNodeContext,
   createFallbackContext,
 ];
+

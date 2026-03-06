@@ -242,15 +242,7 @@ function buildPageContextSystemPrompt(
     "Use this context to make answers relevant. If user intent conflicts with context, ask a clarification question."
   );
 
-  if (pageContext.pageType === "build-node") {
-    contextLines.push(
-      "BUILD NODE MODE: Focus on creating reusable custom node code and schemas, not workflow canvas edits.",
-      "When generating code, target a runtime function signature like: async function handler(payload, secrets, context) { ... }.",
-      "Custom node results must use standardized output: { success: true, data: ... } or { success: false, error: { message: ... } }.",
-      "Prefer fetch-based integrations and avoid SDK dependencies.",
-      "If asked to wire node usage in workflow, provide scaffold action config with customNodeId/customNodeVersion/payloadJson."
-    );
-  }
+
 
   return contextLines.join("\n");
 }
