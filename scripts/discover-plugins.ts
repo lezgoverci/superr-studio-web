@@ -137,6 +137,7 @@ export type {
 
 // Export the registry utilities
 export {
+  actionRequiresIntegration,
   computeActionId,
   findActionById,
   flattenConfigFields,

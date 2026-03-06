@@ -113,6 +113,92 @@ export const integrations = pgTable("integrations", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// Reusable user-authored custom node definitions (runtime scaffold nodes)
+export const customNodeDefinitions = pgTable(
+  "custom_node_definitions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    runtime: text("runtime").notNull().default("javascript"),
+    // biome-ignore lint/suspicious/noExplicitAny: JSONB type - schema validated at application level
+    configSchema: jsonb("config_schema").$type<Record<string, any> | null>(),
+    // biome-ignore lint/suspicious/noExplicitAny: JSONB type - schema validated at application level
+    outputSchema: jsonb("output_schema").$type<Record<string, any> | null>(),
+    // biome-ignore lint/suspicious/noExplicitAny: JSONB type - schema validated at application level
+    secretSchema: jsonb("secret_schema").$type<Record<string, any> | null>(),
+    latestVersion: integer("latest_version").notNull().default(1),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index("custom_node_definitions_user_id_idx").on(table.userId),
+    userNameUnique: uniqueIndex("custom_node_definitions_user_name_unique").on(
+      table.userId,
+      table.name
+    ),
+  })
+);
+
+// Immutable source code versions for each custom node definition
+export const customNodeVersions = pgTable(
+  "custom_node_versions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    customNodeId: text("custom_node_id")
+      .notNull()
+      .references(() => customNodeDefinitions.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    code: text("code").notNull(),
+    changelog: text("changelog"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    customNodeIdIdx: index("custom_node_versions_custom_node_id_idx").on(
+      table.customNodeId
+    ),
+    customNodeVersionUnique: uniqueIndex(
+      "custom_node_versions_custom_node_version_unique"
+    ).on(table.customNodeId, table.version),
+  })
+);
+
+// Encrypted secret key/value pairs for each custom node (per owner)
+export const customNodeSecretValues = pgTable(
+  "custom_node_secret_values",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    customNodeId: text("custom_node_id")
+      .notNull()
+      .references(() => customNodeDefinitions.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    encryptedValue: text("encrypted_value").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    customNodeIdIdx: index("custom_node_secret_values_custom_node_id_idx").on(
+      table.customNodeId
+    ),
+    userIdIdx: index("custom_node_secret_values_user_id_idx").on(table.userId),
+    customNodeSecretUnique: uniqueIndex(
+      "custom_node_secret_values_custom_node_user_key_unique"
+    ).on(table.customNodeId, table.userId, table.key),
+  })
+);
+
 export type OpencodeConnectionMode =
   | "self_hosted"
   | "managed_shared"
@@ -427,12 +513,55 @@ export const artifactPublicationsRelations = relations(
   })
 );
 
+export const customNodeDefinitionsRelations = relations(
+  customNodeDefinitions,
+  ({ one, many }) => ({
+    user: one(users, {
+      fields: [customNodeDefinitions.userId],
+      references: [users.id],
+    }),
+    versions: many(customNodeVersions),
+    secretValues: many(customNodeSecretValues),
+  })
+);
+
+export const customNodeVersionsRelations = relations(
+  customNodeVersions,
+  ({ one }) => ({
+    customNode: one(customNodeDefinitions, {
+      fields: [customNodeVersions.customNodeId],
+      references: [customNodeDefinitions.id],
+    }),
+  })
+);
+
+export const customNodeSecretValuesRelations = relations(
+  customNodeSecretValues,
+  ({ one }) => ({
+    customNode: one(customNodeDefinitions, {
+      fields: [customNodeSecretValues.customNodeId],
+      references: [customNodeDefinitions.id],
+    }),
+    user: one(users, {
+      fields: [customNodeSecretValues.userId],
+      references: [users.id],
+    }),
+  })
+);
+
 export type User = typeof users.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type Workflow = typeof workflows.$inferSelect;
 export type NewWorkflow = typeof workflows.$inferInsert;
 export type Integration = typeof integrations.$inferSelect;
 export type NewIntegration = typeof integrations.$inferInsert;
+export type CustomNodeDefinition = typeof customNodeDefinitions.$inferSelect;
+export type NewCustomNodeDefinition = typeof customNodeDefinitions.$inferInsert;
+export type CustomNodeVersion = typeof customNodeVersions.$inferSelect;
+export type NewCustomNodeVersion = typeof customNodeVersions.$inferInsert;
+export type CustomNodeSecretValue = typeof customNodeSecretValues.$inferSelect;
+export type NewCustomNodeSecretValue =
+  typeof customNodeSecretValues.$inferInsert;
 export type OpencodeConnection = typeof opencodeConnections.$inferSelect;
 export type NewOpencodeConnection = typeof opencodeConnections.$inferInsert;
 export type WorkflowExecution = typeof workflowExecutions.$inferSelect;

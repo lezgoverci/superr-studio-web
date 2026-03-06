@@ -6,6 +6,7 @@ import type { IntegrationType } from "@/lib/types/integration";
 import { generateWorkflowModule } from "@/lib/workflow-codegen";
 import type { WorkflowEdge, WorkflowNode } from "@/lib/workflow-store";
 import {
+  actionRequiresIntegration,
   findActionById,
   getDependenciesForActions,
   getIntegration,
@@ -41,7 +42,10 @@ const SUPPORTED_SYSTEM_ACTIONS = new Set([
   RUN_WORKFLOW_ACTION,
   "Condition",
 ]);
-const EXPLICITLY_UNSUPPORTED_PLUGIN_ACTIONS = new Set(["ai-agent/run-agent"]);
+const EXPLICITLY_UNSUPPORTED_PLUGIN_ACTIONS = new Set([
+  "ai-agent/run-agent",
+  "scaffold/execute",
+]);
 
 const BINARY_EXTENSIONS = new Set([
   ".ico",
@@ -548,6 +552,56 @@ function writeUnsupportedPluginStep(params: {
     });
 }
 
+function processActionTypeForExport(params: {
+  actionType: string;
+  stepFiles: Record<string, string>;
+  diagnostics: ExportDiagnostics;
+  usedIntegrationTypes: Set<IntegrationType>;
+  unknownActionTypes: Set<string>;
+}) {
+  const {
+    actionType,
+    stepFiles,
+    diagnostics,
+    usedIntegrationTypes,
+    unknownActionTypes,
+  } = params;
+
+  if (actionType === RUN_WORKFLOW_ACTION) {
+    diagnostics.unsupportedActions.push(RUN_WORKFLOW_ACTION);
+  }
+
+  const action = findActionById(actionType);
+  if (!action) {
+    if (!SUPPORTED_SYSTEM_ACTIONS.has(actionType)) {
+      unknownActionTypes.add(actionType);
+    }
+    return;
+  }
+
+  if (EXPLICITLY_UNSUPPORTED_PLUGIN_ACTIONS.has(action.id)) {
+    writeUnsupportedPluginStep({ stepFiles, diagnostics, action });
+    return;
+  }
+
+  if (actionRequiresIntegration(action.id)) {
+    usedIntegrationTypes.add(action.integration);
+  }
+
+  const template = resolvePluginStepTemplate(action);
+  if (!template) {
+    writeUnsupportedPluginStep({
+      stepFiles,
+      diagnostics,
+      action,
+      missingTemplate: true,
+    });
+    return;
+  }
+
+  stepFiles[buildPluginStepFilePath(action.stepImportPath)] = template;
+}
+
 export function generateStepFilesAndDiagnostics(
   templateFiles: Record<string, string>,
   usedActionTypes: Set<string>
@@ -569,37 +623,13 @@ export function generateStepFilesAndDiagnostics(
   }
 
   for (const actionType of usedActionTypes) {
-    if (actionType === RUN_WORKFLOW_ACTION) {
-      diagnostics.unsupportedActions.push(RUN_WORKFLOW_ACTION);
-    }
-
-    const action = findActionById(actionType);
-    if (!action) {
-      if (!SUPPORTED_SYSTEM_ACTIONS.has(actionType)) {
-        unknownActionTypes.add(actionType);
-      }
-      continue;
-    }
-
-    if (EXPLICITLY_UNSUPPORTED_PLUGIN_ACTIONS.has(action.id)) {
-      writeUnsupportedPluginStep({ stepFiles, diagnostics, action });
-      continue;
-    }
-
-    usedIntegrationTypes.add(action.integration);
-
-    const template = resolvePluginStepTemplate(action);
-    if (!template) {
-      writeUnsupportedPluginStep({
-        stepFiles,
-        diagnostics,
-        action,
-        missingTemplate: true,
-      });
-      continue;
-    }
-
-    stepFiles[buildPluginStepFilePath(action.stepImportPath)] = template;
+    processActionTypeForExport({
+      actionType,
+      stepFiles,
+      diagnostics,
+      usedIntegrationTypes,
+      unknownActionTypes,
+    });
   }
 
   finalizeDiagnostics(diagnostics, unknownActionTypes);

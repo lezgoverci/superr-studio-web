@@ -79,6 +79,46 @@ export type IntegrationWithConfig = Integration & {
   config: IntegrationConfig;
 };
 
+export type CustomNodeVersionSummary = {
+  id: string;
+  version: number;
+  changelog: string | null;
+  createdAt: string;
+};
+
+export type CustomNodeRecord = {
+  id: string;
+  userId: string;
+  name: string;
+  description: string | null;
+  runtime: string;
+  configSchema: Record<string, unknown> | null;
+  outputSchema: Record<string, unknown> | null;
+  secretSchema: Record<string, unknown> | null;
+  latestVersion: number;
+  latestCode: string;
+  latestChangelog: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CustomNodeDetailRecord = {
+  id: string;
+  userId: string;
+  name: string;
+  description: string | null;
+  runtime: string;
+  configSchema: Record<string, unknown> | null;
+  outputSchema: Record<string, unknown> | null;
+  secretSchema: Record<string, unknown> | null;
+  latestVersion: number;
+  latestCode: string;
+  latestChangelog: string | null;
+  versions: CustomNodeVersionSummary[];
+  createdAt: string;
+  updatedAt: string;
+};
+
 // AI Gateway types
 export type AiGatewayStatusResponse = {
   enabled: boolean;
@@ -746,6 +786,110 @@ export const userPreferencesApi = {
     }),
 };
 
+export const customNodeApi = {
+  list: () => apiCall<CustomNodeRecord[]>("/api/custom-nodes"),
+
+  get: (customNodeId: string) =>
+    apiCall<CustomNodeDetailRecord>(`/api/custom-nodes/${customNodeId}`),
+
+  create: (data: {
+    name: string;
+    description?: string;
+    runtime?: string;
+    configSchema?: Record<string, unknown> | null;
+    outputSchema?: Record<string, unknown> | null;
+    secretSchema?: Record<string, unknown> | null;
+    code: string;
+    changelog?: string;
+    secrets?: Record<string, string>;
+  }) =>
+    apiCall<CustomNodeRecord>("/api/custom-nodes", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  update: (
+    customNodeId: string,
+    data: {
+      name?: string;
+      description?: string;
+      runtime?: string;
+      configSchema?: Record<string, unknown> | null;
+      outputSchema?: Record<string, unknown> | null;
+      secretSchema?: Record<string, unknown> | null;
+    }
+  ) =>
+    apiCall<CustomNodeDetailRecord>(`/api/custom-nodes/${customNodeId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  remove: (customNodeId: string) =>
+    apiCall<{ success: boolean }>(`/api/custom-nodes/${customNodeId}`, {
+      method: "DELETE",
+    }),
+
+  listVersions: (customNodeId: string) =>
+    apiCall<
+      Array<{
+        id: string;
+        customNodeId: string;
+        version: number;
+        code: string;
+        changelog: string | null;
+        createdAt: string;
+      }>
+    >(`/api/custom-nodes/${customNodeId}/versions`),
+
+  createVersion: (
+    customNodeId: string,
+    data: { code: string; changelog?: string }
+  ) =>
+    apiCall<{
+      id: string;
+      customNodeId: string;
+      version: number;
+      code: string;
+      changelog: string | null;
+      createdAt: string;
+    }>(`/api/custom-nodes/${customNodeId}/versions`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  setSecrets: (
+    customNodeId: string,
+    data: { secrets: Record<string, string> }
+  ) =>
+    apiCall<{ success: boolean; updatedKeys: string[] }>(
+      `/api/custom-nodes/${customNodeId}/secrets`,
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }
+    ),
+
+  test: (
+    customNodeId: string,
+    data?: {
+      payload?: Record<string, unknown>;
+      version?: number;
+      timeoutMs?: number;
+      sandboxType?: string;
+      oidcToken?: string;
+      vercelSandboxToken?: string;
+    }
+  ) =>
+    apiCall<{
+      success: boolean;
+      data?: unknown;
+      error?: { message: string };
+    }>(`/api/custom-nodes/${customNodeId}/test`, {
+      method: "POST",
+      body: JSON.stringify(data || {}),
+    }),
+};
+
 // Skills types
 export type SkillStatus = "installed" | "installing" | "failed";
 
@@ -805,6 +949,7 @@ export const api = {
   artifact: artifactApi,
   aiGateway: aiGatewayApi,
   agentWorkflow: agentWorkflowApi,
+  customNode: customNodeApi,
   integration: integrationApi,
   opencode: opencodeApi,
   skills: skillsApi,

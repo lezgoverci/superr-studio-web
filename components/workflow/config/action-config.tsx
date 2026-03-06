@@ -2,6 +2,7 @@
 
 import { useAtomValue, useSetAtom } from "jotai";
 import { HelpCircle, Plus, Settings } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ConfigureConnectionOverlay } from "@/components/overlays/add-connection-overlay";
 import { AiGatewayConsentOverlay } from "@/components/overlays/ai-gateway-consent-overlay";
@@ -35,6 +36,7 @@ import {
 import type { IntegrationType } from "@/lib/types/integration";
 import { currentWorkflowIdAtom } from "@/lib/workflow-store";
 import {
+  actionRequiresIntegration,
   findActionById,
   getActionsByCategory,
   getAllIntegrations,
@@ -465,6 +467,76 @@ function normalizeActionType(actionType: string): string {
   return actionType;
 }
 
+function getActionIntegrationType(
+  actionType: string
+): IntegrationType | undefined {
+  if (!actionType) {
+    return;
+  }
+
+  if (SYSTEM_ACTION_INTEGRATIONS[actionType]) {
+    return SYSTEM_ACTION_INTEGRATIONS[actionType];
+  }
+
+  const action = findActionById(actionType);
+  if (!(action && actionRequiresIntegration(actionType))) {
+    return;
+  }
+
+  return action.integration as IntegrationType;
+}
+
+function getBuildNodeHref(options: {
+  customNodeId?: unknown;
+  workflowId?: string | null;
+}): string {
+  const customNodeId =
+    typeof options.customNodeId === "string" ? options.customNodeId.trim() : "";
+  const workflowId = options.workflowId?.trim() || "";
+
+  if (customNodeId && workflowId) {
+    return `/app/build-node?customNodeId=${encodeURIComponent(
+      customNodeId
+    )}&workflowId=${encodeURIComponent(workflowId)}`;
+  }
+  if (customNodeId) {
+    return `/app/build-node?customNodeId=${encodeURIComponent(customNodeId)}`;
+  }
+  if (workflowId) {
+    return `/app/build-node?workflowId=${encodeURIComponent(workflowId)}`;
+  }
+  return "/app/build-node";
+}
+
+function ScaffoldBuildNodeHint(props: {
+  pluginActionId: string | undefined;
+  isOwner: boolean;
+  customNodeId?: unknown;
+  workflowId?: string | null;
+}) {
+  if (!(props.isOwner && props.pluginActionId === "scaffold/execute")) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-md border border-dashed p-3">
+      <p className="text-muted-foreground text-xs">
+        Build or edit reusable custom node code in Build Node mode.
+      </p>
+      <Button asChild className="mt-2" size="sm" variant="outline">
+        <Link
+          href={getBuildNodeHref({
+            customNodeId: props.customNodeId,
+            workflowId: props.workflowId,
+          })}
+        >
+          Open Build Node
+        </Link>
+      </Button>
+    </div>
+  );
+}
+
 export function ActionConfig({
   config,
   onUpdateConfig,
@@ -474,6 +546,7 @@ export function ActionConfig({
   const actionType = (config?.actionType as string) || "";
   const categories = useCategoryData();
   const integrations = useMemo(() => getAllIntegrations(), []);
+  const currentWorkflowId = useAtomValue(currentWorkflowIdAtom);
 
   const selectedCategory = actionType ? getCategoryForAction(actionType) : null;
   const [category, setCategory] = useState<string>(selectedCategory || "");
@@ -510,22 +583,13 @@ export function ActionConfig({
 
   // Get dynamic config fields for plugin actions
   const pluginAction = actionType ? findActionById(actionType) : null;
+  const requiresConnection = actionRequiresIntegration(actionType);
 
   // Determine the integration type for the current action
-  const integrationType: IntegrationType | undefined = useMemo(() => {
-    if (!actionType) {
-      return;
-    }
-
-    // Check system actions first
-    if (SYSTEM_ACTION_INTEGRATIONS[actionType]) {
-      return SYSTEM_ACTION_INTEGRATIONS[actionType];
-    }
-
-    // Check plugin actions
-    const action = findActionById(actionType);
-    return action?.integration as IntegrationType | undefined;
-  }, [actionType]);
+  const integrationType = useMemo(
+    () => getActionIntegrationType(actionType),
+    [actionType]
+  );
 
   // Check if AI Gateway managed keys should be offered (user can have multiple for different teams)
   const shouldUseManagedKeys =
@@ -631,7 +695,7 @@ export function ActionConfig({
         </div>
       </div>
 
-      {integrationType && isOwner && (
+      {integrationType && isOwner && requiresConnection && (
         <div className="space-y-2">
           <div className="ml-1 flex items-center justify-between">
             <div className="flex items-center gap-1">
@@ -685,6 +749,13 @@ export function ActionConfig({
           onUpdateConfig={handlePluginUpdateConfig}
         />
       )}
+
+      <ScaffoldBuildNodeHint
+        customNodeId={config.customNodeId}
+        isOwner={isOwner}
+        pluginActionId={pluginAction?.id}
+        workflowId={currentWorkflowId}
+      />
     </>
   );
 }

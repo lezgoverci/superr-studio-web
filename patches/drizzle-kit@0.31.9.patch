@@ -1,0 +1,13 @@
+diff --git a/bin.cjs b/bin.cjs
+--- a/bin.cjs
++++ b/bin.cjs
+@@ -19575,6 +19575,9 @@
+             for (const checks of tableChecks) {
+               let checkValue = checks.constraint_definition;
+               const constraintName = checks.constraint_name;
++              if (typeof checkValue !== "string") {
++                continue;
++              }
+               checkValue = checkValue.replace(/^CHECK\s*\(\(/, "").replace(/\)\)\s*$/, "");
+               checkConstraints[constraintName] = {
+                 name: constraintName,

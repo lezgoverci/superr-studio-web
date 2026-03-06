@@ -32,7 +32,11 @@ import {
   selectedExecutionIdAtom,
   type WorkflowNodeData,
 } from "@/lib/workflow-store";
-import { findActionById, getIntegration } from "@/plugins";
+import {
+  actionRequiresIntegration,
+  findActionById,
+  getIntegration,
+} from "@/plugins";
 
 // Helper to get display name for AI model
 const getModelDisplayName = (modelId: string): string => {
@@ -116,9 +120,7 @@ const requiresIntegration = (actionType: string): boolean => {
     return true;
   }
 
-  // Plugin actions always require integration
-  const action = findActionById(actionType);
-  return action !== undefined;
+  return actionRequiresIntegration(actionType);
 };
 
 // Helper to get provider logo for action type

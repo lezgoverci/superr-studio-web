@@ -54,7 +54,7 @@ If any of the above commands fail or show errors:
 - **Workflow**: 
   1. Update the schema in `lib/db/schema.ts`
   2. Run `pnpm db:generate` to generate the migration
-  3. Run `pnpm db:push` to apply the migration to the database
+  3. Run `pnpm db:migrate` to apply the migration to the database
 - The migration generator will create properly formatted SQL files based on your schema changes
 
 ## Code Cleanliness

@@ -45,7 +45,7 @@ import {
   selectedNodeAtom,
   updateNodeDataAtom,
 } from "@/lib/workflow-store";
-import { findActionById } from "@/plugins";
+import { actionRequiresIntegration, findActionById } from "@/plugins";
 import { ActionConfig } from "../workflow/config/action-config";
 import { ActionGrid } from "../workflow/config/action-grid";
 import { TriggerConfig } from "../workflow/config/trigger-config";
@@ -130,6 +130,9 @@ export function ConfigurationOverlay({ overlayId }: ConfigurationOverlayProps) {
     }
 
     const action = findActionById(actionType);
+    if (action && !actionRequiresIntegration(actionType)) {
+      return;
+    }
     const integrationType: IntegrationType | undefined =
       (action?.integration as IntegrationType | undefined) ||
       SYSTEM_ACTION_INTEGRATIONS[actionType];

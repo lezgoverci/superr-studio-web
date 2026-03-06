@@ -50,7 +50,7 @@ import {
   showDeleteDialogAtom,
   updateNodeDataAtom,
 } from "@/lib/workflow-store";
-import { findActionById } from "@/plugins";
+import { actionRequiresIntegration, findActionById } from "@/plugins";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { ActionConfig } from "./config/action-config";
 import { ActionGrid } from "./config/action-grid";
@@ -66,6 +66,20 @@ const WORD_SPLIT_REGEX = /\s+/;
 const SYSTEM_ACTION_INTEGRATIONS: Record<string, IntegrationType> = {
   "Database Query": "database",
 };
+
+function getRequiredIntegrationTypeForAction(
+  actionType: string
+): IntegrationType | undefined {
+  const action = findActionById(actionType);
+  if (action && !actionRequiresIntegration(actionType)) {
+    return;
+  }
+
+  return (
+    (action?.integration as IntegrationType | undefined) ||
+    SYSTEM_ACTION_INTEGRATIONS[actionType]
+  );
+}
 
 // Multi-selection panel component
 const MultiSelectionPanel = ({
@@ -251,11 +265,7 @@ export const PanelInner = () => {
       return;
     }
 
-    // Get the required integration type for this action
-    const action = findActionById(actionType);
-    const integrationType: IntegrationType | undefined =
-      (action?.integration as IntegrationType | undefined) ||
-      SYSTEM_ACTION_INTEGRATIONS[actionType];
+    const integrationType = getRequiredIntegrationTypeForAction(actionType);
 
     if (!integrationType) {
       return;
@@ -400,11 +410,7 @@ export const PanelInner = () => {
       currentConfig: Record<string, unknown>,
       abortSignal: AbortSignal
     ) => {
-      // Get integration type - check plugin registry first, then system actions
-      const action = findActionById(actionType);
-      const integrationType: IntegrationType | undefined =
-        (action?.integration as IntegrationType | undefined) ||
-        SYSTEM_ACTION_INTEGRATIONS[actionType];
+      const integrationType = getRequiredIntegrationTypeForAction(actionType);
 
       if (!integrationType) {
         // No integration needed, remove from pending

@@ -136,6 +136,10 @@ export type PluginAction = {
   // Category for grouping in UI
   category: string;
 
+  // Whether this action requires an integration connection
+  // Defaults to true when integration has form fields
+  requiresConnection?: boolean;
+
   // Step configuration
   stepFunction: string; // Name of the exported function in the step file
   stepImportPath: string; // Path to import from, relative to plugins/[plugin-name]/steps/
@@ -359,6 +363,29 @@ export function findActionById(
   }
 
   return undefined;
+}
+
+/**
+ * Check whether an action requires a configured integration connection
+ */
+export function actionRequiresIntegration(
+  actionId: string | undefined | null
+): boolean {
+  const action = findActionById(actionId);
+  if (!action) {
+    return false;
+  }
+
+  const plugin = integrationRegistry.get(action.integration);
+  if (!plugin) {
+    return false;
+  }
+
+  if (typeof action.requiresConnection === "boolean") {
+    return action.requiresConnection;
+  }
+
+  return plugin.formFields.length > 0;
 }
 
 /**

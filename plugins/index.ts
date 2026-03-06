@@ -25,6 +25,7 @@ import "./github";
 import "./linear";
 import "./perplexity";
 import "./resend";
+import "./scaffold";
 import "./slack";
 import "./stripe";
 import "./superagent";
@@ -42,6 +43,7 @@ export type {
 
 // Export the registry utilities
 export {
+  actionRequiresIntegration,
   computeActionId,
   findActionById,
   flattenConfigFields,

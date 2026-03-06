@@ -71,6 +71,7 @@ import {
   type WorkflowVisibility,
 } from "@/lib/workflow-store";
 import {
+  actionRequiresIntegration,
   findActionById,
   flattenConfigFields,
   getIntegrationLabels,
@@ -459,6 +460,40 @@ function getMissingRequiredFields(
     .filter((result): result is MissingRequiredFieldInfo => result !== null);
 }
 
+function getRequiredIntegrationTypeForAction(
+  actionType: string
+): IntegrationType | undefined {
+  const action = findActionById(actionType);
+  if (action && !actionRequiresIntegration(actionType)) {
+    return;
+  }
+
+  return (
+    (action?.integration as IntegrationType | undefined) ||
+    BUILTIN_ACTION_INTEGRATIONS[actionType]
+  );
+}
+
+function hasValidNodeIntegration(
+  node: WorkflowNode,
+  userIntegrationIds: Set<string>
+): boolean {
+  const configuredIntegrationId = node.data.config?.integrationId as
+    | string
+    | undefined;
+  return Boolean(
+    configuredIntegrationId && userIntegrationIds.has(configuredIntegrationId)
+  );
+}
+
+function getWorkflowNodeActionLabel(
+  node: WorkflowNode,
+  actionType: string
+): string {
+  const actionInfo = findActionById(actionType);
+  return node.data.label || actionInfo?.label || actionType;
+}
+
 // Get missing integrations for workflow nodes
 // Uses the plugin registry to determine which integrations are required
 // Also handles built-in actions that aren't in the plugin registry
@@ -482,34 +517,20 @@ function getMissingIntegrations(
       continue;
     }
 
-    // Look up the integration type from the plugin registry first
-    const action = findActionById(actionType);
-    // Fall back to built-in action integrations for actions not in the registry
     const requiredIntegrationType =
-      action?.integration || BUILTIN_ACTION_INTEGRATIONS[actionType];
-
+      getRequiredIntegrationTypeForAction(actionType);
     if (!requiredIntegrationType) {
       continue;
     }
 
-    // Check if this node has a valid integrationId configured
-    // The integration must exist (not just be configured)
-    const configuredIntegrationId = node.data.config?.integrationId as
-      | string
-      | undefined;
-    const hasValidIntegration =
-      configuredIntegrationId &&
-      userIntegrationIds.has(configuredIntegrationId);
-    if (hasValidIntegration) {
+    if (hasValidNodeIntegration(node, userIntegrationIds)) {
       continue;
     }
 
     // Check if user has any integration of this type
     if (!userIntegrationTypes.has(requiredIntegrationType)) {
       const existing = missingByType.get(requiredIntegrationType) || [];
-      // Use human-readable label from registry if no custom label
-      const actionInfo = findActionById(actionType);
-      existing.push(node.data.label || actionInfo?.label || actionType);
+      existing.push(getWorkflowNodeActionLabel(node, actionType));
       missingByType.set(requiredIntegrationType, existing);
     }
   }

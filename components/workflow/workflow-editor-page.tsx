@@ -47,7 +47,7 @@ import {
   type WorkflowVisibility,
   workflowNotFoundAtom,
 } from "@/lib/workflow-store";
-import { findActionById } from "@/plugins";
+import { actionRequiresIntegration, findActionById } from "@/plugins";
 
 type WorkflowPageProps = {
   params: Promise<{ workflowId: string }>;
@@ -63,6 +63,9 @@ function getRequiredIntegrationType(
   actionType: string
 ): IntegrationType | undefined {
   const action = findActionById(actionType);
+  if (action && !actionRequiresIntegration(actionType)) {
+    return;
+  }
   return (
     (action?.integration as IntegrationType | undefined) ||
     SYSTEM_ACTION_INTEGRATIONS[actionType]

@@ -1,1 +1,1 @@
-ALTER TABLE "opencode_connections" ADD COLUMN "directory" text;
+ALTER TABLE "opencode_connections" ADD COLUMN IF NOT EXISTS "directory" text;
