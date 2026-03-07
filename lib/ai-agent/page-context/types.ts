@@ -8,7 +8,6 @@ export type AiAgentPageType =
   | "agent"
   | "unknown";
 
-
 export type AiAgentPageContextSeed = {
   pageType: AiAgentPageType;
   route: string;

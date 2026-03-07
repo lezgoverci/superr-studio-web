@@ -113,8 +113,6 @@ export const integrations = pgTable("integrations", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-
-
 export type OpencodeConnectionMode =
   | "self_hosted"
   | "managed_shared"
@@ -428,8 +426,6 @@ export const artifactPublicationsRelations = relations(
     }),
   })
 );
-
-
 
 export type User = typeof users.$inferSelect;
 export type Session = typeof sessions.$inferSelect;

@@ -49,6 +49,7 @@ const scaffoldPlugin: IntegrationPlugin = {
           options: [
             { value: "just-bash", label: "just-bash (local)" },
             { value: "vercel", label: "Vercel Sandbox (remote)" },
+            { value: "opencode", label: "OpenCode (remote/local agent)" },
           ],
         },
         {

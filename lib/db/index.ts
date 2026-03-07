@@ -20,7 +20,6 @@ import {
   workflows,
 } from "./schema";
 
-
 // Construct schema object for drizzle
 const schema = {
   users,
@@ -39,7 +38,6 @@ const schema = {
   userPreferences,
   userSkills,
 };
-
 
 const connectionString = resolveDatabaseUrlWithFallback();
 const SUPABASE_POOLER_HOST_PATTERN = /pooler\.supabase\.com$/i;

@@ -486,8 +486,6 @@ function getActionIntegrationType(
   return action.integration as IntegrationType;
 }
 
-
-
 export function ActionConfig({
   config,
   onUpdateConfig,
@@ -497,7 +495,6 @@ export function ActionConfig({
   const actionType = (config?.actionType as string) || "";
   const categories = useCategoryData();
   const integrations = useMemo(() => getAllIntegrations(), []);
-  const currentWorkflowId = useAtomValue(currentWorkflowIdAtom);
 
   const selectedCategory = actionType ? getCategoryForAction(actionType) : null;
   const [category, setCategory] = useState<string>(selectedCategory || "");
@@ -700,8 +697,6 @@ export function ActionConfig({
           onUpdateConfig={handlePluginUpdateConfig}
         />
       )}
-
-
     </>
   );
 }

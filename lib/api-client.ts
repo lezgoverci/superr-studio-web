@@ -746,8 +746,6 @@ export const userPreferencesApi = {
     }),
 };
 
-
-
 // Skills types
 export type SkillStatus = "installed" | "installing" | "failed";
 

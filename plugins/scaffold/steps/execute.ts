@@ -1,16 +1,38 @@
 import "server-only";
 
+import {
+  createOpencodeClient,
+  type OpencodeClient,
+} from "@opencode-ai/sdk/v2/client";
+import type { PermissionRuleset } from "@opencode-ai/sdk/v2";
+import { eq } from "drizzle-orm";
 import { Sandbox as VercelSandbox } from "@vercel/sandbox";
 import { createBashTool } from "bash-tool";
+import { db } from "@/lib/db";
+import {
+  getResolvedOpencodeConnectionForUser,
+  type ResolvedOpencodeConnection,
+} from "@/lib/db/opencode-connections";
+import { workflows } from "@/lib/db/schema";
+import {
+  createBasicAuthHeader,
+  normalizeOpencodeBaseUrl,
+  parseOpencodeUrl,
+} from "@/lib/opencode-server-utils";
 import { type StepInput, withStepLogging } from "@/lib/steps/step-handler";
 import { getErrorMessageAsync } from "@/lib/utils";
 
 const RUNNER_PATH = "/tmp/superr-scaffold-runner.mjs";
 const DEFAULT_TIMEOUT_MS = 30_000;
+const OPENCODE_DEFAULT_AGENT = "build";
 
-type SandboxType = "vercel" | "just-bash";
+type SandboxType = "vercel" | "just-bash" | "opencode";
 
-type BashSandbox = Awaited<ReturnType<typeof createBashTool>>["sandbox"];
+type CommandExecutionResult = {
+  stdout: string;
+  stderr: string;
+  exitCode: number;
+};
 
 type VercelSandboxCredentials = {
   token: string;
@@ -51,7 +73,15 @@ export type ExecuteScaffoldInput = StepInput & ExecuteScaffoldCoreInput;
 // ── Sandbox helpers (shared with bash plugin pattern) ──
 
 function getSandboxType(rawSandboxType: string | undefined): SandboxType {
-  return rawSandboxType === "vercel" ? "vercel" : "just-bash";
+  if (rawSandboxType === "vercel") {
+    return "vercel";
+  }
+
+  if (rawSandboxType === "opencode") {
+    return "opencode";
+  }
+
+  return "just-bash";
 }
 
 function decodeBase64Url(base64Url: string): string {
@@ -174,10 +204,11 @@ async function createSandboxExecutor(input: {
   sandboxType?: string;
   oidcToken?: string;
   vercelSandboxToken?: string;
+  workflowId?: string;
 }): Promise<{
   sandboxType: SandboxType;
-  sandbox: BashSandbox;
   workingDirectory: string;
+  executeCommand: (command: string) => Promise<CommandExecutionResult>;
   cleanup: () => Promise<void>;
 }> {
   const sandboxType = getSandboxType(input.sandboxType);
@@ -186,8 +217,53 @@ async function createSandboxExecutor(input: {
     const { sandbox } = await createBashTool();
     return {
       sandboxType,
-      sandbox,
       workingDirectory: "/workspace",
+      executeCommand: (command) => sandbox.executeCommand(command),
+      cleanup: async () => {},
+    };
+  }
+
+  if (sandboxType === "opencode") {
+    const workflowId = input.workflowId?.trim();
+    if (!workflowId) {
+      throw new Error(
+        "Workflow context is required when Sandbox is set to OpenCode."
+      );
+    }
+
+    const workflow = await db.query.workflows.findFirst({
+      where: eq(workflows.id, workflowId),
+      columns: {
+        id: true,
+        userId: true,
+      },
+    });
+
+    if (!workflow?.userId) {
+      throw new Error("Workflow not found for OpenCode execution.");
+    }
+
+    const connection = await getResolvedOpencodeConnectionForUser(workflow.userId);
+    if (!connection) {
+      throw new Error(
+        "No active OpenCode connection found for the workflow owner."
+      );
+    }
+
+    if (!parseOpencodeUrl(connection.url)) {
+      throw new Error(
+        "Invalid OpenCode URL. Use HTTPS for remote hosts or HTTP only for localhost/127.0.0.1/::1."
+      );
+    }
+
+    return {
+      sandboxType,
+      workingDirectory: connection.directory?.trim() || "/",
+      executeCommand: (command) =>
+        executeOpenCodeCommand({
+          connection,
+          command,
+        }),
       cleanup: async () => {},
     };
   }
@@ -203,12 +279,221 @@ async function createSandboxExecutor(input: {
 
   return {
     sandboxType,
-    sandbox: wrappedSandbox,
     workingDirectory: destination,
+    executeCommand: (command) => wrappedSandbox.executeCommand(command),
     cleanup: async () => {
       await sandbox.stop();
     },
   };
+}
+
+type OpenCodeAssistantMessage = {
+  id?: string;
+  error?: {
+    message?: string;
+  } | null;
+};
+
+type OpenCodeSessionShellMessage = {
+  id?: string;
+  info?: OpenCodeAssistantMessage;
+  data?: OpenCodeAssistantMessage;
+  parts?: unknown[];
+  error?: {
+    message?: string;
+  } | null;
+};
+
+type OpenCodeToolPart = {
+  type?: string;
+  tool?: string;
+  state?: {
+    status?: string;
+    error?: string;
+    metadata?: {
+      output?: string;
+      stdout?: string;
+      stderr?: string;
+      response?: string;
+      result?: string;
+      exit?: number;
+      exitCode?: number;
+    };
+    output?: string;
+    stderr?: string;
+  };
+};
+
+type ParsedRuntimeOutput =
+  | {
+      ok: true;
+      value: unknown;
+    }
+  | {
+      ok: false;
+      error: string;
+    };
+
+function createServerOpenCodeClient(
+  connection: ResolvedOpencodeConnection,
+): OpencodeClient {
+  const baseUrl = parseOpencodeUrl(connection.url);
+  if (!baseUrl) {
+    throw new Error(
+      "Invalid OpenCode URL. Use HTTPS for remote hosts or HTTP only for localhost/127.0.0.1/::1."
+    );
+  }
+
+  return createOpencodeClient({
+    baseUrl: normalizeOpencodeBaseUrl(baseUrl),
+    headers: {
+      Authorization: createBasicAuthHeader(
+        connection.password,
+        connection.username
+      ),
+      "Accept-Encoding": "identity",
+    },
+    ...(connection.directory?.trim()
+      ? { directory: connection.directory.trim() }
+      : {}),
+  });
+}
+
+function describeOpenCodeResponseShape(value: unknown): string {
+  if (!(value && typeof value === "object")) {
+    return typeof value;
+  }
+
+  const keys = Object.keys(value as Record<string, unknown>).sort();
+  return keys.length > 0 ? keys.join(", ") : "(empty object)";
+}
+
+function resolveOpenCodeMessageId(
+  message: OpenCodeSessionShellMessage
+): string | null {
+  const candidates = [message.id, message.info?.id, message.data?.id];
+
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+function parseOpenCodeToolResult(parts: unknown[]): CommandExecutionResult {
+  const bashPart = parts.find((part) => {
+    if (!(part && typeof part === "object")) {
+      return false;
+    }
+
+    const candidate = part as OpenCodeToolPart;
+    return candidate.type === "tool" && candidate.tool === "bash";
+  }) as OpenCodeToolPart | undefined;
+
+  if (!bashPart?.state) {
+    throw new Error("OpenCode shell response did not include a bash tool result.");
+  }
+
+  const metadata = bashPart.state.metadata;
+  const stdout =
+    metadata?.output ??
+    metadata?.stdout ??
+    metadata?.response ??
+    metadata?.result ??
+    (typeof bashPart.state.output === "string" ? bashPart.state.output : "");
+  const stderr =
+    metadata?.stderr ??
+    (typeof bashPart.state.stderr === "string" ? bashPart.state.stderr : "") ??
+    "";
+  const exitCode =
+    typeof metadata?.exit === "number"
+      ? metadata.exit
+      : typeof metadata?.exitCode === "number"
+        ? metadata.exitCode
+        : bashPart.state.status === "error"
+          ? 1
+          : 0;
+
+  if (bashPart.state.status === "error") {
+    return {
+      stdout,
+      stderr: bashPart.state.error || stderr || "OpenCode bash command failed.",
+      exitCode,
+    };
+  }
+
+  return {
+    stdout,
+    stderr,
+    exitCode,
+  };
+}
+
+async function executeOpenCodeCommand(input: {
+  connection: ResolvedOpencodeConnection;
+  command: string;
+}): Promise<CommandExecutionResult> {
+  const permission: PermissionRuleset = [
+    { permission: "bash", pattern: "*", action: "allow" },
+    { permission: "external_directory", pattern: "*", action: "allow" },
+  ];
+  const client = createServerOpenCodeClient(input.connection);
+
+  const session = await client.session.create({
+    title: "Superr Scaffold Execution",
+    permission,
+  });
+
+  const sessionID = session.data?.id;
+  if (!sessionID) {
+    throw new Error("Failed to create OpenCode session.");
+  }
+
+  try {
+    const message = await client.session.shell({
+      sessionID,
+      agent: OPENCODE_DEFAULT_AGENT,
+      command: input.command,
+    });
+    const messageData = message.data as OpenCodeSessionShellMessage;
+
+    const messageError =
+      messageData.error?.message ||
+      messageData.info?.error?.message ||
+      messageData.data?.error?.message;
+    if (messageError) {
+      throw new Error(messageError);
+    }
+
+    if (
+      Array.isArray(messageData.parts) &&
+      messageData.parts.length > 0
+    ) {
+      return parseOpenCodeToolResult(messageData.parts);
+    }
+
+    const messageID = resolveOpenCodeMessageId(messageData);
+    if (!messageID) {
+      throw new Error(
+        `Unsupported OpenCode shell response shape: ${describeOpenCodeResponseShape(messageData)}.`
+      );
+    }
+
+    const details = await client.session.message({
+      sessionID,
+      messageID,
+    });
+
+    return parseOpenCodeToolResult(details.data?.parts ?? []);
+  } finally {
+    try {
+      await client.session.delete({ sessionID });
+    } catch {
+      // Ignore session cleanup failures.
+    }
+  }
 }
 
 // ── Runner script ──
@@ -301,32 +586,144 @@ function parsePayload(payloadJson: string | undefined):
   }
 }
 
-function parseRuntimeOutput(stdout: string): unknown {
-  const trimmed = stdout.trim();
-  if (!trimmed) {
-    throw new Error("Code produced no output.");
+function quoteForPosixShell(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+function stripAnsiAndControl(text: string): string {
+  return text
+    .replace(/\u001B\[[0-9;]*[A-Za-z]/g, "")
+    .replace(/\r/g, "")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "");
+}
+
+function getUsefulRuntimeError(stdout: string, stderr: string): string | null {
+  const sanitizedStderr = stripAnsiAndControl(stderr).trim();
+  if (sanitizedStderr) {
+    return sanitizedStderr;
   }
 
-  const lines = trimmed
+  const sanitizedStdout = stripAnsiAndControl(stdout).trim();
+  if (!sanitizedStdout) {
+    return null;
+  }
+
+  const errorLikeLines = sanitizedStdout
     .split("\n")
     .map((line) => line.trim())
-    .filter((line) => line.length > 0);
+    .filter(Boolean)
+    .filter((line) =>
+      /(^|\s)(zsh|bash|sh|node):|parse error|syntax error|command substitution|unexpected token|unexpected EOF|is not defined/i.test(
+        line
+      )
+    );
 
-  for (let index = lines.length - 1; index >= 0; index -= 1) {
-    try {
-      return JSON.parse(lines[index]);
-    } catch {
-      // Keep scanning backwards until a JSON line is found.
+  if (errorLikeLines.length === 0) {
+    return null;
+  }
+
+  return errorLikeLines.slice(0, 4).join("\n");
+}
+
+function tryParseJsonSegment(candidate: string): unknown | null {
+  const trimmed = candidate.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return null;
+  }
+}
+
+function isJsonBoundaryCharacter(character: string | undefined): boolean {
+  if (!character) {
+    return true;
+  }
+
+  return /[\s\]\}\),]/.test(character);
+}
+
+function extractTrailingJsonValue(stdout: string): unknown | null {
+  const sanitized = stripAnsiAndControl(stdout).trim();
+  if (!sanitized) {
+    return null;
+  }
+
+  const fullParse = tryParseJsonSegment(sanitized);
+  if (fullParse !== null) {
+    return fullParse;
+  }
+
+  for (let index = sanitized.length - 1; index >= 0; index -= 1) {
+    const character = sanitized[index];
+    if (character !== "}" && character !== "]") {
+      continue;
+    }
+
+    for (let start = index; start >= 0; start -= 1) {
+      const startCharacter = sanitized[start];
+      const isObject = startCharacter === "{";
+      const isArray = startCharacter === "[";
+
+      if (!isObject && !isArray) {
+        continue;
+      }
+
+      if (start > 0 && !isJsonBoundaryCharacter(sanitized[start - 1])) {
+        continue;
+      }
+
+      const candidate = sanitized.slice(start, index + 1);
+      const parsed = tryParseJsonSegment(candidate);
+      if (parsed !== null) {
+        return parsed;
+      }
     }
   }
 
-  throw new Error("Failed to parse code output JSON.");
+  return null;
+}
+
+function parseRuntimeOutput(stdout: string, stderr: string): ParsedRuntimeOutput {
+  const sanitized = stripAnsiAndControl(stdout).trim();
+  if (!sanitized) {
+    return {
+      ok: false,
+      error: getUsefulRuntimeError(stdout, stderr) || "Code produced no output.",
+    };
+  }
+
+  const parsed = extractTrailingJsonValue(stdout);
+  if (parsed === null) {
+    return {
+      ok: false,
+      error:
+        getUsefulRuntimeError(stdout, stderr) ||
+        "Failed to parse code output JSON.",
+    };
+  }
+
+  if (!(parsed && typeof parsed === "object" && "success" in parsed)) {
+    return {
+      ok: false,
+      error:
+        "Code must return standardized output: { success: boolean, data?: unknown, error?: { message: string } }.",
+    };
+  }
+
+  return {
+    ok: true,
+    value: parsed,
+  };
 }
 
 // ── Step handler ──
 
 async function stepHandler(
-  input: ExecuteScaffoldCoreInput
+  input: ExecuteScaffoldInput
 ): Promise<ExecuteScaffoldResult> {
   const code = input.code?.trim();
   if (!code) {
@@ -352,6 +749,7 @@ async function stepHandler(
       sandboxType: input.sandboxType,
       oidcToken: input.oidcToken,
       vercelSandboxToken: input.vercelSandboxToken,
+      workflowId: input._context?.workflowId,
     });
     cleanup = runtime.cleanup;
     sandboxTypeResolved = runtime.sandboxType;
@@ -364,18 +762,43 @@ async function stepHandler(
       }),
       "utf8"
     ).toString("base64");
-
-    const escapedDir = runtime.workingDirectory.replace(/"/g, '\\"');
-    const command = [
-      "set -e",
-      `cd "${escapedDir}"`,
-      `cat <<'EOF_RUNNER' > ${RUNNER_PATH}`,
-      getRunnerScript(),
-      "EOF_RUNNER",
-      `node ${RUNNER_PATH} '${payloadBase64}'`,
+    const runnerBase64 = Buffer.from(getRunnerScript(), "utf8").toString(
+      "base64"
+    );
+    const bootstrap = [
+      "const fs = require('fs');",
+      "const { spawnSync } = require('child_process');",
+      "const runnerBase64 = process.argv[2];",
+      "const payloadBase64 = process.argv[3];",
+      "const workingDirectory = process.argv[4];",
+      "if (!runnerBase64 || !payloadBase64 || !workingDirectory) {",
+      "  throw new Error('Missing scaffold bootstrap payload.');",
+      "}",
+      `const runnerPath = ${JSON.stringify(RUNNER_PATH)};`,
+      "fs.writeFileSync(runnerPath, Buffer.from(runnerBase64, 'base64').toString('utf8'));",
+      "const result = spawnSync('node', [runnerPath, payloadBase64], {",
+      "  cwd: workingDirectory,",
+      "  stdio: 'inherit',",
+      "});",
+      "if (typeof result.status === 'number') {",
+      "  process.exit(result.status);",
+      "}",
+      "if (result.error) {",
+      "  throw result.error;",
+      "}",
+      "process.exit(1);",
+    ].join("\n");
+    const bootstrapBase64 = Buffer.from(bootstrap, "utf8").toString("base64");
+    const bootstrapEntry = [
+      "eval(Buffer.from(process.argv[1], 'base64').toString('utf8'));",
     ].join("\n");
 
-    const result = await runtime.sandbox.executeCommand(command);
+    const command = [
+      // Transport the runner as base64 to avoid shell parsing issues.
+      `node -e ${quoteForPosixShell(bootstrapEntry)} ${quoteForPosixShell(bootstrapBase64)} ${quoteForPosixShell(runnerBase64)} ${quoteForPosixShell(payloadBase64)} ${quoteForPosixShell(runtime.workingDirectory)}`,
+    ].join("\n");
+
+    const result = await runtime.executeCommand(command);
 
     if (result.exitCode !== 0) {
       return {
@@ -392,12 +815,24 @@ async function stepHandler(
       };
     }
 
-    const parsed = parseRuntimeOutput(result.stdout);
+    const parsed = parseRuntimeOutput(result.stdout, result.stderr);
+    if (!parsed.ok) {
+      return {
+        success: false,
+        error: {
+          message: parsed.error,
+          sandboxType: sandboxTypeResolved,
+          stdout: result.stdout,
+          stderr: result.stderr,
+          exitCode: result.exitCode,
+        },
+      };
+    }
 
     return {
       success: true,
       data: {
-        output: parsed,
+        output: parsed.value,
         sandboxType: sandboxTypeResolved,
         stdout: result.stdout,
       },

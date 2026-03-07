@@ -242,8 +242,6 @@ function buildPageContextSystemPrompt(
     "Use this context to make answers relevant. If user intent conflicts with context, ask a clarification question."
   );
 
-
-
   return contextLines.join("\n");
 }
 

@@ -137,8 +137,6 @@ function createAgentContext(
   };
 }
 
-
-
 function createFallbackContext(
   input: AiAgentContextResolveInput
 ): AiAgentPageContextSeed | null {
@@ -164,4 +162,3 @@ export const AI_AGENT_CONTEXT_RETRIEVERS: AiAgentContextRetriever[] = [
   createAgentContext,
   createFallbackContext,
 ];
-
