@@ -30,6 +30,7 @@ import "./slack";
 import "./stripe";
 import "./superagent";
 import "./v0";
+import "./vercel";
 import "./webflow";
 
 export type {

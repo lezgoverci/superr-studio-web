@@ -269,6 +269,7 @@ type WorkflowNodeForValidation = {
   data?: {
     config?: {
       integrationId?: string;
+      vercelIntegrationId?: string;
     };
   };
 };
@@ -282,9 +283,15 @@ export function extractIntegrationIds(
   const integrationIds: string[] = [];
 
   for (const node of nodes) {
-    const integrationId = node.data?.config?.integrationId;
-    if (integrationId && typeof integrationId === "string") {
-      integrationIds.push(integrationId);
+    const connectionIds = [
+      node.data?.config?.integrationId,
+      node.data?.config?.vercelIntegrationId,
+    ];
+
+    for (const integrationId of connectionIds) {
+      if (integrationId && typeof integrationId === "string") {
+        integrationIds.push(integrationId);
+      }
     }
   }
 

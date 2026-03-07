@@ -37,6 +37,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { api } from "@/lib/api-client";
 import { signInWithWhop, useSession } from "@/lib/auth-client";
+import {
+  type ConnectionRequirement,
+  getConnectionLabel,
+  getConnectionRequirements,
+} from "@/lib/connection-requirements";
 import { integrationsAtom } from "@/lib/integrations-store";
 import type { IntegrationType } from "@/lib/types/integration";
 import {
@@ -70,12 +75,7 @@ import {
   type WorkflowNode,
   type WorkflowVisibility,
 } from "@/lib/workflow-store";
-import {
-  actionRequiresIntegration,
-  findActionById,
-  flattenConfigFields,
-  getIntegrationLabels,
-} from "@/plugins";
+import { findActionById, flattenConfigFields } from "@/plugins";
 import { ConfigurationOverlay } from "../overlays/configuration-overlay";
 import { ConfirmOverlay } from "../overlays/confirm-overlay";
 import { ExportWorkflowOverlay } from "../overlays/export-workflow-overlay";
@@ -252,12 +252,10 @@ function updateNodesStatus(
 type MissingIntegrationInfo = {
   integrationType: IntegrationType;
   integrationLabel: string;
+  hasAvailableConnection: boolean;
+  fieldKey: string;
+  nodeId: string;
   nodeNames: string[];
-};
-
-// Built-in actions that require integrations but aren't in the plugin registry
-const BUILTIN_ACTION_INTEGRATIONS: Record<string, IntegrationType> = {
-  "Database Query": "database",
 };
 
 // Labels for built-in integration types that don't have plugins
@@ -460,30 +458,24 @@ function getMissingRequiredFields(
     .filter((result): result is MissingRequiredFieldInfo => result !== null);
 }
 
-function getRequiredIntegrationTypeForAction(
-  actionType: string
-): IntegrationType | undefined {
-  const action = findActionById(actionType);
-  if (action && !actionRequiresIntegration(actionType)) {
-    return;
-  }
-
-  return (
-    (action?.integration as IntegrationType | undefined) ||
-    BUILTIN_ACTION_INTEGRATIONS[actionType]
-  );
-}
-
-function hasValidNodeIntegration(
+function hasValidNodeConnections(
   node: WorkflowNode,
   userIntegrationIds: Set<string>
 ): boolean {
-  const configuredIntegrationId = node.data.config?.integrationId as
-    | string
-    | undefined;
-  return Boolean(
-    configuredIntegrationId && userIntegrationIds.has(configuredIntegrationId)
-  );
+  const actionType = node.data.config?.actionType as string | undefined;
+  const requirements = getConnectionRequirements({
+    actionType,
+    config: node.data.config,
+  });
+
+  return requirements.every((requirement) => {
+    const configuredIntegrationId = node.data.config?.[requirement.fieldKey] as
+      | string
+      | undefined;
+    return Boolean(
+      configuredIntegrationId && userIntegrationIds.has(configuredIntegrationId)
+    );
+  });
 }
 
 function getWorkflowNodeActionLabel(
@@ -492,6 +484,80 @@ function getWorkflowNodeActionLabel(
 ): string {
   const actionInfo = findActionById(actionType);
   return node.data.label || actionInfo?.label || actionType;
+}
+
+type MissingIntegrationGroup = {
+  fieldKey: string;
+  hasAvailableConnection: boolean;
+  nodeId: string;
+  nodeNames: string[];
+};
+
+function getMissingRequirementsForNode(
+  node: WorkflowNode,
+  userIntegrationIds: Set<string>
+): {
+  actionType: string;
+  requirements: ConnectionRequirement[];
+} | null {
+  if (node.data.enabled === false) {
+    return null;
+  }
+
+  const actionType = node.data.config?.actionType as string | undefined;
+  if (!actionType) {
+    return null;
+  }
+
+  const requirements = getConnectionRequirements({
+    actionType,
+    config: node.data.config,
+  });
+  if (
+    requirements.length === 0 ||
+    hasValidNodeConnections(node, userIntegrationIds)
+  ) {
+    return null;
+  }
+
+  return {
+    actionType,
+    requirements: requirements.filter((requirement) => {
+      const configuredIntegrationId = node.data.config?.[
+        requirement.fieldKey
+      ] as string | undefined;
+      return !(
+        configuredIntegrationId &&
+        userIntegrationIds.has(configuredIntegrationId)
+      );
+    }),
+  };
+}
+
+function recordMissingIntegration(params: {
+  missingByType: Map<IntegrationType, MissingIntegrationGroup>;
+  requirement: ConnectionRequirement;
+  node: WorkflowNode;
+  nodeName: string;
+  userIntegrationTypes: Set<IntegrationType>;
+}) {
+  const { missingByType, requirement, node, nodeName, userIntegrationTypes } =
+    params;
+  const existing = missingByType.get(requirement.integrationType);
+
+  if (existing) {
+    existing.nodeNames.push(nodeName);
+    return;
+  }
+
+  missingByType.set(requirement.integrationType, {
+    fieldKey: requirement.fieldKey,
+    hasAvailableConnection: userIntegrationTypes.has(
+      requirement.integrationType
+    ),
+    nodeId: node.id,
+    nodeNames: [nodeName],
+  });
 }
 
 // Get missing integrations for workflow nodes
@@ -503,46 +569,43 @@ function getMissingIntegrations(
 ): MissingIntegrationInfo[] {
   const userIntegrationTypes = new Set(userIntegrations.map((i) => i.type));
   const userIntegrationIds = new Set(userIntegrations.map((i) => i.id));
-  const missingByType = new Map<IntegrationType, string[]>();
-  const integrationLabels = getIntegrationLabels();
+  const missingByType = new Map<IntegrationType, MissingIntegrationGroup>();
 
   for (const node of nodes) {
-    // Skip disabled nodes
-    if (node.data.enabled === false) {
+    const missingNodeConnections = getMissingRequirementsForNode(
+      node,
+      userIntegrationIds
+    );
+    if (!missingNodeConnections) {
       continue;
     }
 
-    const actionType = node.data.config?.actionType as string | undefined;
-    if (!actionType) {
-      continue;
-    }
-
-    const requiredIntegrationType =
-      getRequiredIntegrationTypeForAction(actionType);
-    if (!requiredIntegrationType) {
-      continue;
-    }
-
-    if (hasValidNodeIntegration(node, userIntegrationIds)) {
-      continue;
-    }
-
-    // Check if user has any integration of this type
-    if (!userIntegrationTypes.has(requiredIntegrationType)) {
-      const existing = missingByType.get(requiredIntegrationType) || [];
-      existing.push(getWorkflowNodeActionLabel(node, actionType));
-      missingByType.set(requiredIntegrationType, existing);
+    const nodeName = getWorkflowNodeActionLabel(
+      node,
+      missingNodeConnections.actionType
+    );
+    for (const requirement of missingNodeConnections.requirements) {
+      recordMissingIntegration({
+        missingByType,
+        requirement,
+        node,
+        nodeName,
+        userIntegrationTypes,
+      });
     }
   }
 
   return Array.from(missingByType.entries()).map(
-    ([integrationType, nodeNames]) => ({
+    ([integrationType, missing]) => ({
       integrationType,
       integrationLabel:
-        integrationLabels[integrationType] ||
+        getConnectionLabel(integrationType) ||
         BUILTIN_INTEGRATION_LABELS[integrationType] ||
         integrationType,
-      nodeNames,
+      hasAvailableConnection: missing.hasAvailableConnection,
+      fieldKey: missing.fieldKey,
+      nodeId: missing.nodeId,
+      nodeNames: missing.nodeNames,
     })
   );
 }

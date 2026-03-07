@@ -25,8 +25,11 @@ import { CodeEditor } from "@/components/ui/code-editor";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api-client";
+import {
+  clearUnusedConnectionFields,
+  getConnectionRequirements,
+} from "@/lib/connection-requirements";
 import { integrationsAtom } from "@/lib/integrations-store";
-import type { IntegrationType } from "@/lib/types/integration";
 import { generateWorkflowCode } from "@/lib/workflow-codegen";
 import {
   clearNodeStatusesAtom,
@@ -45,18 +48,12 @@ import {
   selectedNodeAtom,
   updateNodeDataAtom,
 } from "@/lib/workflow-store";
-import { actionRequiresIntegration, findActionById } from "@/plugins";
 import { ActionConfig } from "../workflow/config/action-config";
 import { ActionGrid } from "../workflow/config/action-grid";
 import { TriggerConfig } from "../workflow/config/trigger-config";
 import { generateNodeCode } from "../workflow/utils/code-generators";
 import { WorkflowRuns } from "../workflow/workflow-runs";
 import type { OverlayComponentProps } from "./types";
-
-// System actions that need integrations (not in plugin registry)
-const SYSTEM_ACTION_INTEGRATIONS: Record<string, IntegrationType> = {
-  "Database Query": "database",
-};
 
 // Regex constants
 const NON_ALPHANUMERIC_REGEX = /[^a-zA-Z0-9\s]/g;
@@ -121,41 +118,47 @@ export function ConfigurationOverlay({ overlayId }: ConfigurationOverlayProps) {
     const actionType = selectedNode.data.config?.actionType as
       | string
       | undefined;
-    const currentIntegrationId = selectedNode.data.config?.integrationId as
-      | string
-      | undefined;
-
-    if (!(actionType && currentIntegrationId)) {
+    if (!actionType) {
       return;
     }
 
-    const action = findActionById(actionType);
-    if (action && !actionRequiresIntegration(actionType)) {
-      return;
-    }
-    const integrationType: IntegrationType | undefined =
-      (action?.integration as IntegrationType | undefined) ||
-      SYSTEM_ACTION_INTEGRATIONS[actionType];
-
-    if (!integrationType) {
-      return;
-    }
-
-    const validIntegrations = globalIntegrations.filter(
-      (i) => i.type === integrationType
-    );
-    const isValid = validIntegrations.some(
-      (i) => i.id === currentIntegrationId
+    const currentConfig = (selectedNode.data.config || {}) as Record<
+      string,
+      unknown
+    >;
+    const requirements = getConnectionRequirements({
+      actionType,
+      config: currentConfig,
+    });
+    const nextConfig = clearUnusedConnectionFields(currentConfig, requirements);
+    let didChange = ["integrationId", "vercelIntegrationId"].some(
+      (fieldKey) => nextConfig[fieldKey] !== currentConfig[fieldKey]
     );
 
-    if (!isValid && validIntegrations.length > 0) {
+    for (const requirement of requirements) {
+      const currentConnectionId = nextConfig[requirement.fieldKey];
+      if (typeof currentConnectionId !== "string" || currentConnectionId === "") {
+        continue;
+      }
+
+      const validIntegrations = globalIntegrations.filter(
+        (integration) => integration.type === requirement.integrationType
+      );
+      const isValid = validIntegrations.some(
+        (integration) => integration.id === currentConnectionId
+      );
+
+      if (!isValid && validIntegrations.length > 0) {
+        nextConfig[requirement.fieldKey] = validIntegrations[0].id;
+        didChange = true;
+      }
+    }
+
+    if (didChange) {
       updateNodeData({
         id: selectedNode.id,
         data: {
-          config: {
-            ...selectedNode.data.config,
-            integrationId: validIntegrations[0].id,
-          },
+          config: nextConfig,
         },
       });
     }
@@ -166,10 +169,26 @@ export function ConfigurationOverlay({ overlayId }: ConfigurationOverlayProps) {
       if (!selectedNode) {
         return;
       }
+      const nextConfig = clearUnusedConnectionFields(
+        {
+          ...(selectedNode.data.config || {}),
+          [key]: value,
+        },
+        getConnectionRequirements({
+          actionType:
+            (key === "actionType"
+              ? value
+              : (selectedNode.data.config?.actionType as string)) || "",
+          config: {
+            ...(selectedNode.data.config || {}),
+            [key]: value,
+          },
+        })
+      );
       updateNodeData({
         id: selectedNode.id,
         data: {
-          config: { ...selectedNode.data.config, [key]: value },
+          config: nextConfig,
         },
       });
     },

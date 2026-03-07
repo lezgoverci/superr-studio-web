@@ -52,14 +52,6 @@ const scaffoldPlugin: IntegrationPlugin = {
             { value: "opencode", label: "OpenCode (remote/local agent)" },
           ],
         },
-        {
-          key: "oidcToken",
-          label: "OIDC Token",
-          type: "text",
-          placeholder:
-            "OIDC token recommended. For access tokens, set VERCEL_TEAM_ID and VERCEL_PROJECT_ID in server env.",
-          showWhen: { field: "sandboxType", equals: "vercel" },
-        },
       ],
     },
   ],

@@ -29,14 +29,13 @@ import {
 } from "@/components/ui/tooltip";
 import { aiGatewayStatusAtom } from "@/lib/ai-gateway/state";
 import { api } from "@/lib/api-client";
+import { getConnectionRequirements } from "@/lib/connection-requirements";
 import {
   integrationsAtom,
   integrationsVersionAtom,
 } from "@/lib/integrations-store";
-import type { IntegrationType } from "@/lib/types/integration";
 import { currentWorkflowIdAtom } from "@/lib/workflow-store";
 import {
-  actionRequiresIntegration,
   findActionById,
   getActionsByCategory,
   getAllIntegrations,
@@ -406,11 +405,6 @@ const SYSTEM_ACTIONS: Array<{ id: string; label: string }> = [
 
 const SYSTEM_ACTION_IDS = SYSTEM_ACTIONS.map((a) => a.id);
 
-// System actions that need integrations (not in plugin registry)
-const SYSTEM_ACTION_INTEGRATIONS: Record<string, IntegrationType> = {
-  "Database Query": "database",
-};
-
 // Build category mapping dynamically from plugins + System
 function useCategoryData() {
   return useMemo(() => {
@@ -467,25 +461,6 @@ function normalizeActionType(actionType: string): string {
   return actionType;
 }
 
-function getActionIntegrationType(
-  actionType: string
-): IntegrationType | undefined {
-  if (!actionType) {
-    return;
-  }
-
-  if (SYSTEM_ACTION_INTEGRATIONS[actionType]) {
-    return SYSTEM_ACTION_INTEGRATIONS[actionType];
-  }
-
-  const action = findActionById(actionType);
-  if (!(action && actionRequiresIntegration(actionType))) {
-    return;
-  }
-
-  return action.integration as IntegrationType;
-}
-
 export function ActionConfig({
   config,
   onUpdateConfig,
@@ -494,7 +469,13 @@ export function ActionConfig({
 }: ActionConfigProps) {
   const actionType = (config?.actionType as string) || "";
   const categories = useCategoryData();
-  const integrations = useMemo(() => getAllIntegrations(), []);
+  const integrations = useMemo(
+    () =>
+      getAllIntegrations().filter(
+        (integration) => integration.actions.length > 0
+      ),
+    []
+  );
 
   const selectedCategory = actionType ? getCategoryForAction(actionType) : null;
   const [category, setCategory] = useState<string>(selectedCategory || "");
@@ -531,55 +512,10 @@ export function ActionConfig({
 
   // Get dynamic config fields for plugin actions
   const pluginAction = actionType ? findActionById(actionType) : null;
-  const requiresConnection = actionRequiresIntegration(actionType);
-
-  // Determine the integration type for the current action
-  const integrationType = useMemo(
-    () => getActionIntegrationType(actionType),
-    [actionType]
+  const connectionRequirements = useMemo(
+    () => getConnectionRequirements({ actionType, config }),
+    [actionType, config]
   );
-
-  // Check if AI Gateway managed keys should be offered (user can have multiple for different teams)
-  const shouldUseManagedKeys =
-    integrationType === "ai-gateway" &&
-    aiGatewayStatus?.enabled &&
-    aiGatewayStatus?.hasVercelConnection;
-
-  // Check if there are existing connections for this integration type
-  const hasExistingConnections = useMemo(() => {
-    if (!integrationType) {
-      return false;
-    }
-    return globalIntegrations.some((i) => i.type === integrationType);
-  }, [integrationType, globalIntegrations]);
-
-  const handleConsentSuccess = (integrationId: string) => {
-    onUpdateConfig("integrationId", integrationId);
-    setIntegrationsVersion((v) => v + 1);
-  };
-
-  const openConnectionOverlay = () => {
-    if (integrationType) {
-      push(ConfigureConnectionOverlay, {
-        type: integrationType,
-        onSuccess: (integrationId: string) => {
-          setIntegrationsVersion((v) => v + 1);
-          onUpdateConfig("integrationId", integrationId);
-        },
-      });
-    }
-  };
-
-  const handleAddSecondaryConnection = () => {
-    if (shouldUseManagedKeys) {
-      push(AiGatewayConsentOverlay, {
-        onConsent: handleConsentSuccess,
-        onManualEntry: openConnectionOverlay,
-      });
-    } else {
-      openConnectionOverlay();
-    }
-  };
 
   return (
     <>
@@ -643,42 +579,83 @@ export function ActionConfig({
         </div>
       </div>
 
-      {integrationType && isOwner && requiresConnection && (
-        <div className="space-y-2">
-          <div className="ml-1 flex items-center justify-between">
-            <div className="flex items-center gap-1">
-              <Label>Connection</Label>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <HelpCircle className="size-3.5 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>API key or OAuth credentials for this service</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            {hasExistingConnections && (
-              <Button
-                className="size-6"
+      {isOwner &&
+        connectionRequirements.map((requirement) => {
+          const shouldUseManagedKeys =
+            requirement.integrationType === "ai-gateway" &&
+            aiGatewayStatus?.enabled &&
+            aiGatewayStatus?.hasVercelConnection;
+          const hasExistingConnections = globalIntegrations.some(
+            (integration) => integration.type === requirement.integrationType
+          );
+
+          const handleConsentSuccess = (integrationId: string) => {
+            onUpdateConfig(requirement.fieldKey, integrationId);
+            setIntegrationsVersion((v) => v + 1);
+          };
+
+          const openConnectionOverlay = () => {
+            push(ConfigureConnectionOverlay, {
+              type: requirement.integrationType,
+              onSuccess: (integrationId: string) => {
+                setIntegrationsVersion((v) => v + 1);
+                onUpdateConfig(requirement.fieldKey, integrationId);
+              },
+            });
+          };
+
+          const handleAddSecondaryConnection = () => {
+            if (shouldUseManagedKeys) {
+              push(AiGatewayConsentOverlay, {
+                onConsent: handleConsentSuccess,
+                onManualEntry: openConnectionOverlay,
+              });
+            } else {
+              openConnectionOverlay();
+            }
+          };
+
+          return (
+            <div className="space-y-2" key={requirement.fieldKey}>
+              <div className="ml-1 flex items-center justify-between">
+                <div className="flex items-center gap-1">
+                  <Label>{requirement.label}</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="size-3.5 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          {requirement.integrationType === "vercel"
+                            ? "Bring your own Vercel project credentials for Sandbox runs."
+                            : "API key or OAuth credentials for this service"}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                {hasExistingConnections && (
+                  <Button
+                    className="size-6"
+                    disabled={disabled}
+                    onClick={handleAddSecondaryConnection}
+                    size="icon"
+                    variant="ghost"
+                  >
+                    <Plus className="size-4" />
+                  </Button>
+                )}
+              </div>
+              <IntegrationSelector
                 disabled={disabled}
-                onClick={handleAddSecondaryConnection}
-                size="icon"
-                variant="ghost"
-              >
-                <Plus className="size-4" />
-              </Button>
-            )}
-          </div>
-          <IntegrationSelector
-            disabled={disabled}
-            integrationType={integrationType}
-            onChange={(id) => onUpdateConfig("integrationId", id)}
-            value={(config?.integrationId as string) || ""}
-          />
-        </div>
-      )}
+                integrationType={requirement.integrationType}
+                onChange={(id) => onUpdateConfig(requirement.fieldKey, id)}
+                value={(config?.[requirement.fieldKey] as string) || ""}
+              />
+            </div>
+          );
+        })}
 
       {/* System actions - hardcoded config fields */}
       <SystemActionFields

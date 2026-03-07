@@ -25,6 +25,7 @@ import {
   integrationIdsAtom,
   integrationsLoadedAtom,
 } from "@/lib/integrations-store";
+import { getConnectionRequirements } from "@/lib/connection-requirements";
 import { cn } from "@/lib/utils";
 import {
   executionLogsAtom,
@@ -32,11 +33,7 @@ import {
   selectedExecutionIdAtom,
   type WorkflowNodeData,
 } from "@/lib/workflow-store";
-import {
-  actionRequiresIntegration,
-  findActionById,
-  getIntegration,
-} from "@/plugins";
+import { findActionById, getIntegration } from "@/plugins";
 
 // Helper to get display name for AI model
 const getModelDisplayName = (modelId: string): string => {
@@ -111,17 +108,6 @@ function isBase64ImageOutput(output: unknown): output is { base64: string } {
     (output as { base64: string }).base64.length > 100
   );
 }
-
-// Helper to check if an action requires an integration
-const requiresIntegration = (actionType: string): boolean => {
-  // System actions that require integration configuration
-  const systemActionsRequiringIntegration = ["Database Query"];
-  if (systemActionsRequiringIntegration.includes(actionType)) {
-    return true;
-  }
-
-  return actionRequiresIntegration(actionType);
-};
 
 // Helper to get provider logo for action type
 const getProviderLogo = (actionType: string) => {
@@ -310,20 +296,24 @@ export const ActionNode = memo(({ data, selected, id }: ActionNodeProps) => {
   const displayDescription =
     data.description || getIntegrationFromActionType(actionType);
 
-  const needsIntegration = requiresIntegration(actionType);
+  const requiredConnections = getConnectionRequirements({
+    actionType,
+    config: data.config,
+  });
   // Don't show missing indicator if we're still checking for auto-select
   const isPendingIntegrationCheck = pendingIntegrationNodes.has(id);
-  // Check both that integrationId is set AND that it exists in available integrations
-  const configuredIntegrationId = data.config?.integrationId as
-    | string
-    | undefined;
-  const hasValidIntegration =
-    configuredIntegrationId &&
-    availableIntegrationIds.has(configuredIntegrationId);
+  const hasValidIntegration = requiredConnections.every((requirement) => {
+    const configuredIntegrationId = data.config?.[
+      requirement.fieldKey
+    ] as string | undefined;
+    return Boolean(
+      configuredIntegrationId && availableIntegrationIds.has(configuredIntegrationId)
+    );
+  });
   // Only show missing indicator after integrations have been loaded
   const integrationMissing =
     integrationsLoaded &&
-    needsIntegration &&
+    requiredConnections.length > 0 &&
     !hasValidIntegration &&
     !isPendingIntegrationCheck;
 

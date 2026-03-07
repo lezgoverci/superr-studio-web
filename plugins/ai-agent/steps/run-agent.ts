@@ -21,6 +21,7 @@ import { getIntegrationById } from "@/lib/db/integrations";
 import { workflows } from "@/lib/db/schema";
 import { type StepInput, withStepLogging } from "@/lib/steps/step-handler";
 import { getErrorMessageAsync } from "@/lib/utils";
+import { resolveVercelSandboxCredentials } from "@/lib/vercel-sandbox-credentials";
 import {
   buildWorkflowSummary,
   composeWorkflowUiSpec,
@@ -66,9 +67,7 @@ type RunAgentResult =
 export type RunAgentCoreInput = {
   aiModel?: string;
   sandboxType?: string;
-  vercelSandboxToken?: string;
-  vercelSandboxTeamId?: string;
-  vercelSandboxProjectId?: string;
+  vercelIntegrationId?: string;
   agentPrompt?: string;
   agentInstructions?: string;
   maxSteps?: string;
@@ -464,12 +463,6 @@ function extractSkillsUsed(steps: Array<{ toolCalls?: unknown }>): string[] {
   return [...names];
 }
 
-type VercelSandboxCredentials = {
-  token: string;
-  teamId: string;
-  projectId: string;
-};
-
 type SandboxTools = Awaited<ReturnType<typeof createBashTool>>["tools"];
 type BashSandbox = Awaited<ReturnType<typeof createBashTool>>["sandbox"];
 type SkillTool = Awaited<
@@ -495,96 +488,6 @@ function getSandboxType(sandboxType: string | undefined): SandboxType {
   }
 
   return "vercel";
-}
-
-function decodeBase64Url(base64Url: string): string {
-  const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-  const paddingLength = (4 - (base64.length % 4)) % 4;
-  const padded = `${base64}${"=".repeat(paddingLength)}`;
-  return Buffer.from(padded, "base64").toString("utf-8");
-}
-
-function parseOidcTokenCredentials(
-  token: string
-): VercelSandboxCredentials | null {
-  const parts = token.split(".");
-  if (parts.length < 2) {
-    return null;
-  }
-
-  try {
-    const payload = JSON.parse(decodeBase64Url(parts[1])) as {
-      owner_id?: unknown;
-      project_id?: unknown;
-    };
-    if (
-      typeof payload.owner_id !== "string" ||
-      typeof payload.project_id !== "string" ||
-      payload.owner_id.trim() === "" ||
-      payload.project_id.trim() === ""
-    ) {
-      return null;
-    }
-
-    return {
-      token,
-      teamId: payload.owner_id,
-      projectId: payload.project_id,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function resolveVercelSandboxCredentials(
-  token: string,
-  options?: {
-    explicitTeamId?: string;
-    explicitProjectId?: string;
-  }
-): VercelSandboxCredentials {
-  const parsed = parseOidcTokenCredentials(token);
-  if (parsed) {
-    return parsed;
-  }
-
-  const explicitTeamId = options?.explicitTeamId?.trim();
-  const explicitProjectId = options?.explicitProjectId?.trim();
-
-  if (explicitTeamId && explicitProjectId) {
-    return {
-      token,
-      teamId: explicitTeamId,
-      projectId: explicitProjectId,
-    };
-  }
-
-  if (explicitTeamId || explicitProjectId) {
-    throw new Error(
-      "Provide both Vercel Sandbox Team ID and Project ID together when using a non-OIDC token."
-    );
-  }
-
-  const teamId = process.env.VERCEL_TEAM_ID?.trim();
-  const projectId = process.env.VERCEL_PROJECT_ID?.trim();
-
-  if (teamId && projectId) {
-    return {
-      token,
-      teamId,
-      projectId,
-    };
-  }
-
-  if (teamId || projectId) {
-    throw new Error(
-      "Both VERCEL_TEAM_ID and VERCEL_PROJECT_ID must be set together when using a non-OIDC Vercel token."
-    );
-  }
-
-  throw new Error(
-    "Invalid Vercel Sandbox token configuration. Provide an OIDC token, set Vercel Sandbox Team ID and Project ID in this node, or configure VERCEL_TEAM_ID and VERCEL_PROJECT_ID in server environment variables."
-  );
 }
 
 async function resolveVercelSandboxDestination(
@@ -739,17 +642,9 @@ async function createSandboxTools(
     };
   }
 
-  const token = input.vercelSandboxToken?.trim();
-  if (!token) {
-    throw new Error(
-      "Vercel Sandbox token is required when Sandbox is set to Vercel Sandbox."
-    );
-  }
-
-  const credentials = resolveVercelSandboxCredentials(token, {
-    explicitTeamId: input.vercelSandboxTeamId,
-    explicitProjectId: input.vercelSandboxProjectId,
-  });
+  const credentials = await resolveVercelSandboxCredentials(
+    input.vercelIntegrationId
+  );
   const sandbox = await VercelSandbox.create(credentials);
   const destination = await resolveVercelSandboxDestination(sandbox);
 

@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { builtinModules } from "node:module";
 import { join } from "node:path";
 import { AUTO_GENERATED_TEMPLATES } from "@/lib/codegen-registry";
+import { actionUsesVercelSandbox } from "@/lib/connection-requirements";
 import type { IntegrationType } from "@/lib/types/integration";
 import { generateWorkflowModule } from "@/lib/workflow-codegen";
 import type { WorkflowEdge, WorkflowNode } from "@/lib/workflow-store";
@@ -486,6 +487,28 @@ function collectUsedActionTypes(nodes: WorkflowNode[]): Set<string> {
   );
 }
 
+function collectUsedConnectionTypes(
+  nodes: WorkflowNode[]
+): Set<IntegrationType> {
+  const usedConnectionTypes = new Set<IntegrationType>();
+
+  for (const node of nodes) {
+    if (node.data.type !== "action") {
+      continue;
+    }
+
+    const config = (node.data.config ?? {}) as Record<string, unknown>;
+    const actionType =
+      typeof config.actionType === "string" ? config.actionType : undefined;
+
+    if (actionUsesVercelSandbox(actionType, config)) {
+      usedConnectionTypes.add("vercel");
+    }
+  }
+
+  return usedConnectionTypes;
+}
+
 function finalizeDiagnostics(
   diagnostics: ExportDiagnostics,
   unknownActionTypes: Set<string>
@@ -719,8 +742,12 @@ export async function buildExportPayload(workflow: WorkflowForExport): Promise<{
   } = boilerplateFiles;
   const templateFiles = await readDirectoryRecursive(CODEGEN_TEMPLATES_PATH);
   const usedActionTypes = collectUsedActionTypes(workflow.nodes);
+  const usedConnectionTypes = collectUsedConnectionTypes(workflow.nodes);
   const { stepFiles, usedIntegrationTypes, diagnostics } =
     generateStepFilesAndDiagnostics(templateFiles, usedActionTypes);
+  for (const integrationType of usedConnectionTypes) {
+    usedIntegrationTypes.add(integrationType);
+  }
 
   const workflowFiles = generateWorkflowFiles(workflow);
   const allFiles = {
