@@ -12,7 +12,7 @@ const SYSTEM_ACTION_INTEGRATIONS: Record<string, IntegrationType> = {
 const VERCEL_SANDBOX_INTEGRATIONS = new Set<IntegrationType>([
   "ai-agent",
   "bash",
-  "scaffold",
+  "code",
 ]);
 
 export type ConnectionFieldKey = "integrationId" | "vercelIntegrationId";

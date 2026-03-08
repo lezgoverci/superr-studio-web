@@ -1,21 +1,20 @@
 import type { IntegrationPlugin } from "../registry";
 import { registerIntegration } from "../registry";
-import { ScaffoldIcon } from "./icon";
+import { CodeIcon } from "./icon";
 
-const scaffoldPlugin: IntegrationPlugin = {
-  type: "scaffold",
-  label: "Scaffold",
-  description: "Execute inline JavaScript code in a sandbox",
-  icon: ScaffoldIcon,
+const codePlugin: IntegrationPlugin = {
+  type: "code",
+  label: "Code",
+  description: "Run inline JavaScript code in a sandbox",
+  icon: CodeIcon,
   formFields: [],
   actions: [
     {
       slug: "execute",
-      label: "Execute Custom Node",
-      description:
-        "Execute inline JavaScript code in a selected sandbox runtime",
-      category: "Scaffold",
-      stepFunction: "executeScaffoldNodeStep",
+      label: "Run Custom Code",
+      description: "Run inline JavaScript code in a selected sandbox runtime",
+      category: "Code",
+      stepFunction: "executeCodeNodeStep",
       stepImportPath: "execute",
       requiresConnection: false,
       outputFields: [
@@ -57,6 +56,6 @@ const scaffoldPlugin: IntegrationPlugin = {
   ],
 };
 
-registerIntegration(scaffoldPlugin);
+registerIntegration(codePlugin);
 
-export default scaffoldPlugin;
+export default codePlugin;

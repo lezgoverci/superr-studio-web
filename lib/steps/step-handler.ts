@@ -174,7 +174,10 @@ const INTERNAL_FIELDS = [
  */
 function stripInternalFields<T extends StepInput>(
   input: T
-): Omit<T, "_context" | "actionType" | "integrationId" | "vercelIntegrationId"> {
+): Omit<
+  T,
+  "_context" | "actionType" | "integrationId" | "vercelIntegrationId"
+> {
   const result = { ...input };
   for (const field of INTERNAL_FIELDS) {
     delete (result as Record<string, unknown>)[field];

@@ -21,11 +21,11 @@ import {
   NodeTitle,
 } from "@/components/ai-elements/node";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { getConnectionRequirements } from "@/lib/connection-requirements";
 import {
   integrationIdsAtom,
   integrationsLoadedAtom,
 } from "@/lib/integrations-store";
-import { getConnectionRequirements } from "@/lib/connection-requirements";
 import { cn } from "@/lib/utils";
 import {
   executionLogsAtom,
@@ -303,11 +303,12 @@ export const ActionNode = memo(({ data, selected, id }: ActionNodeProps) => {
   // Don't show missing indicator if we're still checking for auto-select
   const isPendingIntegrationCheck = pendingIntegrationNodes.has(id);
   const hasValidIntegration = requiredConnections.every((requirement) => {
-    const configuredIntegrationId = data.config?.[
-      requirement.fieldKey
-    ] as string | undefined;
+    const configuredIntegrationId = data.config?.[requirement.fieldKey] as
+      | string
+      | undefined;
     return Boolean(
-      configuredIntegrationId && availableIntegrationIds.has(configuredIntegrationId)
+      configuredIntegrationId &&
+        availableIntegrationIds.has(configuredIntegrationId)
     );
   });
   // Only show missing indicator after integrations have been loaded

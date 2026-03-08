@@ -45,7 +45,7 @@ const SUPPORTED_SYSTEM_ACTIONS = new Set([
 ]);
 const EXPLICITLY_UNSUPPORTED_PLUGIN_ACTIONS = new Set([
   "ai-agent/run-agent",
-  "scaffold/execute",
+  "code/execute",
 ]);
 
 const BINARY_EXTENSIONS = new Set([

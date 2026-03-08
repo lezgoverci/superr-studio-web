@@ -23,7 +23,7 @@ import { type StepInput, withStepLogging } from "@/lib/steps/step-handler";
 import { getErrorMessageAsync } from "@/lib/utils";
 import { resolveVercelSandboxCredentials } from "@/lib/vercel-sandbox-credentials";
 
-const RUNNER_PATH = "/tmp/superr-scaffold-runner.mjs";
+const RUNNER_PATH = "/tmp/superr-code-runner.mjs";
 const DEFAULT_TIMEOUT_MS = 30_000;
 const OPENCODE_DEFAULT_AGENT = "build";
 
@@ -35,7 +35,7 @@ type CommandExecutionResult = {
   exitCode: number;
 };
 
-type ExecuteScaffoldResult =
+type ExecuteCodeResult =
   | {
       success: true;
       data: {
@@ -55,14 +55,14 @@ type ExecuteScaffoldResult =
       };
     };
 
-export type ExecuteScaffoldCoreInput = {
+export type ExecuteCodeCoreInput = {
   code?: string;
   payloadJson?: string;
   sandboxType?: string;
   vercelIntegrationId?: string;
 };
 
-export type ExecuteScaffoldInput = StepInput & ExecuteScaffoldCoreInput;
+export type ExecuteCodeInput = StepInput & ExecuteCodeCoreInput;
 
 // ── Sandbox helpers (shared with bash plugin pattern) ──
 
@@ -356,7 +356,7 @@ async function executeOpenCodeCommand(input: {
   const client = createServerOpenCodeClient(input.connection);
 
   const session = await client.session.create({
-    title: "Superr Scaffold Execution",
+    title: "Superr Code Execution",
     permission,
   });
 
@@ -423,7 +423,7 @@ function fail(message) {
 async function main() {
   const encodedPayload = process.argv[2];
   if (!encodedPayload) {
-    fail("Missing scaffold payload.");
+    fail("Missing code payload.");
   }
 
   const decoded = Buffer.from(encodedPayload, "base64").toString("utf8");
@@ -637,8 +637,8 @@ function parseRuntimeOutput(stdout: string, stderr: string): ParsedRuntimeOutput
 // ── Step handler ──
 
 async function stepHandler(
-  input: ExecuteScaffoldInput
-): Promise<ExecuteScaffoldResult> {
+  input: ExecuteCodeInput
+): Promise<ExecuteCodeResult> {
   const code = input.code?.trim();
   if (!code) {
     return {
@@ -685,7 +685,7 @@ async function stepHandler(
       "const payloadBase64 = process.argv[3];",
       "const workingDirectory = process.argv[4];",
       "if (!runnerBase64 || !payloadBase64 || !workingDirectory) {",
-      "  throw new Error('Missing scaffold bootstrap payload.');",
+      "  throw new Error('Missing code bootstrap payload.');",
       "}",
       `const runnerPath = ${JSON.stringify(RUNNER_PATH)};`,
       "fs.writeFileSync(runnerPath, Buffer.from(runnerBase64, 'base64').toString('utf8'));",
@@ -763,19 +763,19 @@ async function stepHandler(
     try {
       await cleanup();
     } catch (cleanupError) {
-      console.error("[scaffold] Failed to cleanup sandbox:", cleanupError);
+      console.error("[code] Failed to cleanup sandbox:", cleanupError);
     }
   }
 }
 
-export async function executeScaffoldNodeStep(
-  input: ExecuteScaffoldInput
-): Promise<ExecuteScaffoldResult> {
+export async function executeCodeNodeStep(
+  input: ExecuteCodeInput
+): Promise<ExecuteCodeResult> {
   "use step";
 
   return withStepLogging(input, () => stepHandler(input));
 }
 
-executeScaffoldNodeStep.maxRetries = 0;
+executeCodeNodeStep.maxRetries = 0;
 
-export const _integrationType = "scaffold";
+export const _integrationType = "code";
