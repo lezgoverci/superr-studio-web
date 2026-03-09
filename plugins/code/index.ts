@@ -51,6 +51,12 @@ const codePlugin: IntegrationPlugin = {
             { value: "opencode", label: "OpenCode (remote/local agent)" },
           ],
         },
+        {
+          key: "sandboxId",
+          label: "Managed Sandbox",
+          type: "sandbox-picker",
+          showWhen: { field: "sandboxType", equals: "vercel" },
+        },
       ],
     },
   ],

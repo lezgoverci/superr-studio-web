@@ -44,6 +44,12 @@ const bashPlugin: IntegrationPlugin = {
           ],
         },
         {
+          key: "sandboxId",
+          label: "Managed Sandbox",
+          type: "sandbox-picker",
+          showWhen: { field: "sandboxType", equals: "vercel" },
+        },
+        {
           key: "command",
           label: "Bash Command",
           type: "template-textarea",

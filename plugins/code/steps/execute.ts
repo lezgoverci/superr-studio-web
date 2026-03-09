@@ -6,8 +6,6 @@ import {
 } from "@opencode-ai/sdk/v2/client";
 import type { PermissionRuleset } from "@opencode-ai/sdk/v2";
 import { eq } from "drizzle-orm";
-import { Sandbox as VercelSandbox } from "@vercel/sandbox";
-import { createBashTool } from "bash-tool";
 import { db } from "@/lib/db";
 import {
   getResolvedOpencodeConnectionForUser,
@@ -19,21 +17,21 @@ import {
   normalizeOpencodeBaseUrl,
   parseOpencodeUrl,
 } from "@/lib/opencode-server-utils";
+import {
+  createSandboxExecutor,
+  getSandboxType,
+  type CommandExecutionResult,
+  type SandboxExecutor,
+  type SandboxType,
+} from "@/lib/sandbox";
 import { type StepInput, withStepLogging } from "@/lib/steps/step-handler";
 import { getErrorMessageAsync } from "@/lib/utils";
-import { resolveVercelSandboxCredentials } from "@/lib/vercel-sandbox-credentials";
 
 const RUNNER_PATH = "/tmp/superr-code-runner.mjs";
 const DEFAULT_TIMEOUT_MS = 30_000;
 const OPENCODE_DEFAULT_AGENT = "build";
 
-type SandboxType = "vercel" | "just-bash" | "opencode";
-
-type CommandExecutionResult = {
-  stdout: string;
-  stderr: string;
-  exitCode: number;
-};
+// SandboxType and CommandExecutionResult imported from @/lib/sandbox
 
 type ExecuteCodeResult =
   | {
@@ -60,82 +58,22 @@ export type ExecuteCodeCoreInput = {
   payloadJson?: string;
   sandboxType?: string;
   vercelIntegrationId?: string;
+  sandboxId?: string;
 };
 
 export type ExecuteCodeInput = StepInput & ExecuteCodeCoreInput;
 
-// ── Sandbox helpers (shared with bash plugin pattern) ──
+// ── Sandbox executor (delegates to shared module, with OpenCode override) ──
 
-function getSandboxType(rawSandboxType: string | undefined): SandboxType {
-  if (rawSandboxType === "vercel") {
-    return "vercel";
-  }
-
-  if (rawSandboxType === "opencode") {
-    return "opencode";
-  }
-
-  return "just-bash";
-}
-
-async function resolveVercelSandboxDestination(
-  sandbox: VercelSandbox
-): Promise<string> {
-  const probeCommand = [
-    "if [ -d /vercel/sandbox/workspace ]; then",
-    "  printf '/vercel/sandbox/workspace'",
-    "elif mkdir -p /vercel/sandbox/workspace >/dev/null 2>&1; then",
-    "  printf '/vercel/sandbox/workspace'",
-    "elif [ -d /workspace ]; then",
-    "  printf '/workspace'",
-    "elif [ -d /vercel/sandbox ]; then",
-    "  printf '/vercel/sandbox'",
-    "else",
-    "  printf '/'",
-    "fi",
-  ].join("\n");
-
-  const probeResult = await sandbox.runCommand("bash", ["-lc", probeCommand]);
-
-  if (probeResult.exitCode !== 0) {
-    const stderr = (await probeResult.stderr()).trim();
-    throw new Error(
-      `Failed to determine Vercel sandbox working directory${stderr ? `: ${stderr}` : "."}`
-    );
-  }
-
-  const destination = (await probeResult.stdout()).trim();
-  if (!destination) {
-    throw new Error(
-      "Failed to determine Vercel sandbox working directory: no destination returned."
-    );
-  }
-
-  return destination;
-}
-
-async function createSandboxExecutor(input: {
+async function createCodeSandboxExecutor(input: {
   sandboxType?: string;
   vercelIntegrationId?: string;
+  sandboxId?: string;
   workflowId?: string;
-}): Promise<{
-  sandboxType: SandboxType;
-  workingDirectory: string;
-  executeCommand: (command: string) => Promise<CommandExecutionResult>;
-  cleanup: () => Promise<void>;
-}> {
+}): Promise<SandboxExecutor> {
   const sandboxType = getSandboxType(input.sandboxType);
 
-  if (sandboxType === "just-bash") {
-    const { sandbox } = await createBashTool();
-    return {
-      sandboxType,
-      workingDirectory: "/workspace",
-      executeCommand: (command) => sandbox.executeCommand(command),
-      cleanup: async () => {},
-    };
-  }
-
+  // OpenCode path is code-plugin-specific — not in the shared module.
   if (sandboxType === "opencode") {
     const workflowId = input.workflowId?.trim();
     if (!workflowId) {
@@ -181,24 +119,12 @@ async function createSandboxExecutor(input: {
     };
   }
 
-  const credentials = await resolveVercelSandboxCredentials(
-    input.vercelIntegrationId
-  );
-  const sandbox = await VercelSandbox.create(credentials);
-  const destination = await resolveVercelSandboxDestination(sandbox);
-  const { sandbox: wrappedSandbox } = await createBashTool({
-    sandbox,
-    destination,
+  // Vercel and just-bash paths use the shared module.
+  return createSandboxExecutor({
+    sandboxType: input.sandboxType,
+    vercelIntegrationId: input.vercelIntegrationId,
+    sandboxId: input.sandboxId,
   });
-
-  return {
-    sandboxType,
-    workingDirectory: destination,
-    executeCommand: (command) => wrappedSandbox.executeCommand(command),
-    cleanup: async () => {
-      await sandbox.stop();
-    },
-  };
 }
 
 type OpenCodeAssistantMessage = {
@@ -659,9 +585,10 @@ async function stepHandler(
   let sandboxTypeResolved = getSandboxType(input.sandboxType);
 
   try {
-    const runtime = await createSandboxExecutor({
+    const runtime = await createCodeSandboxExecutor({
       sandboxType: input.sandboxType,
       vercelIntegrationId: input.vercelIntegrationId,
+      sandboxId: input.sandboxId,
       workflowId: input._context?.workflowId,
     });
     cleanup = runtime.cleanup;

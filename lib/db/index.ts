@@ -9,6 +9,7 @@ import {
   artifacts,
   integrations,
   opencodeConnections,
+  sandboxes,
   sessions,
   userPreferences,
   userSkills,
@@ -35,6 +36,7 @@ const schema = {
   apiKeys,
   integrations,
   opencodeConnections,
+  sandboxes,
   userPreferences,
   userSkills,
 };

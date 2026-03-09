@@ -28,7 +28,8 @@ export type ActionConfigFieldBase = {
     | "text" // Regular text input
     | "number" // Number input
     | "select" // Dropdown select
-    | "schema-builder"; // Schema builder for structured output
+    | "schema-builder" // Schema builder for structured output
+    | "sandbox-picker"; // Sandbox picker for managed sandboxes
 
   // Placeholder text
   placeholder?: string;

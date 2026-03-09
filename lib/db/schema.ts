@@ -113,6 +113,41 @@ export const integrations = pgTable("integrations", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// Managed sandboxes — user-created Vercel Sandbox VMs that persist across workflow runs
+export type SandboxStatus = "pending" | "running" | "stopped" | "failed";
+
+export const sandboxes = pgTable(
+  "sandboxes",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    /** The Vercel-side sandbox ID (from Sandbox.create()). */
+    vercelSandboxId: text("vercel_sandbox_id"),
+    /** Which Vercel integration credentials to use. */
+    integrationId: text("integration_id").references(() => integrations.id, {
+      onDelete: "set null",
+    }),
+    /** Cached status from Vercel API. */
+    status: text("status").notNull().default("stopped").$type<SandboxStatus>(),
+    /** Sandbox VM runtime (e.g. node24, python3.13). */
+    runtime: text("runtime").default("node24"),
+    /** Timeout in milliseconds before auto-terminate. */
+    timeout: integer("timeout"),
+    // biome-ignore lint/suspicious/noExplicitAny: JSONB type - extra metadata
+    metadata: jsonb("metadata").$type<Record<string, any> | null>(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index("sandboxes_user_id_idx").on(table.userId),
+  }),
+);
+
 export type OpencodeConnectionMode =
   | "self_hosted"
   | "managed_shared"
@@ -450,3 +485,5 @@ export type UserPreference = typeof userPreferences.$inferSelect;
 export type NewUserPreference = typeof userPreferences.$inferInsert;
 export type UserSkill = typeof userSkills.$inferSelect;
 export type NewUserSkill = typeof userSkills.$inferInsert;
+export type SandboxRecord = typeof sandboxes.$inferSelect;
+export type NewSandboxRecord = typeof sandboxes.$inferInsert;

@@ -1,6 +1,6 @@
 "use client";
 
-import { GitBranch, Layers, MessageSquare, Settings } from "lucide-react";
+import { Box, GitBranch, Layers, MessageSquare, Settings } from "lucide-react";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useCallback, useMemo } from "react";
@@ -14,6 +14,7 @@ import type { ShellNavItem, ShellUser } from "./types";
 const DEFAULT_PERMISSIONS = [
   "route:dashboard:view",
   "route:workflows:view",
+  "route:sandboxes:view",
   "route:library:view",
   "route:settings:view",
 ] as const;
@@ -34,6 +35,14 @@ const NAV_ITEMS: ShellNavItem[] = [
     href: "/app/workflows",
     icon: GitBranch,
     requiredPermissions: ["route:workflows:view"],
+  },
+  {
+    id: "sandboxes",
+    label: "Sandboxes",
+    description: "Managed sandbox environments",
+    href: "/app/sandboxes",
+    icon: Box,
+    requiredPermissions: ["route:sandboxes:view"],
   },
   {
     id: "library",

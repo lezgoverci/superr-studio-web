@@ -19,6 +19,12 @@ import { fetchCredentials } from "@/lib/credential-fetcher";
 import { db } from "@/lib/db";
 import { getIntegrationById } from "@/lib/db/integrations";
 import { workflows } from "@/lib/db/schema";
+import {
+  getSandboxType,
+  resolveVercelSandboxDestination,
+  type SandboxType,
+} from "@/lib/sandbox";
+import { resolveManagedSandbox } from "@/lib/sandbox/managed";
 import { type StepInput, withStepLogging } from "@/lib/steps/step-handler";
 import { getErrorMessageAsync } from "@/lib/utils";
 import { resolveVercelSandboxCredentials } from "@/lib/vercel-sandbox-credentials";
@@ -29,7 +35,7 @@ import {
 } from "@/lib/workflow-ui-spec/compose";
 import type { AiAgentCredentials } from "../credentials";
 
-type SandboxType = "vercel" | "just-bash";
+// SandboxType imported from @/lib/sandbox
 
 type RunAgentResult =
   | {
@@ -68,6 +74,7 @@ export type RunAgentCoreInput = {
   aiModel?: string;
   sandboxType?: string;
   vercelIntegrationId?: string;
+  sandboxId?: string;
   agentPrompt?: string;
   agentInstructions?: string;
   maxSteps?: string;
@@ -482,48 +489,7 @@ type PreparedSkillToolkit = {
   cleanup: () => Promise<void>;
 };
 
-function getSandboxType(sandboxType: string | undefined): SandboxType {
-  if (sandboxType === "just-bash") {
-    return "just-bash";
-  }
-
-  return "vercel";
-}
-
-async function resolveVercelSandboxDestination(
-  sandbox: VercelSandbox
-): Promise<string> {
-  const probeCommand = [
-    "if [ -d /vercel/sandbox/workspace ]; then",
-    "  printf '/vercel/sandbox/workspace'",
-    "elif mkdir -p /vercel/sandbox/workspace >/dev/null 2>&1; then",
-    "  printf '/vercel/sandbox/workspace'",
-    "elif [ -d /workspace ]; then",
-    "  printf '/workspace'",
-    "elif [ -d /vercel/sandbox ]; then",
-    "  printf '/vercel/sandbox'",
-    "else",
-    "  printf '/'",
-    "fi",
-  ].join("\n");
-
-  const probeResult = await sandbox.runCommand("bash", ["-lc", probeCommand]);
-  if (probeResult.exitCode !== 0) {
-    const stderr = (await probeResult.stderr()).trim();
-    throw new Error(
-      `Failed to determine Vercel sandbox working directory${stderr ? `: ${stderr}` : "."}`
-    );
-  }
-
-  const destination = (await probeResult.stdout()).trim();
-  if (!destination) {
-    throw new Error(
-      "Failed to determine Vercel sandbox working directory: no destination returned."
-    );
-  }
-
-  return destination;
-}
+// getSandboxType and resolveVercelSandboxDestination imported from @/lib/sandbox
 
 function buildSkillSourceConfig(input: RunAgentCoreInput): SkillSourceConfig {
   const source = input.skillsSource === "git" ? "git" : "preloaded";
@@ -609,7 +575,7 @@ async function createSandboxTools(
   sandboxType: SandboxType;
   cleanup: () => Promise<void>;
 }> {
-  const requestedSandboxType = getSandboxType(input.sandboxType);
+  const requestedSandboxType = getSandboxType(input.sandboxType, "vercel");
 
   if (skillToolkit?.hasExecutableSkills && requestedSandboxType !== "vercel") {
     throw new Error(
@@ -642,10 +608,29 @@ async function createSandboxTools(
     };
   }
 
-  const credentials = await resolveVercelSandboxCredentials(
-    input.vercelIntegrationId
-  );
-  const sandbox = await VercelSandbox.create(credentials);
+  // ── Vercel path: managed or ephemeral ─────────────────────────
+  let sandbox: VercelSandbox;
+  let isManaged = false;
+
+  if (input.sandboxId) {
+    // Reconnect to a managed sandbox
+    const managed = await resolveManagedSandbox(input.sandboxId);
+    const credentials = await resolveVercelSandboxCredentials(
+      managed.integrationId || input.vercelIntegrationId,
+    );
+    sandbox = await VercelSandbox.get({
+      sandboxId: managed.vercelSandboxId,
+      ...credentials,
+    });
+    isManaged = true;
+  } else {
+    // Ephemeral sandbox
+    const credentials = await resolveVercelSandboxCredentials(
+      input.vercelIntegrationId
+    );
+    sandbox = await VercelSandbox.create(credentials);
+  }
+
   const destination = await resolveVercelSandboxDestination(sandbox);
 
   const { tools, sandbox: wrappedSandbox } = await createBashTool({
@@ -662,9 +647,9 @@ async function createSandboxTools(
     sandbox: wrappedSandbox,
     workingDirectory: destination,
     sandboxType: requestedSandboxType,
-    cleanup: async () => {
-      await sandbox.stop();
-    },
+    cleanup: isManaged
+      ? async () => {}
+      : async () => { await sandbox.stop(); },
   };
 }
 

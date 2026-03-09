@@ -115,6 +115,12 @@ const aiAgentPlugin: IntegrationPlugin = {
           ],
         },
         {
+          key: "sandboxId",
+          label: "Managed Sandbox",
+          type: "sandbox-picker",
+          showWhen: { field: "sandboxType", equals: "vercel" },
+        },
+        {
           key: "skillsEnabled",
           label: "Agent Skills",
           type: "select",

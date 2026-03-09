@@ -1,13 +1,14 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -115,6 +116,73 @@ function SchemaBuilderField(props: FieldProps) {
   );
 }
 
+function SandboxPickerField({ value, onChange, disabled }: FieldProps) {
+  const [sandboxes, setSandboxes] = useState<
+    Array<{ id: string; name: string; status: string }>
+  >([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch("/api/sandboxes");
+        if (!res.ok) throw new Error("Failed to fetch sandboxes");
+        const data = await res.json();
+        if (active) setSandboxes(data);
+      } catch (err) {
+        console.error("Failed to load sandboxes:", err);
+        if (active) setSandboxes([]);
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    };
+    load();
+    return () => { active = false; };
+  }, []);
+
+  const statusBadge = (status: string) => {
+    const colors: Record<string, string> = {
+      running: "bg-green-500",
+      stopped: "bg-gray-400",
+      pending: "bg-yellow-500",
+      failed: "bg-red-500",
+    };
+    return (
+      <span
+        className={`inline-block h-2 w-2 rounded-full ${colors[status] || "bg-gray-400"}`}
+      />
+    );
+  };
+
+  return (
+    <Select
+      disabled={disabled || isLoading}
+      onValueChange={(v) => onChange(v === "__ephemeral" ? "" : v)}
+      value={value || "__ephemeral"}
+    >
+      <SelectTrigger className="w-full">
+        <SelectValue placeholder={isLoading ? "Loading..." : "Select sandbox"} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="__ephemeral">
+          Ephemeral (create new each run)
+        </SelectItem>
+        {sandboxes.length > 0 && <SelectSeparator />}
+        {sandboxes.map((sb) => (
+          <SelectItem key={sb.id} value={sb.id}>
+            <span className="flex items-center gap-2">
+              {statusBadge(sb.status)}
+              {sb.name}
+            </span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 const FIELD_RENDERERS: Record<
   ActionConfigFieldBase["type"],
   React.ComponentType<FieldProps>
@@ -125,6 +193,7 @@ const FIELD_RENDERERS: Record<
   number: NumberInputField,
   select: SelectField,
   "schema-builder": SchemaBuilderField,
+  "sandbox-picker": SandboxPickerField,
 };
 
 function resolveFieldValue(
