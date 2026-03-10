@@ -1,0 +1,41 @@
+{
+  "skill_name": "app-to-cli-generator",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Turn our internal web dashboard at https://ops.example.com into a CLI. I only have the live app, not the source code. I need commands for projects list, project details, and deployments list.",
+      "expected_output": "The skill initializes a manifest, captures the live web app with agent-browser, infers a projects and deployments command tree, authors API and UI execution paths where possible, and renders a standalone CLI scaffold.",
+      "expectations": [
+        "Creates captures, manifest, and cli workspace directories",
+        "Uses runtime observation rather than source code inspection",
+        "Creates commands with explicit path arrays",
+        "Uses auto mode only when both requestRecipeId and flowId are present",
+        "Runs the render-cli script to scaffold the generated project"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Build a CLI wrapper for the Slack desktop app. It is running locally with a remote debugging port on 9222. I want commands for unread channels and open channel by name.",
+      "expected_output": "The skill follows the Electron capture path, connects over CDP, captures the relevant views, writes a manifest with Electron metadata, and renders a CLI with unread and open-channel commands.",
+      "expectations": [
+        "Uses Electron capture flow instead of web-only assumptions",
+        "Connects with agent-browser to a CDP port",
+        "Writes app.platform as electron",
+        "Includes electron.cdpPort metadata in the manifest",
+        "Produces CLI commands backed by UI flows"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Generate a CLI for Superr Studio at http://localhost:3000. Start with workflows list, workflow get, workflow execute, artifacts list, and sandboxes list. Use API mode where stable and UI mode otherwise.",
+      "expected_output": "The skill captures the live app, derives the requested command set, records stable API recipes where available, preserves UI fallbacks, and generates a CLI scaffold without assuming source-code access.",
+      "expectations": [
+        "Does not rely on repository source code to define commands",
+        "Creates both request recipes and UI flows when evidence supports them",
+        "Keeps command mode selection aligned with runtime-modes guidance",
+        "Includes auth and regeneration metadata in the manifest",
+        "Reports known gaps or risky selectors in the final summary"
+      ]
+    }
+  ]
+}

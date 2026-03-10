@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/app-cli-manifest.schema.json",
+  "type": "object",
+  "required": ["version", "app", "auth", "commands", "requestRecipes", "flows"],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "app": {
+      "type": "object",
+      "required": ["name", "slug", "bin", "platform"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "slug": { "type": "string", "minLength": 1 },
+        "bin": { "type": "string", "minLength": 1 },
+        "platform": {
+          "type": "string",
+          "enum": ["web", "electron"]
+        },
+        "defaultMode": {
+          "type": "string",
+          "enum": ["auto", "api", "ui"]
+        },
+        "homeDir": { "type": "string" },
+        "defaultSessionName": { "type": "string" },
+        "baseUrl": { "type": "string" },
+        "electron": {
+          "type": "object",
+          "properties": {
+            "cdpPort": { "type": "number" },
+            "appName": { "type": "string" },
+            "launchCommand": { "type": "string" }
+          }
+        }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "required": ["strategy"],
+      "properties": {
+        "strategy": {
+          "type": "string",
+          "enum": ["none", "state-file"]
+        },
+        "loginUrl": { "type": "string" },
+        "stateFile": { "type": "string" },
+        "loginFlowId": { "type": "string" },
+        "env": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string" },
+              "description": { "type": "string" },
+              "secret": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string" },
+          "plural": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "path", "description"],
+        "properties": {
+          "id": { "type": "string" },
+          "path": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 1
+          },
+          "description": { "type": "string" },
+          "mode": {
+            "type": "string",
+            "enum": ["auto", "api", "ui"]
+          },
+          "requestRecipeId": { "type": "string" },
+          "flowId": { "type": "string" },
+          "inputs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "flag", "type"],
+              "properties": {
+                "name": { "type": "string" },
+                "flag": { "type": "string" },
+                "alias": { "type": "string" },
+                "type": {
+                  "type": "string",
+                  "enum": ["string", "number", "boolean"]
+                },
+                "description": { "type": "string" },
+                "required": { "type": "boolean" }
+              }
+            }
+          },
+          "output": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["json", "text", "bytes"]
+              }
+            }
+          }
+        }
+      }
+    },
+    "requestRecipes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "method", "url"],
+        "properties": {
+          "id": { "type": "string" },
+          "method": { "type": "string" },
+          "url": { "type": "string" },
+          "headers": { "type": "object" },
+          "query": { "type": "object" },
+          "body": {},
+          "responseType": {
+            "type": "string",
+            "enum": ["json", "text", "bytes"]
+          },
+          "useCookies": { "type": "boolean" }
+        }
+      }
+    },
+    "flows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "steps"],
+        "properties": {
+          "id": { "type": "string" },
+          "description": { "type": "string" },
+          "steps": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["action"],
+              "properties": {
+                "action": { "type": "string" }
+              }
+            }
+          },
+          "result": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "selectors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "value"],
+        "properties": {
+          "id": { "type": "string" },
+          "value": { "type": "string" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+    "regeneration": {
+      "type": "object"
+    }
+  }
+}
