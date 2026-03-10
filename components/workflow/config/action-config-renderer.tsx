@@ -124,22 +124,33 @@ function SandboxPickerField({ value, onChange, disabled }: FieldProps) {
 
   useEffect(() => {
     let active = true;
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: The effect keeps fetch, loading, and cancellation behavior together.
     const load = async () => {
       setIsLoading(true);
       try {
         const res = await fetch("/api/sandboxes");
-        if (!res.ok) throw new Error("Failed to fetch sandboxes");
+        if (!res.ok) {
+          throw new Error("Failed to fetch sandboxes");
+        }
         const data = await res.json();
-        if (active) setSandboxes(data);
+        if (active) {
+          setSandboxes(data);
+        }
       } catch (err) {
         console.error("Failed to load sandboxes:", err);
-        if (active) setSandboxes([]);
+        if (active) {
+          setSandboxes([]);
+        }
       } finally {
-        if (active) setIsLoading(false);
+        if (active) {
+          setIsLoading(false);
+        }
       }
     };
     load();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   const statusBadge = (status: string) => {
@@ -163,7 +174,9 @@ function SandboxPickerField({ value, onChange, disabled }: FieldProps) {
       value={value || "__ephemeral"}
     >
       <SelectTrigger className="w-full">
-        <SelectValue placeholder={isLoading ? "Loading..." : "Select sandbox"} />
+        <SelectValue
+          placeholder={isLoading ? "Loading..." : "Select sandbox"}
+        />
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="__ephemeral">

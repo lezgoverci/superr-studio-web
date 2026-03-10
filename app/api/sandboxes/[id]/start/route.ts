@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
 import { Sandbox as VercelSandbox } from "@vercel/sandbox";
 import { and, eq } from "drizzle-orm";
+import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { sandboxes, type SandboxStatus } from "@/lib/db/schema";
+import { type SandboxStatus, sandboxes } from "@/lib/db/schema";
 import { resolveVercelSandboxCredentials } from "@/lib/vercel-sandbox-credentials";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -24,10 +24,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const { id } = await params;
     const record = await db.query.sandboxes.findFirst({
-      where: and(
-        eq(sandboxes.id, id),
-        eq(sandboxes.userId, session.user.id),
-      ),
+      where: and(eq(sandboxes.id, id), eq(sandboxes.userId, session.user.id)),
     });
 
     if (!record) {
@@ -37,23 +34,31 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (record.status === "running") {
       return NextResponse.json(
         { error: "Sandbox is already running." },
-        { status: 409 },
+        { status: 409 }
       );
     }
 
     if (!record.integrationId) {
       return NextResponse.json(
-        { error: "No Vercel connection linked. Delete and re-create the sandbox." },
-        { status: 400 },
+        {
+          error:
+            "No Vercel connection linked. Delete and re-create the sandbox.",
+        },
+        { status: 400 }
       );
     }
 
     const credentials = await resolveVercelSandboxCredentials(
-      record.integrationId,
+      record.integrationId
     );
     const sandbox = await VercelSandbox.create({
       ...credentials,
-      runtime: (record.runtime as Parameters<typeof VercelSandbox.create>[0] extends { runtime?: infer R } ? R : never) || "node24",
+      runtime:
+        (record.runtime as Parameters<typeof VercelSandbox.create>[0] extends {
+          runtime?: infer R;
+        }
+          ? R
+          : never) || "node24",
       ...(record.timeout ? { timeout: record.timeout } : {}),
     });
 
@@ -79,7 +84,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         error: "Failed to start sandbox",
         details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

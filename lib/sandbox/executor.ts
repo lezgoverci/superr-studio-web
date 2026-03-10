@@ -15,9 +15,13 @@ import { Sandbox as VercelSandbox } from "@vercel/sandbox";
 import { createBashTool } from "bash-tool";
 
 import { resolveVercelSandboxCredentials } from "@/lib/vercel-sandbox-credentials";
-import type { CreateSandboxExecutorInput, SandboxExecutor } from "./types";
-import { getSandboxType, resolveVercelSandboxDestination } from "./resolve";
 import { resolveManagedSandbox } from "./managed";
+import { getSandboxType, resolveVercelSandboxDestination } from "./resolve";
+import type { CreateSandboxExecutorInput, SandboxExecutor } from "./types";
+
+async function noopCleanup(): Promise<void> {
+  // Intentionally empty: lifecycle is managed elsewhere.
+}
 
 // ── Public API ──────────────────────────────────────────────────────
 
@@ -33,7 +37,7 @@ import { resolveManagedSandbox } from "./managed";
  *     ↳ Not handled here; the code plugin retains its own OpenCode logic.
  */
 export async function createSandboxExecutor(
-  input: CreateSandboxExecutorInput,
+  input: CreateSandboxExecutorInput
 ): Promise<SandboxExecutor> {
   const sandboxType = getSandboxType(input.sandboxType);
 
@@ -44,14 +48,14 @@ export async function createSandboxExecutor(
       sandboxType,
       workingDirectory: "/workspace",
       executeCommand: (command) => sandbox.executeCommand(command),
-      cleanup: async () => {},
+      cleanup: noopCleanup,
     };
   }
 
   // ── opencode (not handled centrally) ──────────────────────────────
   if (sandboxType === "opencode") {
     throw new Error(
-      "OpenCode sandbox type must be resolved by the code plugin directly.",
+      "OpenCode sandbox type must be resolved by the code plugin directly."
     );
   }
 
@@ -71,11 +75,11 @@ export async function createSandboxExecutor(
  */
 async function connectToManagedSandbox(
   sandboxId: string,
-  vercelIntegrationId: string | undefined,
+  vercelIntegrationId: string | undefined
 ): Promise<SandboxExecutor> {
   const managed = await resolveManagedSandbox(sandboxId);
   const credentials = await resolveVercelSandboxCredentials(
-    managed.integrationId || vercelIntegrationId,
+    managed.integrationId || vercelIntegrationId
   );
 
   const sandbox = await VercelSandbox.get({
@@ -94,7 +98,7 @@ async function connectToManagedSandbox(
     workingDirectory: destination,
     executeCommand: (command) => wrappedSandbox.executeCommand(command),
     // Managed sandbox: do NOT stop — the user controls the lifecycle.
-    cleanup: async () => {},
+    cleanup: noopCleanup,
   };
 }
 
@@ -103,11 +107,10 @@ async function connectToManagedSandbox(
  * Stops the sandbox on cleanup.
  */
 async function createEphemeralSandbox(
-  vercelIntegrationId: string | undefined,
+  vercelIntegrationId: string | undefined
 ): Promise<SandboxExecutor> {
-  const credentials = await resolveVercelSandboxCredentials(
-    vercelIntegrationId,
-  );
+  const credentials =
+    await resolveVercelSandboxCredentials(vercelIntegrationId);
   const sandbox = await VercelSandbox.create(credentials);
   const destination = await resolveVercelSandboxDestination(sandbox);
   const { sandbox: wrappedSandbox } = await createBashTool({

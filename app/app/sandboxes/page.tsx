@@ -1,7 +1,9 @@
 "use client";
 
 import { Box, Loader2, Plus, Power, PowerOff, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
+import type { SandboxListItem } from "@/app/api/sandboxes/route";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { SandboxListItem } from "@/app/api/sandboxes/route";
 
 type Integration = { id: string; name: string; type: string };
 
@@ -47,12 +48,12 @@ function CreateSandboxForm({
   const [runtime, setRuntime] = useState("node24");
   const [isCreating, setIsCreating] = useState(false);
 
-  const vercelIntegrations = integrations.filter(
-    (i) => i.type === "vercel",
-  );
+  const vercelIntegrations = integrations.filter((i) => i.type === "vercel");
 
   const handleCreate = async () => {
-    if (!name.trim() || !integrationId) return;
+    if (!(name.trim() && integrationId)) {
+      return;
+    }
     setIsCreating(true);
     try {
       const res = await fetch("/api/sandboxes", {
@@ -68,7 +69,9 @@ function CreateSandboxForm({
       onCreated();
     } catch (err) {
       console.error("Failed to create sandbox:", err);
-      alert(err instanceof Error ? err.message : "Failed to create sandbox");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to create sandbox"
+      );
     } finally {
       setIsCreating(false);
     }
@@ -123,7 +126,7 @@ function CreateSandboxForm({
         <div className="flex items-end">
           <Button
             className="w-full"
-            disabled={!name.trim() || !integrationId || isCreating}
+            disabled={!(name.trim() && integrationId) || isCreating}
             onClick={handleCreate}
           >
             {isCreating ? (
@@ -164,7 +167,7 @@ function SandboxRow({
       onAction();
     } catch (err) {
       console.error(`Failed to ${action} sandbox:`, err);
-      alert(err instanceof Error ? err.message : `Failed to ${action}`);
+      toast.error(err instanceof Error ? err.message : `Failed to ${action}`);
     } finally {
       setLoading(null);
     }
@@ -177,7 +180,10 @@ function SandboxRow({
         <div>
           <p className="font-medium text-sm">{sandbox.name}</p>
           <p className="text-muted-foreground text-xs">
-            {sandbox.runtime || "node24"} · {sandbox.vercelSandboxId ? `ID: ${sandbox.vercelSandboxId.slice(0, 12)}…` : "No VM"}
+            {sandbox.runtime || "node24"} ·{" "}
+            {sandbox.vercelSandboxId
+              ? `ID: ${sandbox.vercelSandboxId.slice(0, 12)}…`
+              : "No VM"}
           </p>
         </div>
       </div>
@@ -241,14 +247,44 @@ export default function SandboxesPage() {
         fetch("/api/sandboxes"),
         fetch("/api/integrations"),
       ]);
-      if (sbRes.ok) setSandboxes(await sbRes.json());
-      if (intRes.ok) setIntegrations(await intRes.json());
+      if (sbRes.ok) {
+        setSandboxes(await sbRes.json());
+      }
+      if (intRes.ok) {
+        setIntegrations(await intRes.json());
+      }
     } catch (err) {
       console.error("Failed to load sandboxes:", err);
     } finally {
       setIsLoading(false);
     }
   }, []);
+
+  let sandboxesContent: ReactNode;
+  if (isLoading) {
+    sandboxesContent = (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  } else if (sandboxes.length === 0) {
+    sandboxesContent = (
+      <div className="rounded-lg border border-dashed p-8 text-center">
+        <Box className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
+        <p className="text-muted-foreground text-sm">
+          No sandboxes yet. Create one above.
+        </p>
+      </div>
+    );
+  } else {
+    sandboxesContent = (
+      <div className="space-y-2">
+        {sandboxes.map((sb) => (
+          <SandboxRow key={sb.id} onAction={refresh} sandbox={sb} />
+        ))}
+      </div>
+    );
+  }
 
   useEffect(() => {
     refresh();
@@ -271,24 +307,7 @@ export default function SandboxesPage() {
 
       <div className="space-y-2">
         <h2 className="font-medium text-sm">Your Sandboxes</h2>
-        {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : sandboxes.length === 0 ? (
-          <div className="rounded-lg border border-dashed p-8 text-center">
-            <Box className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
-            <p className="text-muted-foreground text-sm">
-              No sandboxes yet. Create one above.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {sandboxes.map((sb) => (
-              <SandboxRow key={sb.id} onAction={refresh} sandbox={sb} />
-            ))}
-          </div>
-        )}
+        {sandboxesContent}
       </div>
     </div>
   );

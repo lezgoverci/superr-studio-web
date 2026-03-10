@@ -19,12 +19,9 @@ import { fetchCredentials } from "@/lib/credential-fetcher";
 import { db } from "@/lib/db";
 import { getIntegrationById } from "@/lib/db/integrations";
 import { workflows } from "@/lib/db/schema";
-import {
-  getSandboxType,
-  resolveVercelSandboxDestination,
-  type SandboxType,
-} from "@/lib/sandbox";
 import { resolveManagedSandbox } from "@/lib/sandbox/managed";
+import { getSandboxType, resolveVercelSandboxDestination } from "@/lib/sandbox/resolve";
+import type { SandboxType } from "@/lib/sandbox/types";
 import { type StepInput, withStepLogging } from "@/lib/steps/step-handler";
 import { getErrorMessageAsync } from "@/lib/utils";
 import { resolveVercelSandboxCredentials } from "@/lib/vercel-sandbox-credentials";

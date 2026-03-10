@@ -17,13 +17,13 @@ import {
   normalizeOpencodeBaseUrl,
   parseOpencodeUrl,
 } from "@/lib/opencode-server-utils";
-import {
-  createSandboxExecutor,
-  getSandboxType,
-  type CommandExecutionResult,
-  type SandboxExecutor,
-  type SandboxType,
-} from "@/lib/sandbox";
+import { createSandboxExecutor } from "@/lib/sandbox/executor";
+import { getSandboxType } from "@/lib/sandbox/resolve";
+import type {
+  CommandExecutionResult,
+  SandboxExecutor,
+  SandboxType,
+} from "@/lib/sandbox/types";
 import { type StepInput, withStepLogging } from "@/lib/steps/step-handler";
 import { getErrorMessageAsync } from "@/lib/utils";
 

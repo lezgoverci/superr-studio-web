@@ -18,11 +18,17 @@ import type { SandboxType } from "./types";
  */
 export function getSandboxType(
   raw: string | undefined,
-  fallback: SandboxType = "just-bash",
+  fallback: SandboxType = "just-bash"
 ): SandboxType {
-  if (raw === "vercel") return "vercel";
-  if (raw === "just-bash") return "just-bash";
-  if (raw === "opencode") return "opencode";
+  if (raw === "vercel") {
+    return "vercel";
+  }
+  if (raw === "just-bash") {
+    return "just-bash";
+  }
+  if (raw === "opencode") {
+    return "opencode";
+  }
   return fallback;
 }
 
@@ -34,7 +40,7 @@ export function getSandboxType(
  * next-best candidate.
  */
 export async function resolveVercelSandboxDestination(
-  sandbox: VercelSandbox,
+  sandbox: VercelSandbox
 ): Promise<string> {
   const probeCommand = [
     "if [ -d /vercel/sandbox/workspace ]; then",
@@ -54,14 +60,14 @@ export async function resolveVercelSandboxDestination(
   if (probeResult.exitCode !== 0) {
     const stderr = (await probeResult.stderr()).trim();
     throw new Error(
-      `Failed to determine Vercel sandbox working directory${stderr ? `: ${stderr}` : "."}`,
+      `Failed to determine Vercel sandbox working directory${stderr ? `: ${stderr}` : "."}`
     );
   }
 
   const destination = (await probeResult.stdout()).trim();
   if (!destination) {
     throw new Error(
-      "Failed to determine Vercel sandbox working directory: no destination returned.",
+      "Failed to determine Vercel sandbox working directory: no destination returned."
     );
   }
 

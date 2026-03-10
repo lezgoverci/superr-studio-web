@@ -1,13 +1,59 @@
-import { NextResponse } from "next/server";
 import { Sandbox as VercelSandbox } from "@vercel/sandbox";
 import { and, eq } from "drizzle-orm";
+import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { sandboxes, type SandboxStatus } from "@/lib/db/schema";
+import { sandboxes } from "@/lib/db/schema";
 import { resolveVercelSandboxCredentials } from "@/lib/vercel-sandbox-credentials";
 import type { SandboxListItem } from "../route";
 
 type RouteParams = { params: Promise<{ id: string }> };
+
+function mapVercelStatus(status: string): SandboxListItem["status"] {
+  switch (status) {
+    case "running":
+      return "running";
+    case "pending":
+      return "pending";
+    case "failed":
+      return "failed";
+    default:
+      return "stopped";
+  }
+}
+
+async function resolveLiveStatus(record: {
+  id: string;
+  status: SandboxListItem["status"];
+  vercelSandboxId: string | null;
+  integrationId: string | null;
+}) {
+  if (!(record.vercelSandboxId && record.integrationId)) {
+    return record.status;
+  }
+
+  try {
+    const credentials = await resolveVercelSandboxCredentials(
+      record.integrationId
+    );
+    const sandbox = await VercelSandbox.get({
+      sandboxId: record.vercelSandboxId,
+      ...credentials,
+    });
+    const liveStatus = mapVercelStatus(sandbox.status);
+
+    if (liveStatus !== record.status) {
+      await db
+        .update(sandboxes)
+        .set({ status: liveStatus, updatedAt: new Date() })
+        .where(eq(sandboxes.id, record.id));
+    }
+
+    return liveStatus;
+  } catch {
+    return record.status;
+  }
+}
 
 // ── GET /api/sandboxes/:id ──────────────────────────────────────────
 
@@ -22,48 +68,14 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     const { id } = await params;
     const record = await db.query.sandboxes.findFirst({
-      where: and(
-        eq(sandboxes.id, id),
-        eq(sandboxes.userId, session.user.id),
-      ),
+      where: and(eq(sandboxes.id, id), eq(sandboxes.userId, session.user.id)),
     });
 
     if (!record) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    // Optionally refresh status from Vercel
-    let liveStatus = record.status;
-    if (record.vercelSandboxId && record.integrationId) {
-      try {
-        const credentials = await resolveVercelSandboxCredentials(
-          record.integrationId,
-        );
-        const sandbox = await VercelSandbox.get({
-          sandboxId: record.vercelSandboxId,
-          ...credentials,
-        });
-        const vercelStatus = sandbox.status;
-        liveStatus =
-          vercelStatus === "running"
-            ? "running"
-            : vercelStatus === "pending"
-              ? "pending"
-              : vercelStatus === "failed"
-                ? "failed"
-                : "stopped";
-
-        // Update cached status if changed
-        if (liveStatus !== record.status) {
-          await db
-            .update(sandboxes)
-            .set({ status: liveStatus, updatedAt: new Date() })
-            .where(eq(sandboxes.id, record.id));
-        }
-      } catch {
-        // Cannot reach Vercel — keep cached status
-      }
-    }
+    const liveStatus = await resolveLiveStatus(record);
 
     const response: SandboxListItem = {
       id: record.id,
@@ -82,7 +94,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     console.error("Failed to get sandbox:", error);
     return NextResponse.json(
       { error: "Failed to get sandbox" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -109,9 +121,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     const [updated] = await db
       .update(sandboxes)
       .set(updates)
-      .where(
-        and(eq(sandboxes.id, id), eq(sandboxes.userId, session.user.id)),
-      )
+      .where(and(eq(sandboxes.id, id), eq(sandboxes.userId, session.user.id)))
       .returning();
 
     if (!updated) {
@@ -127,7 +137,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     console.error("Failed to update sandbox:", error);
     return NextResponse.json(
       { error: "Failed to update sandbox" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -145,10 +155,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
     const { id } = await params;
     const record = await db.query.sandboxes.findFirst({
-      where: and(
-        eq(sandboxes.id, id),
-        eq(sandboxes.userId, session.user.id),
-      ),
+      where: and(eq(sandboxes.id, id), eq(sandboxes.userId, session.user.id)),
       columns: {
         id: true,
         vercelSandboxId: true,
@@ -164,7 +171,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     if (record.vercelSandboxId && record.integrationId) {
       try {
         const credentials = await resolveVercelSandboxCredentials(
-          record.integrationId,
+          record.integrationId
         );
         const sandbox = await VercelSandbox.get({
           sandboxId: record.vercelSandboxId,
@@ -176,16 +183,14 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       }
     }
 
-    await db
-      .delete(sandboxes)
-      .where(eq(sandboxes.id, record.id));
+    await db.delete(sandboxes).where(eq(sandboxes.id, record.id));
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Failed to delete sandbox:", error);
     return NextResponse.json(
       { error: "Failed to delete sandbox" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

@@ -145,7 +145,7 @@ export const sandboxes = pgTable(
   },
   (table) => ({
     userIdIdx: index("sandboxes_user_id_idx").on(table.userId),
-  }),
+  })
 );
 
 export type OpencodeConnectionMode =

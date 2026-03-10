@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
 import { Sandbox as VercelSandbox } from "@vercel/sandbox";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
+import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { sandboxes, type SandboxStatus } from "@/lib/db/schema";
+import { type SandboxStatus, sandboxes } from "@/lib/db/schema";
 import { resolveVercelSandboxCredentials } from "@/lib/vercel-sandbox-credentials";
 
 // ── Response types ──────────────────────────────────────────────────
@@ -65,7 +65,7 @@ export async function GET(request: Request) {
         error: "Failed to list sandboxes",
         details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -85,25 +85,27 @@ export async function POST(request: Request) {
     const body: CreateSandboxRequest = await request.json();
 
     if (!body.name?.trim()) {
-      return NextResponse.json(
-        { error: "Name is required." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Name is required." }, { status: 400 });
     }
     if (!body.integrationId?.trim()) {
       return NextResponse.json(
         { error: "A Vercel connection is required." },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
     // Resolve credentials and create Vercel sandbox
     const credentials = await resolveVercelSandboxCredentials(
-      body.integrationId,
+      body.integrationId
     );
     const sandbox = await VercelSandbox.create({
       ...credentials,
-      runtime: (body.runtime as Parameters<typeof VercelSandbox.create>[0] extends { runtime?: infer R } ? R : never) || "node24",
+      runtime:
+        (body.runtime as Parameters<typeof VercelSandbox.create>[0] extends {
+          runtime?: infer R;
+        }
+          ? R
+          : never) || "node24",
       ...(body.timeout ? { timeout: body.timeout } : {}),
     });
 
@@ -141,7 +143,7 @@ export async function POST(request: Request) {
         error: "Failed to create sandbox",
         details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

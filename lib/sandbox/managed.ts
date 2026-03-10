@@ -17,7 +17,7 @@ export type ManagedSandboxInfo = {
  * Look up a managed sandbox by its DB primary key and ensure it's usable.
  */
 export async function resolveManagedSandbox(
-  sandboxId: string,
+  sandboxId: string
 ): Promise<ManagedSandboxInfo> {
   const record = await db.query.sandboxes.findFirst({
     where: eq(sandboxes.id, sandboxId),
@@ -30,19 +30,19 @@ export async function resolveManagedSandbox(
 
   if (!record) {
     throw new Error(
-      `Managed sandbox "${sandboxId}" not found. Create one from the Sandboxes dashboard.`,
+      `Managed sandbox "${sandboxId}" not found. Create one from the Sandboxes dashboard.`
     );
   }
 
   if (!record.vercelSandboxId) {
     throw new Error(
-      `Managed sandbox "${sandboxId}" has no Vercel sandbox ID. It may not have been started yet.`,
+      `Managed sandbox "${sandboxId}" has no Vercel sandbox ID. It may not have been started yet.`
     );
   }
 
   if (record.status !== "running") {
     throw new Error(
-      `Managed sandbox "${sandboxId}" is not running (status: ${record.status}). Start it from the Sandboxes dashboard.`,
+      `Managed sandbox "${sandboxId}" is not running (status: ${record.status}). Start it from the Sandboxes dashboard.`
     );
   }
 

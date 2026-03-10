@@ -1,10 +1,8 @@
 import "server-only";
 
-import {
-  createSandboxExecutor,
-  getSandboxType,
-  type SandboxType,
-} from "@/lib/sandbox";
+import { createSandboxExecutor } from "@/lib/sandbox/executor";
+import { getSandboxType } from "@/lib/sandbox/resolve";
+import type { SandboxType } from "@/lib/sandbox/types";
 import { type StepInput, withStepLogging } from "@/lib/steps/step-handler";
 import { getErrorMessageAsync } from "@/lib/utils";
 
@@ -42,6 +40,10 @@ export type RunBashCoreInput = {
 
 export type RunBashInput = StepInput & RunBashCoreInput;
 
+async function noopCleanup(): Promise<void> {
+  // Intentionally empty: lifecycle is managed elsewhere.
+}
+
 async function stepHandler(input: RunBashCoreInput): Promise<RunBashResult> {
   const command = input.command?.trim();
   if (!command) {
@@ -53,7 +55,7 @@ async function stepHandler(input: RunBashCoreInput): Promise<RunBashResult> {
     };
   }
 
-  let cleanup = async () => {};
+  let cleanup = noopCleanup;
   let sandboxType = getSandboxType(input.sandboxType);
 
   try {
@@ -123,4 +125,3 @@ export async function runBashCommandStep(
 runBashCommandStep.maxRetries = 0;
 
 export const _integrationType = "bash";
-
