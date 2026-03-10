@@ -12,30 +12,36 @@ Capture the target from the live product only. Do not inspect its source code.
 ## Web Targets
 
 1. Open the target and record the home route.
-2. Save an annotated screenshot and an interactive snapshot.
-3. Visit each top-level navigation area.
-4. For each area, identify:
+2. Use bounded waits. Prefer `wait --load domcontentloaded` plus a short explicit wait over relying entirely on `networkidle`.
+3. Prime request tracking explicitly before flows:
+   - `agent-browser network requests --clear`
+   - reload or perform the action
+   - `agent-browser network requests --json`
+4. Save an annotated screenshot plus both text and JSON snapshots.
+5. Visit each top-level navigation area.
+6. For each area, identify:
    - list views
    - detail views
    - filters and search
    - create or update actions
    - publish, deploy, run, or destructive actions
-5. While performing the flow, inspect network traffic and note:
+7. While performing the flow, inspect network traffic and note:
    - method
    - URL
-   - query params
-   - body shape
+   - query params when visible
    - auth behavior
-   - response shape
-6. Save auth state once the session is valid.
+   - resource type
+8. Save auth state once the session is valid.
 
 Recommended artifacts:
 
 - `captures/screenshots/*.png`
 - `captures/snapshots/*.txt`
+- `captures/snapshots/*.json`
+- `captures/pages/*.json`
 - `captures/network/*.json`
 - `captures/auth/auth-state.json`
-- `captures/notes.md`
+- `captures/site-capture.json`
 
 ## Electron Targets
 
@@ -81,6 +87,8 @@ Promote a request into `requestRecipes` only when:
 - required headers are reproducible
 - cookies or storage-backed auth can be replayed
 - the response is useful in CLI form
+
+If request logs are thin or empty, fall back to route and runtime heuristics from the observed page. Do not inspect the target's source repository.
 
 Keep the UI flow even when an API recipe exists. It is the fallback path.
 

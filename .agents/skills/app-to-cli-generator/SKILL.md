@@ -5,152 +5,108 @@ description: Generate a standalone CLI for a website, internal web app, or Chrom
 
 # App to CLI Generator
 
-Build a manifest-driven CLI for a live website or Chromium-based Electron app using runtime observation only. Do not rely on source code. Capture the UI, network requests, and login flow from the running target, synthesize a command tree, then scaffold a standalone TypeScript CLI.
+Generate a manifest-driven CLI from a live product using runtime observation only. Do not rely on source code. The web path is the primary automated flow in this version. Electron remains supported as a manual/CDP-assisted path.
 
 Always use `agent-browser` directly. Do not use `npx agent-browser`.
 
-## What This Skill Produces
+## Default Web Workflow
 
-The output is a standalone CLI project with:
+For web targets, use the single orchestrator script first:
 
-- Explicit subcommands for the target app's high-value workflows
-- A `raw` passthrough command for unsupported low-level browser actions
-- Hybrid execution modes: `auto`, `api`, and `ui`
-- A manifest file that describes commands, flows, request recipes, selectors, auth, and regeneration metadata
+```bash
+node .agents/skills/app-to-cli-generator/scripts/generate-web-cli.mjs \
+  --name "Target App" \
+  --target https://example.com \
+  --output ./target-app-cli
+```
 
-The generated CLI is intentionally manifest-driven. Updating `manifest.json` does not require rewriting the runtime by hand.
+Optional flags:
+
+```bash
+--auth state-file
+--login-url https://example.com/login
+--headed
+```
+
+This script does the default v1 flow end to end:
+
+- creates `captures/`, `manifest/`, and `cli/`
+- captures the live site with `agent-browser`
+- infers a small command tree
+- writes `manifest/app-cli.manifest.json`
+- renders the generated CLI
+- writes `report.json` and `report.md`
+
+## What the Generated CLI Contains
+
+- Explicit subcommands for the captured app
+- A `raw` passthrough command
+- Hybrid execution modes: `auto`, `api`, `ui`
+- A manifest describing commands, flows, request recipes, selectors, auth, and regeneration metadata
+
+The generated CLI stays manifest-driven. Updating `manifest.json` does not require hand-editing the runtime.
 
 ## Required Inputs
 
-You need:
+- Target platform: `web` or `electron`
+- Web target URL, or Electron app name plus CDP details
+- Output directory if the default `./<slug>-cli/` is not wanted
+- Authentication notes when login is required
 
-- The target platform: `web` or `electron`
-- A target URL for web apps, or an Electron app name plus CDP connection details
-- An output directory
-- Authentication notes if login is required
+## Web Decision Rules
 
-If the user does not specify an output directory, default to `./<slug>-cli/`.
+- Start with the orchestrator script unless you are debugging capture internals.
+- Use `auto` only when both a request recipe and a UI flow exist.
+- Prefer request recipes only when the captured evidence is stable enough to replay.
+- Keep commands read-only unless the user explicitly asks for mutating operations.
+- If command inference is ambiguous, surface the assumption in the report instead of inventing extra commands.
 
-## Workflow
+## Fallback / Debugging Tools
 
-### 1. Prepare the workspace
-
-Create these working directories inside the chosen output root:
-
-- `captures/`
-- `manifest/`
-- `cli/`
-
-Use the init script to create a manifest skeleton:
-
-```bash
-node .agents/skills/app-to-cli-generator/scripts/init-manifest.mjs \
-  --name "Target App" \
-  --platform web \
-  --target https://example.com \
-  --output ./target-app-cli/manifest/app-cli.manifest.json
-```
-
-For Electron apps, use:
-
-```bash
-node .agents/skills/app-to-cli-generator/scripts/init-manifest.mjs \
-  --name "Target App" \
-  --platform electron \
-  --target "Slack" \
-  --cdp-port 9222 \
-  --output ./target-app-cli/manifest/app-cli.manifest.json
-```
-
-### 2. Capture the live target
-
-Read [references/capture-playbook.md](references/capture-playbook.md).
-
-Use the shell templates when they help:
+Use these only when you need to inspect or repair part of the workflow manually:
 
 - [templates/capture-web-session.sh](templates/capture-web-session.sh)
-- [templates/capture-electron-session.sh](templates/capture-electron-session.sh)
 - [templates/auth-login.sh](templates/auth-login.sh)
+- [scripts/init-manifest.mjs](scripts/init-manifest.mjs)
+- [scripts/render-cli.mjs](scripts/render-cli.mjs)
 
-Capture enough evidence to support a stable command tree:
+Read [references/capture-playbook.md](references/capture-playbook.md) when the default run needs manual intervention.
 
-- Top-level navigation
-- Primary list and detail views
-- Create, update, or destructive actions if the user wants them
-- Authentication flow and saved state behavior
-- Network requests for repeatable reads and mutations
+## Electron Scope in This Version
 
-Prefer semantic locators and saved request recipes over fragile pixel-driven behavior.
+Electron is still limited to Chromium-based apps reachable through CDP. The skill package keeps the Electron helper and manifest/runtime support, but the automated end-to-end generator is web-first in this version.
 
-### 3. Synthesize the command tree
+For Electron targets, use:
 
-Read [references/manifest-schema.md](references/manifest-schema.md) and [references/runtime-modes.md](references/runtime-modes.md).
+- [templates/capture-electron-session.sh](templates/capture-electron-session.sh)
+- `agent-browser connect <port>`
+- `agent-browser tab` or `agent-browser tab list`
 
-Default command-tree heuristics:
+If CDP access is unavailable, stop and report that the target is unsupported.
 
-- Turn primary navigation areas into top-level nouns
-- Turn visible user actions and observed HTTP mutations into verbs
-- Prefer `list`, `get`, `create`, `update`, `delete`, `search`, `open`, `run`, `publish`, and `status` when the evidence supports them
+## Smoke Check
 
-Ask the user to confirm the command tree only when the mapping is ambiguous or high-impact. Otherwise, proceed with the best default tree and note the assumption.
-
-### 4. Author the manifest
-
-Fill the initialized manifest with:
-
-- `commands`
-- `flows`
-- `requestRecipes`
-- `selectors`
-- `auth`
-- `regeneration`
-
-Rules:
-
-- If a request recipe is stable and can reuse saved auth state, wire both `requestRecipeId` and `flowId`, then default the command to `auto`.
-- If API replay is not stable, make the command UI-only.
-- Do not invent commands that were not observed in the product.
-- Keep destructive commands out unless the user wants them.
-
-### 5. Render the CLI
-
-Run:
+The generated CLI is standalone, but the reliable validation path is:
 
 ```bash
-node .agents/skills/app-to-cli-generator/scripts/render-cli.mjs \
-  --manifest ./target-app-cli/manifest/app-cli.manifest.json \
-  --output ./target-app-cli/cli
+pnpm --dir ./target-app-cli/cli install --ignore-workspace
+pnpm --dir ./target-app-cli/cli type-check
+pnpm --dir ./target-app-cli/cli build
+node ./target-app-cli/cli/dist/index.js inspect --json
 ```
 
-The renderer only rewrites generated files. It should not delete custom files in the output directory.
-
-### 6. Smoke check
-
-The generated CLI runtime is dependency-light so you can smoke-check it with an existing TypeScript toolchain when one is available:
-
-```bash
-pnpm exec tsx ./target-app-cli/cli/src/index.ts inspect --json
-pnpm exec tsc --noEmit --project ./target-app-cli/cli/tsconfig.json
-```
-
-If the environment does not have `pnpm` or a TypeScript toolchain, still validate the manifest and report which checks were skipped.
-
-## Decision Rules
-
-- Use `auto` only when the command has both a viable request recipe and a viable UI flow.
-- Use `api` first in `auto` mode. Fall back to `ui` only if API execution fails and a UI flow exists.
-- For Electron apps, assume Chromium plus CDP. If CDP access is unavailable, stop and report that the target is unsupported for this skill.
-- Preserve auth state in the generated CLI under the app-specific home directory. Never hardcode credentials into the manifest.
+If install or build is not possible in the current environment, still validate the manifest and report which checks were skipped.
 
 ## Output Contract
 
 At the end, report:
 
-- Where the manifest lives
-- Where the generated CLI lives
-- The command tree that was created
-- Which commands are `auto`, `api`, or `ui`
-- Any known gaps, risky selectors, or unsupported flows
+- where captures live
+- where the manifest lives
+- where the generated CLI lives
+- the command tree that was created
+- which commands are `auto`, `api`, or `ui`
+- any known gaps, unstable heuristics, or risky selectors
 
 ## References
 

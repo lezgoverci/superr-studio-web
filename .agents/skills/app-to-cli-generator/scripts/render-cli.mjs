@@ -90,6 +90,42 @@ async function copyTemplates(outputDirectory, replacements) {
   return generatedFiles.sort((left, right) => left.localeCompare(right));
 }
 
+export async function renderCliProject({
+  manifest,
+  manifestPath,
+  outputDirectory,
+}) {
+  const packageName = `${manifest.app.slug}-cli`;
+  const generatedFiles = await copyTemplates(outputDirectory, {
+    APP_NAME: manifest.app.name,
+    CLI_BIN: manifest.app.bin,
+    PACKAGE_NAME: packageName,
+    PACKAGE_DESCRIPTION: `CLI wrapper for ${manifest.app.name}`,
+  });
+
+  await writeJsonFile(path.join(outputDirectory, "manifest.json"), manifest);
+  generatedFiles.push("manifest.json");
+
+  await writeJsonFile(
+    path.join(outputDirectory, ".generated/app-to-cli-generator.json"),
+    {
+      generatedAt: new Date().toISOString(),
+      manifestSource: manifestPath,
+      packageName,
+      generatedFiles: [...generatedFiles].sort((left, right) =>
+        left.localeCompare(right)
+      ),
+    }
+  );
+
+  return {
+    packageName,
+    generatedFiles: [...generatedFiles].sort((left, right) =>
+      left.localeCompare(right)
+    ),
+  };
+}
+
 async function main() {
   try {
     const flags = parseArgs(process.argv.slice(2));
@@ -103,28 +139,11 @@ async function main() {
     const outputDirectory = path.resolve(process.cwd(), flags.output);
 
     const manifest = validateManifest(await readJsonFile(manifestPath));
-    const packageName = `${manifest.app.slug}-cli`;
-    const generatedFiles = await copyTemplates(outputDirectory, {
-      APP_NAME: manifest.app.name,
-      CLI_BIN: manifest.app.bin,
-      PACKAGE_NAME: packageName,
-      PACKAGE_DESCRIPTION: `CLI wrapper for ${manifest.app.name}`,
+    const { packageName, generatedFiles } = await renderCliProject({
+      manifest,
+      manifestPath,
+      outputDirectory,
     });
-
-    await writeJsonFile(path.join(outputDirectory, "manifest.json"), manifest);
-    generatedFiles.push("manifest.json");
-
-    await writeJsonFile(
-      path.join(outputDirectory, ".generated/app-to-cli-generator.json"),
-      {
-        generatedAt: new Date().toISOString(),
-        manifestSource: manifestPath,
-        packageName,
-        generatedFiles: [...generatedFiles].sort((left, right) =>
-          left.localeCompare(right)
-        ),
-      }
-    );
 
     console.log(`Rendered CLI project: ${outputDirectory}`);
     console.log(`Package name: ${packageName}`);
@@ -145,4 +164,6 @@ async function main() {
   }
 }
 
-await main();
+if (process.argv[1] && path.resolve(process.argv[1]) === SCRIPT_PATH) {
+  await main();
+}

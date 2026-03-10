@@ -57,6 +57,19 @@ type ProcessResult = {
   exitCode: number;
 };
 
+function getAgentBrowserCommand(): string {
+  return process.env.APP_TO_CLI_GENERATOR_AGENT_BROWSER_BIN || "agent-browser";
+}
+
+function getAgentBrowserEnvironment(): NodeJS.ProcessEnv {
+  return {
+    ...process.env,
+    AGENT_BROWSER_SOCKET_DIR:
+      process.env.AGENT_BROWSER_SOCKET_DIR ??
+      (process.platform === "win32" ? path.join(os.tmpdir(), "ab") : "/tmp/ab"),
+  };
+}
+
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
     throw new Error(message);
@@ -141,14 +154,14 @@ function renderValue<T>(value: T, context: TemplateContext): T {
 async function runProcess(
   command: string,
   args: string[],
-  options: { stdin?: string; capture?: boolean } = {},
+  options: { stdin?: string; capture?: boolean; env?: NodeJS.ProcessEnv } = {},
 ): Promise<ProcessResult> {
   const capture = options.capture ?? true;
 
   return await new Promise<ProcessResult>((resolve, reject) => {
     const child = spawn(command, args, {
       stdio: capture ? "pipe" : "inherit",
-      env: process.env,
+      env: options.env ?? process.env,
     });
 
     let stdout = "";
@@ -204,7 +217,8 @@ async function runAgentBrowser(
 ): Promise<string> {
   const sessionName = globals.sessionName ?? manifest.app.defaultSessionName;
   const finalArgs = sessionName ? ["--session", sessionName, ...args] : args;
-  const result = await runProcess("agent-browser", finalArgs, {
+  const result = await runProcess(getAgentBrowserCommand(), finalArgs, {
+    env: getAgentBrowserEnvironment(),
     stdin: options.stdin,
   });
 
@@ -237,7 +251,10 @@ export async function executeRawAgentBrowser(
     finalArgs.push("--headed");
   }
 
-  const result = await runProcess("agent-browser", finalArgs, { capture: false });
+  const result = await runProcess(getAgentBrowserCommand(), finalArgs, {
+    capture: false,
+    env: getAgentBrowserEnvironment(),
+  });
   return result.exitCode;
 }
 
@@ -420,7 +437,7 @@ async function runFlowStep(
 
     case "open": {
       const url = resolveUrl(manifest, renderedStep.url);
-      const openArgs = ["open", url];
+      const openArgs = ["open", url, "--waitUntil", "domcontentloaded"];
       if (globals.headed) {
         openArgs.push("--headed");
       }
