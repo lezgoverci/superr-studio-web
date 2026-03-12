@@ -1,0 +1,349 @@
+{
+  "origin": "https://shop.bench.com.ph/products/biy0041-mens-classic-polo-shirt",
+  "refs": {
+    "e1": {
+      "name": "Privacy and Cookie Policy",
+      "role": "link"
+    },
+    "e10": {
+      "name": "WOMEN",
+      "role": "link"
+    },
+    "e11": {
+      "name": "BODY & BATH",
+      "role": "link"
+    },
+    "e12": {
+      "name": "SALE",
+      "role": "link"
+    },
+    "e13": {
+      "name": "COLLECTIONS",
+      "role": "link"
+    },
+    "e14": {
+      "name": "BRANDS",
+      "role": "link"
+    },
+    "e15": {
+      "name": "Open search bar",
+      "role": "button"
+    },
+    "e16": {
+      "name": "Go to wishlist page",
+      "role": "link"
+    },
+    "e17": {
+      "name": "My Account",
+      "role": "link"
+    },
+    "e18": {
+      "name": "Open cart",
+      "role": "link"
+    },
+    "e19": {
+      "name": "Home",
+      "role": "link"
+    },
+    "e2": {
+      "name": "Manage preferences",
+      "role": "button"
+    },
+    "e20": {
+      "name": "Open image lightbox",
+      "role": "link"
+    },
+    "e21": {
+      "name": "Open image lightbox",
+      "role": "link"
+    },
+    "e22": {
+      "name": "Open image lightbox",
+      "role": "link"
+    },
+    "e23": {
+      "name": "Men's Classic Polo Shirt",
+      "role": "link"
+    },
+    "e24": {
+      "name": "Men's Classic Polo Shirt",
+      "role": "link"
+    },
+    "e25": {
+      "name": "Men's Classic Polo Shirt",
+      "role": "link"
+    },
+    "e26": {
+      "name": "Sage Green",
+      "role": "radio"
+    },
+    "e27": {
+      "name": "Size guide",
+      "role": "button"
+    },
+    "e28": {
+      "name": "S",
+      "role": "radio"
+    },
+    "e29": {
+      "name": "M",
+      "role": "radio"
+    },
+    "e3": {
+      "name": "Accept",
+      "role": "button"
+    },
+    "e30": {
+      "name": "L",
+      "role": "radio"
+    },
+    "e31": {
+      "name": "XL",
+      "role": "radio"
+    },
+    "e32": {
+      "name": "XXL",
+      "role": "radio"
+    },
+    "e33": {
+      "name": "Quantity",
+      "role": "button"
+    },
+    "e34": {
+      "name": "Sold Out - Notify Me When It’s Available",
+      "role": "button"
+    },
+    "e35": {
+      "name": "DETAILS",
+      "role": "button"
+    },
+    "e36": {
+      "name": "SHIPPING & RETURNS",
+      "role": "button"
+    },
+    "e37": {
+      "name": "Men's Classic Polo Shirt",
+      "role": "link"
+    },
+    "e38": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e39": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e4": {
+      "name": "Decline",
+      "role": "button"
+    },
+    "e40": {
+      "name": "Men's Classic Polo Shirt",
+      "role": "link"
+    },
+    "e41": {
+      "name": "From ₱599.00",
+      "role": "link"
+    },
+    "e42": {
+      "name": "Men's Polo Shirt",
+      "role": "link"
+    },
+    "e43": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e44": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e45": {
+      "name": "Men's Polo Shirt",
+      "role": "link"
+    },
+    "e46": {
+      "name": "₱639.00",
+      "role": "link"
+    },
+    "e47": {
+      "name": "Men's Polo Shirt",
+      "role": "link"
+    },
+    "e48": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e49": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e5": {
+      "name": "Skip to content",
+      "role": "link"
+    },
+    "e50": {
+      "name": "Men's Polo Shirt",
+      "role": "link"
+    },
+    "e51": {
+      "name": "From ₱639.00",
+      "role": "link"
+    },
+    "e52": {
+      "name": "Men's Polo Shirt",
+      "role": "link"
+    },
+    "e53": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e54": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e55": {
+      "name": "Men's Polo Shirt",
+      "role": "link"
+    },
+    "e56": {
+      "name": "₱599.00",
+      "role": "link"
+    },
+    "e57": {
+      "name": "Men's Classic Polo Shirt",
+      "role": "link"
+    },
+    "e58": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e59": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e6": {
+      "name": "Apparel and Underwear",
+      "role": "link"
+    },
+    "e60": {
+      "name": "Men's Classic Polo Shirt",
+      "role": "link"
+    },
+    "e61": {
+      "name": "₱639.00",
+      "role": "link"
+    },
+    "e62": {
+      "name": "Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt",
+      "role": "link"
+    },
+    "e63": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e64": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e65": {
+      "name": "Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt",
+      "role": "link"
+    },
+    "e66": {
+      "name": "₱539.00",
+      "role": "link"
+    },
+    "e67": {
+      "role": "link"
+    },
+    "e68": {
+      "name": "Explore",
+      "role": "button"
+    },
+    "e69": {
+      "name": "Our Story",
+      "role": "link"
+    },
+    "e7": {
+      "name": "Bench Online",
+      "role": "link"
+    },
+    "e70": {
+      "name": "Careers",
+      "role": "link"
+    },
+    "e71": {
+      "name": "Lifestyle Rewards",
+      "role": "link"
+    },
+    "e72": {
+      "name": "Terms of Use",
+      "role": "link"
+    },
+    "e73": {
+      "name": "Privacy Policy",
+      "role": "link"
+    },
+    "e74": {
+      "name": "Customer Care",
+      "role": "button"
+    },
+    "e75": {
+      "name": "Contact Us",
+      "role": "link"
+    },
+    "e76": {
+      "name": "Track Order",
+      "role": "link"
+    },
+    "e77": {
+      "name": "FAQ",
+      "role": "link"
+    },
+    "e78": {
+      "name": "Your email",
+      "role": "textbox"
+    },
+    "e79": {
+      "name": "Sign up",
+      "role": "button"
+    },
+    "e8": {
+      "name": "Bench Online",
+      "role": "link"
+    },
+    "e80": {
+      "name": "App Store",
+      "role": "link"
+    },
+    "e81": {
+      "name": "Google Play",
+      "role": "link"
+    },
+    "e82": {
+      "name": "Social 1",
+      "role": "link"
+    },
+    "e83": {
+      "name": "Social 2",
+      "role": "link"
+    },
+    "e84": {
+      "name": "Social 3",
+      "role": "link"
+    },
+    "e85": {
+      "name": "Social 4",
+      "role": "link"
+    },
+    "e86": {
+      "name": "Social 5",
+      "role": "link"
+    },
+    "e9": {
+      "name": "MEN",
+      "role": "link"
+    }
+  },
+  "snapshot": "- link \"Privacy and Cookie Policy\" [ref=e1]\n- button \"Manage preferences\" [ref=e2]\n- button \"Accept\" [ref=e3]\n- button \"Decline\" [ref=e4]\n- link \"Skip to content\" [ref=e5]\n- link \"Apparel and Underwear\" [ref=e6]\n- link \"Bench Online\" [ref=e7]\n- link \"Bench Online\" [ref=e8] [nth=1]\n- link \"MEN\" [ref=e9]\n- link \"WOMEN\" [ref=e10]\n- link \"BODY & BATH\" [ref=e11]\n- link \"SALE\" [ref=e12]\n- link \"COLLECTIONS\" [ref=e13]\n- link \"BRANDS\" [ref=e14]\n- button \"Open search bar\" [ref=e15]\n- link \"Go to wishlist page\" [ref=e16]\n- link \"My Account\" [ref=e17]\n- link \"Open cart\" [ref=e18]\n- link \"Home\" [ref=e19]\n- link \"Open image lightbox\" [ref=e20]\n- link \"Open image lightbox\" [ref=e21] [nth=1]\n- link \"Open image lightbox\" [ref=e22] [nth=2]\n- link \"Men's Classic Polo Shirt\" [ref=e23]\n- link \"Men's Classic Polo Shirt\" [ref=e24] [nth=1]\n- link \"Men's Classic Polo Shirt\" [ref=e25] [nth=2]\n- radio \"Sage Green\" [ref=e26] [checked]\n- button \"Size guide\" [ref=e27]\n- radio \"S\" [ref=e28] [checked]\n- radio \"M\" [ref=e29]\n- radio \"L\" [ref=e30]\n- radio \"XL\" [ref=e31]\n- radio \"XXL\" [ref=e32]\n- button \"Quantity\" [ref=e33]\n- button \"Sold Out - Notify Me When It’s Available\" [ref=e34]\n- button \"DETAILS\" [ref=e35] [expanded]\n- button \"SHIPPING & RETURNS\" [ref=e36]\n- link \"Men's Classic Polo Shirt\" [ref=e37] [nth=3]\n- button \"Add to wishlist\" [ref=e38]\n- link \"Quick Buy\" [ref=e39]\n- link \"Men's Classic Polo Shirt\" [ref=e40] [nth=4]\n- link \"From ₱599.00\" [ref=e41]\n- link \"Men's Polo Shirt\" [ref=e42]\n- button \"Add to wishlist\" [ref=e43] [nth=1]\n- link \"Quick Buy\" [ref=e44] [nth=1]\n- link \"Men's Polo Shirt\" [ref=e45] [nth=1]\n- link \"₱639.00\" [ref=e46]\n- link \"Men's Polo Shirt\" [ref=e47] [nth=2]\n- button \"Add to wishlist\" [ref=e48] [nth=2]\n- link \"Quick Buy\" [ref=e49] [nth=2]\n- link \"Men's Polo Shirt\" [ref=e50] [nth=3]\n- link \"From ₱639.00\" [ref=e51]\n- link \"Men's Polo Shirt\" [ref=e52] [nth=4]\n- button \"Add to wishlist\" [ref=e53] [nth=3]\n- link \"Quick Buy\" [ref=e54] [nth=3]\n- link \"Men's Polo Shirt\" [ref=e55] [nth=5]\n- link \"₱599.00\" [ref=e56]\n- link \"Men's Classic Polo Shirt\" [ref=e57] [nth=5]\n- button \"Add to wishlist\" [ref=e58] [nth=4]\n- link \"Quick Buy\" [ref=e59] [nth=4]\n- link \"Men's Classic Polo Shirt\" [ref=e60] [nth=6]\n- link \"₱639.00\" [ref=e61] [nth=1]\n- link \"Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt\" [ref=e62]\n- button \"Add to wishlist\" [ref=e63] [nth=5]\n- link \"Quick Buy\" [ref=e64] [nth=5]\n- link \"Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt\" [ref=e65] [nth=1]\n- link \"₱539.00\" [ref=e66]\n- link [ref=e67]\n- button \"Explore\" [ref=e68]\n- link \"Our Story\" [ref=e69]\n- link \"Careers\" [ref=e70]\n- link \"Lifestyle Rewards\" [ref=e71]\n- link \"Terms of Use\" [ref=e72]\n- link \"Privacy Policy\" [ref=e73]\n- button \"Customer Care\" [ref=e74]\n- link \"Contact Us\" [ref=e75]\n- link \"Track Order\" [ref=e76]\n- link \"FAQ\" [ref=e77]\n- textbox \"Your email\" [ref=e78]\n- button \"Sign up\" [ref=e79]\n- link \"App Store\" [ref=e80]\n- link \"Google Play\" [ref=e81]\n- link \"Social 1\" [ref=e82]\n- link \"Social 2\" [ref=e83]\n- link \"Social 3\" [ref=e84]\n- link \"Social 4\" [ref=e85]\n- link \"Social 5\" [ref=e86]"
+}

@@ -1,0 +1,66 @@
+{
+  "generatedAt": "2026-03-10T07:29:31.230Z",
+  "capturesPath": "/Users/cruzr/projects/superr/superr-workflow-builder/bench-ph-cli/captures",
+  "manifestPath": "/Users/cruzr/projects/superr/superr-workflow-builder/bench-ph-cli/manifest/app-cli.manifest.json",
+  "cliPath": "/Users/cruzr/projects/superr/superr-workflow-builder/bench-ph-cli/cli",
+  "commandTree": [
+    {
+      "id": "home-title",
+      "path": "home title",
+      "mode": "ui",
+      "hasFlow": true,
+      "hasRequestRecipe": false
+    },
+    {
+      "id": "collections-list",
+      "path": "collections list",
+      "mode": "ui",
+      "hasFlow": true,
+      "hasRequestRecipe": false
+    },
+    {
+      "id": "products-get",
+      "path": "products get",
+      "mode": "auto",
+      "hasFlow": true,
+      "hasRequestRecipe": true
+    }
+  ],
+  "captureSummary": {
+    "totalPages": 6,
+    "listPages": 3,
+    "detailPages": 2,
+    "shopifyDetected": true,
+    "capturedUrls": [
+      "https://shop.bench.com.ph/",
+      "https://shop.bench.com.ph/collections/men",
+      "https://shop.bench.com.ph/collections/mens-new-arrivals",
+      "https://shop.bench.com.ph/collections/bench-body",
+      "https://shop.bench.com.ph/products/boo0151-bench-x-harry-potter-mens-short-sleeve-relaxed-fit-t-shirt",
+      "https://shop.bench.com.ph/products/biy0041-mens-classic-polo-shirt"
+    ]
+  },
+  "validation": {
+    "pnpmAvailable": true,
+    "install": {
+      "attempted": true,
+      "success": true,
+      "output": "Progress: resolved 1, reused 0, downloaded 0, added 0\nPackages: +9\n+++++++++\nProgress: resolved 34, reused 9, downloaded 0, added 9, done\n\ndevDependencies:\n+ @types/node 24.12.0 (25.4.0 is available)\n+ tsx 4.21.0\n+ typescript 5.9.3\n\n╭ Warning ─────────────────────────────────────────────────────────────────────╮\n│                                                                              │\n│   Ignored build scripts: esbuild@0.27.3.                                     │\n│   Run \"pnpm approve-builds\" to pick which dependencies should be allowed     │\n│   to run scripts.                                                            │\n│                                                                              │\n╰──────────────────────────────────────────────────────────────────────────────╯\nDone in 1.4s using pnpm v10.29.2"
+    },
+    "typeCheck": {
+      "attempted": true,
+      "success": true,
+      "output": "> bench-ph-cli@0.1.0 type-check /Users/cruzr/projects/superr/superr-workflow-builder/bench-ph-cli/cli\n> tsc --noEmit"
+    },
+    "build": {
+      "attempted": true,
+      "success": true,
+      "output": "> bench-ph-cli@0.1.0 build /Users/cruzr/projects/superr/superr-workflow-builder/bench-ph-cli/cli\n> tsc -p tsconfig.json"
+    },
+    "inspect": {
+      "attempted": true,
+      "success": true,
+      "output": "{\n  \"app\": {\n    \"name\": \"Bench PH\",\n    \"slug\": \"bench-ph\",\n    \"bin\": \"bench-ph\",\n    \"platform\": \"web\",\n    \"defaultMode\": \"auto\",\n    \"baseUrl\": \"https://shop.bench.com.ph/\",\n    \"electron\": null\n  },\n  \"auth\": {\n    \"strategy\": \"none\",\n    \"loginUrl\": null,\n    \"stateFile\": \"/Users/cruzr/.bench-ph/auth-state.json\",\n    \"env\": []\n  },\n  \"commands\": [\n    {\n      \"path\": \"home title\",\n      \"description\": \"Read the home page title.\",\n      \"mode\": \"ui\",\n      \"hasRequestRecipe\": false,\n      \"hasFlow\": true,\n      \"inputs\": []\n    },\n    {\n      \"path\": \"collections list\",\n      \"description\": \"Men – Bench Online\",\n      \"mode\": \"ui\",\n      \"hasRequestRecipe\": false,\n      \"hasFlow\": true,\n      \"inputs\": []\n    },\n    {\n      \"path\": \"products get\",\n      \"description\": \"Get product data by handle.\",\n      \"mode\": \"auto\",\n      \"hasRequestRecipe\": true,\n      \"hasFlow\": true,\n      \"inputs\": [\n        {\n          \"name\": \"handle\",\n          \"flag\": \"--handle\",\n          \"type\": \"string\",\n          \"description\": \"product handle\",\n          \"required\": true\n        }\n      ]\n    }\n  ],\n  \"entities\": [\n    {\n      \"name\": \"product\",\n      \"plural\": \"products\",\n      \"description\": \"Observed products inferred from runtime capture.\"\n    }\n  ],\n  \"selectors\": [],\n  \"regeneration\": {\n    \"capturedAt\": \"2026-03-10T07:29:20.004Z\",\n    \"source\": \"runtime-observation\",\n    \"sourceNotes\": [\n      \"Captured 6 page(s) with agent-browser.\",\n      \"Applied Shopify request heuristic for product detail endpoints.\"\n    ],\n    \"fingerprints\": {\n      \"target\": \"https://shop.bench.com.ph/\",\n      \"totalPages\": 6,\n      \"detailPrefixes\": [\n        \"products\"\n      ],\n      \"shopifyDetected\": true\n    }\n  }\n}"
+    }
+  }
+}

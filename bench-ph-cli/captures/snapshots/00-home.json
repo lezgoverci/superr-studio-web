@@ -1,0 +1,386 @@
+{
+  "origin": "https://shop.bench.com.ph/",
+  "refs": {
+    "e1": {
+      "name": "Privacy and Cookie Policy",
+      "role": "link"
+    },
+    "e10": {
+      "name": "WOMEN",
+      "role": "link"
+    },
+    "e11": {
+      "name": "BODY & BATH",
+      "role": "link"
+    },
+    "e12": {
+      "name": "SALE",
+      "role": "link"
+    },
+    "e13": {
+      "name": "COLLECTIONS",
+      "role": "link"
+    },
+    "e14": {
+      "name": "BRANDS",
+      "role": "link"
+    },
+    "e15": {
+      "name": "Open search bar",
+      "role": "button"
+    },
+    "e16": {
+      "name": "Go to wishlist page",
+      "role": "link"
+    },
+    "e17": {
+      "name": "My Account",
+      "role": "link"
+    },
+    "e18": {
+      "name": "Open cart",
+      "role": "link"
+    },
+    "e19": {
+      "role": "link"
+    },
+    "e2": {
+      "name": "Manage preferences",
+      "role": "button"
+    },
+    "e20": {
+      "name": "Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt",
+      "role": "link"
+    },
+    "e21": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e22": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e23": {
+      "name": "Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt",
+      "role": "link"
+    },
+    "e24": {
+      "name": "₱539.00",
+      "role": "link"
+    },
+    "e25": {
+      "name": "Men's Classic Polo Shirt",
+      "role": "link"
+    },
+    "e26": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e27": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e28": {
+      "name": "Men's Classic Polo Shirt",
+      "role": "link"
+    },
+    "e29": {
+      "name": "₱639.00",
+      "role": "link"
+    },
+    "e3": {
+      "name": "Accept",
+      "role": "button"
+    },
+    "e30": {
+      "name": "Men's Quarter Socks",
+      "role": "link"
+    },
+    "e31": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e32": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e33": {
+      "name": "Men's Quarter Socks",
+      "role": "link"
+    },
+    "e34": {
+      "name": "₱119.00",
+      "role": "link"
+    },
+    "e35": {
+      "name": "Men's Casual Shoes",
+      "role": "link"
+    },
+    "e36": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e37": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e38": {
+      "name": "Men's Casual Shoes",
+      "role": "link"
+    },
+    "e39": {
+      "name": "₱1,799.00",
+      "role": "link"
+    },
+    "e4": {
+      "name": "Decline",
+      "role": "button"
+    },
+    "e40": {
+      "name": "SHOP MEN",
+      "role": "link"
+    },
+    "e41": {
+      "name": "SHOP BODY & BATH",
+      "role": "link"
+    },
+    "e42": {
+      "name": "SHOP WOMEN",
+      "role": "link"
+    },
+    "e43": {
+      "name": "BEST SELLERS",
+      "role": "link"
+    },
+    "e44": {
+      "name": "Women's 3-in-1 Pack Mid-Rise Bikini",
+      "role": "link"
+    },
+    "e45": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e46": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e47": {
+      "name": "Women's 3-in-1 Pack Mid-Rise Bikini",
+      "role": "link"
+    },
+    "e48": {
+      "name": "₱329.75",
+      "role": "link"
+    },
+    "e49": {
+      "name": "+ 4 more",
+      "role": "button"
+    },
+    "e5": {
+      "name": "Skip to content",
+      "role": "link"
+    },
+    "e50": {
+      "name": "Women's 2-in-1 Pack Wireless Bra",
+      "role": "link"
+    },
+    "e51": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e52": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e53": {
+      "name": "Women's 2-in-1 Pack Wireless Bra",
+      "role": "link"
+    },
+    "e54": {
+      "name": "₱529.75",
+      "role": "link"
+    },
+    "e55": {
+      "name": "Men's 3-in-1 Pack Boxer Brief",
+      "role": "link"
+    },
+    "e56": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e57": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e58": {
+      "name": "Men's 3-in-1 Pack Boxer Brief",
+      "role": "link"
+    },
+    "e59": {
+      "name": "₱599.75",
+      "role": "link"
+    },
+    "e6": {
+      "name": "Apparel and Underwear",
+      "role": "link"
+    },
+    "e60": {
+      "name": "Women's Ultra Stretch Seamless Midrise Hipster Panty",
+      "role": "link"
+    },
+    "e61": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e62": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e63": {
+      "name": "Women's Ultra Stretch Seamless Midrise Hipster Panty",
+      "role": "link"
+    },
+    "e64": {
+      "name": "From ₱218.00",
+      "role": "link"
+    },
+    "e65": {
+      "name": "+ 4 more",
+      "role": "button"
+    },
+    "e66": {
+      "name": "Shop Now",
+      "role": "link"
+    },
+    "e67": {
+      "name": "Shop Now",
+      "role": "link"
+    },
+    "e68": {
+      "role": "link"
+    },
+    "e69": {
+      "name": "Bench Active",
+      "role": "link"
+    },
+    "e7": {
+      "name": "Bench Online",
+      "role": "link"
+    },
+    "e70": {
+      "name": "Bench Beauty",
+      "role": "link"
+    },
+    "e71": {
+      "name": "Bench Body",
+      "role": "link"
+    },
+    "e72": {
+      "name": "Pickleball Collection",
+      "role": "link"
+    },
+    "e73": {
+      "name": "Bench x UNIS",
+      "role": "link"
+    },
+    "e74": {
+      "role": "link"
+    },
+    "e75": {
+      "name": "SEE MORE",
+      "role": "link"
+    },
+    "e76": {
+      "name": "LEARN MORE",
+      "role": "link"
+    },
+    "e77": {
+      "role": "link"
+    },
+    "e78": {
+      "name": "Explore",
+      "role": "button"
+    },
+    "e79": {
+      "name": "Our Story",
+      "role": "link"
+    },
+    "e8": {
+      "name": "Bench Online",
+      "role": "link"
+    },
+    "e80": {
+      "name": "Careers",
+      "role": "link"
+    },
+    "e81": {
+      "name": "Lifestyle Rewards",
+      "role": "link"
+    },
+    "e82": {
+      "name": "Terms of Use",
+      "role": "link"
+    },
+    "e83": {
+      "name": "Privacy Policy",
+      "role": "link"
+    },
+    "e84": {
+      "name": "Customer Care",
+      "role": "button"
+    },
+    "e85": {
+      "name": "Contact Us",
+      "role": "link"
+    },
+    "e86": {
+      "name": "Track Order",
+      "role": "link"
+    },
+    "e87": {
+      "name": "FAQ",
+      "role": "link"
+    },
+    "e88": {
+      "name": "Your email",
+      "role": "textbox"
+    },
+    "e89": {
+      "name": "Sign up",
+      "role": "button"
+    },
+    "e9": {
+      "name": "MEN",
+      "role": "link"
+    },
+    "e90": {
+      "name": "App Store",
+      "role": "link"
+    },
+    "e91": {
+      "name": "Google Play",
+      "role": "link"
+    },
+    "e92": {
+      "name": "Social 1",
+      "role": "link"
+    },
+    "e93": {
+      "name": "Social 2",
+      "role": "link"
+    },
+    "e94": {
+      "name": "Social 3",
+      "role": "link"
+    },
+    "e95": {
+      "name": "Social 4",
+      "role": "link"
+    },
+    "e96": {
+      "name": "Social 5",
+      "role": "link"
+    }
+  },
+  "snapshot": "- link \"Privacy and Cookie Policy\" [ref=e1]\n- button \"Manage preferences\" [ref=e2]\n- button \"Accept\" [ref=e3]\n- button \"Decline\" [ref=e4]\n- link \"Skip to content\" [ref=e5]\n- link \"Apparel and Underwear\" [ref=e6]\n- link \"Bench Online\" [ref=e7]\n- link \"Bench Online\" [ref=e8] [nth=1]\n- link \"MEN\" [ref=e9]\n- link \"WOMEN\" [ref=e10]\n- link \"BODY & BATH\" [ref=e11]\n- link \"SALE\" [ref=e12]\n- link \"COLLECTIONS\" [ref=e13]\n- link \"BRANDS\" [ref=e14]\n- button \"Open search bar\" [ref=e15]\n- link \"Go to wishlist page\" [ref=e16]\n- link \"My Account\" [ref=e17]\n- link \"Open cart\" [ref=e18]\n- link [ref=e19]\n- link \"Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt\" [ref=e20]\n- button \"Add to wishlist\" [ref=e21]\n- link \"Quick Buy\" [ref=e22]\n- link \"Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt\" [ref=e23] [nth=1]\n- link \"₱539.00\" [ref=e24]\n- link \"Men's Classic Polo Shirt\" [ref=e25]\n- button \"Add to wishlist\" [ref=e26] [nth=1]\n- link \"Quick Buy\" [ref=e27] [nth=1]\n- link \"Men's Classic Polo Shirt\" [ref=e28] [nth=1]\n- link \"₱639.00\" [ref=e29]\n- link \"Men's Quarter Socks\" [ref=e30]\n- button \"Add to wishlist\" [ref=e31] [nth=2]\n- link \"Quick Buy\" [ref=e32] [nth=2]\n- link \"Men's Quarter Socks\" [ref=e33] [nth=1]\n- link \"₱119.00\" [ref=e34]\n- link \"Men's Casual Shoes\" [ref=e35]\n- button \"Add to wishlist\" [ref=e36] [nth=3]\n- link \"Quick Buy\" [ref=e37] [nth=3]\n- link \"Men's Casual Shoes\" [ref=e38] [nth=1]\n- link \"₱1,799.00\" [ref=e39]\n- link \"SHOP MEN\" [ref=e40]\n- link \"SHOP BODY & BATH\" [ref=e41]\n- link \"SHOP WOMEN\" [ref=e42]\n- link \"BEST SELLERS\" [ref=e43]\n- link \"Women's 3-in-1 Pack Mid-Rise Bikini\" [ref=e44]\n- button \"Add to wishlist\" [ref=e45] [nth=4]\n- link \"Quick Buy\" [ref=e46] [nth=4]\n- link \"Women's 3-in-1 Pack Mid-Rise Bikini\" [ref=e47] [nth=1]\n- link \"₱329.75\" [ref=e48]\n- button \"+ 4 more\" [ref=e49]\n- link \"Women's 2-in-1 Pack Wireless Bra\" [ref=e50]\n- button \"Add to wishlist\" [ref=e51] [nth=5]\n- link \"Quick Buy\" [ref=e52] [nth=5]\n- link \"Women's 2-in-1 Pack Wireless Bra\" [ref=e53] [nth=1]\n- link \"₱529.75\" [ref=e54]\n- link \"Men's 3-in-1 Pack Boxer Brief\" [ref=e55]\n- button \"Add to wishlist\" [ref=e56] [nth=6]\n- link \"Quick Buy\" [ref=e57] [nth=6]\n- link \"Men's 3-in-1 Pack Boxer Brief\" [ref=e58] [nth=1]\n- link \"₱599.75\" [ref=e59]\n- link \"Women's Ultra Stretch Seamless Midrise Hipster Panty\" [ref=e60]\n- button \"Add to wishlist\" [ref=e61] [nth=7]\n- link \"Quick Buy\" [ref=e62] [nth=7]\n- link \"Women's Ultra Stretch Seamless Midrise Hipster Panty\" [ref=e63] [nth=1]\n- link \"From ₱218.00\" [ref=e64]\n- button \"+ 4 more\" [ref=e65] [nth=1]\n- link \"Shop Now\" [ref=e66]\n- link \"Shop Now\" [ref=e67] [nth=1]\n- link [ref=e68] [nth=1]\n- link \"Bench Active\" [ref=e69]\n- link \"Bench Beauty\" [ref=e70]\n- link \"Bench Body\" [ref=e71]\n- link \"Pickleball Collection\" [ref=e72]\n- link \"Bench x UNIS\" [ref=e73]\n- link [ref=e74] [nth=2]\n- link \"SEE MORE\" [ref=e75]\n- link \"LEARN MORE\" [ref=e76]\n- link [ref=e77] [nth=3]\n- button \"Explore\" [ref=e78]\n- link \"Our Story\" [ref=e79]\n- link \"Careers\" [ref=e80]\n- link \"Lifestyle Rewards\" [ref=e81]\n- link \"Terms of Use\" [ref=e82]\n- link \"Privacy Policy\" [ref=e83]\n- button \"Customer Care\" [ref=e84]\n- link \"Contact Us\" [ref=e85]\n- link \"Track Order\" [ref=e86]\n- link \"FAQ\" [ref=e87]\n- textbox \"Your email\" [ref=e88]\n- button \"Sign up\" [ref=e89]\n- link \"App Store\" [ref=e90]\n- link \"Google Play\" [ref=e91]\n- link \"Social 1\" [ref=e92]\n- link \"Social 2\" [ref=e93]\n- link \"Social 3\" [ref=e94]\n- link \"Social 4\" [ref=e95]\n- link \"Social 5\" [ref=e96]"
+}

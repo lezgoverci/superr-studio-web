@@ -1,0 +1,15 @@
+{
+  "generatedAt": "2026-03-10T07:36:03.792Z",
+  "manifestSource": "/Users/cruzr/projects/superr/superr-workflow-builder/bench-ph-cli/manifest/app-cli.manifest.json",
+  "packageName": "bench-ph-cli",
+  "generatedFiles": [
+    ".gitignore",
+    "manifest.json",
+    "package.json",
+    "schemas/app-cli-manifest.schema.json",
+    "src/index.ts",
+    "src/manifest-types.ts",
+    "src/runtime.ts",
+    "tsconfig.json"
+  ]
+}

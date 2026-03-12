@@ -1,0 +1,1177 @@
+{
+  "origin": "https://shop.bench.com.ph/collections/mens-new-arrivals",
+  "refs": {
+    "e1": {
+      "name": "Privacy and Cookie Policy",
+      "role": "link"
+    },
+    "e10": {
+      "name": "WOMEN",
+      "role": "link"
+    },
+    "e100": {
+      "name": "₱1,899.00",
+      "role": "link"
+    },
+    "e101": {
+      "name": "Men's Logo Varsity Jacket",
+      "role": "link"
+    },
+    "e102": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e103": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e104": {
+      "name": "Men's Logo Varsity Jacket",
+      "role": "link"
+    },
+    "e105": {
+      "name": "₱1,899.00",
+      "role": "link"
+    },
+    "e106": {
+      "name": "Men's Logo Varsity Jacket",
+      "role": "link"
+    },
+    "e107": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e108": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e109": {
+      "name": "Men's Logo Varsity Jacket",
+      "role": "link"
+    },
+    "e11": {
+      "name": "BODY & BATH",
+      "role": "link"
+    },
+    "e110": {
+      "name": "₱1,599.00",
+      "role": "link"
+    },
+    "e111": {
+      "name": "Bench x SB19 Men's Regular Fit Varsity Jacket",
+      "role": "link"
+    },
+    "e112": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e113": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e114": {
+      "name": "Bench x SB19 Men's Regular Fit Varsity Jacket",
+      "role": "link"
+    },
+    "e115": {
+      "name": "₱1,499.00",
+      "role": "link"
+    },
+    "e116": {
+      "name": "Men's Crew Neck T-Shirt",
+      "role": "link"
+    },
+    "e117": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e118": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e119": {
+      "name": "Men's Crew Neck T-Shirt",
+      "role": "link"
+    },
+    "e12": {
+      "name": "SALE",
+      "role": "link"
+    },
+    "e120": {
+      "name": "₱499.00",
+      "role": "link"
+    },
+    "e121": {
+      "name": "Men's Knitted Hoodie Jacket",
+      "role": "link"
+    },
+    "e122": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e123": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e124": {
+      "name": "Men's Knitted Hoodie Jacket",
+      "role": "link"
+    },
+    "e125": {
+      "name": "₱999.00",
+      "role": "link"
+    },
+    "e126": {
+      "name": "Men's Oversized Hoodie Jacket",
+      "role": "link"
+    },
+    "e127": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e128": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e129": {
+      "name": "Men's Oversized Hoodie Jacket",
+      "role": "link"
+    },
+    "e13": {
+      "name": "COLLECTIONS",
+      "role": "link"
+    },
+    "e130": {
+      "name": "₱899.00",
+      "role": "link"
+    },
+    "e131": {
+      "name": "Men's Hoodie Jacket",
+      "role": "link"
+    },
+    "e132": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e133": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e134": {
+      "name": "Men's Hoodie Jacket",
+      "role": "link"
+    },
+    "e135": {
+      "name": "₱899.00",
+      "role": "link"
+    },
+    "e136": {
+      "name": "Men's Hoodie Jacket",
+      "role": "link"
+    },
+    "e137": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e138": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e139": {
+      "name": "Men's Hoodie Jacket",
+      "role": "link"
+    },
+    "e14": {
+      "name": "BRANDS",
+      "role": "link"
+    },
+    "e140": {
+      "name": "₱1,099.00",
+      "role": "link"
+    },
+    "e141": {
+      "name": "Men's Polo Shirt",
+      "role": "link"
+    },
+    "e142": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e143": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e144": {
+      "name": "Men's Polo Shirt",
+      "role": "link"
+    },
+    "e145": {
+      "name": "₱739.00",
+      "role": "link"
+    },
+    "e146": {
+      "name": "Men's Short Sleeve Shirt",
+      "role": "link"
+    },
+    "e147": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e148": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e149": {
+      "name": "Men's Short Sleeve Shirt",
+      "role": "link"
+    },
+    "e15": {
+      "name": "Open search bar",
+      "role": "button"
+    },
+    "e150": {
+      "name": "₱999.00",
+      "role": "link"
+    },
+    "e151": {
+      "name": "Men's Short Sleeve Shirt",
+      "role": "link"
+    },
+    "e152": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e153": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e154": {
+      "name": "Men's Short Sleeve Shirt",
+      "role": "link"
+    },
+    "e155": {
+      "name": "₱1,099.00",
+      "role": "link"
+    },
+    "e156": {
+      "name": "Men's Short Sleeve Shirt",
+      "role": "link"
+    },
+    "e157": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e158": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e159": {
+      "name": "Men's Short Sleeve Shirt",
+      "role": "link"
+    },
+    "e16": {
+      "name": "Go to wishlist page",
+      "role": "link"
+    },
+    "e160": {
+      "name": "₱1,099.00",
+      "role": "link"
+    },
+    "e161": {
+      "name": "Men's Short Sleeve Shirt",
+      "role": "link"
+    },
+    "e162": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e163": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e164": {
+      "name": "Men's Short Sleeve Shirt",
+      "role": "link"
+    },
+    "e165": {
+      "name": "₱999.00",
+      "role": "link"
+    },
+    "e166": {
+      "name": "Men's Short Sleeve Shirt",
+      "role": "link"
+    },
+    "e167": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e168": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e169": {
+      "name": "Men's Short Sleeve Shirt",
+      "role": "link"
+    },
+    "e17": {
+      "name": "My Account",
+      "role": "link"
+    },
+    "e170": {
+      "name": "₱999.00",
+      "role": "link"
+    },
+    "e171": {
+      "name": "Men's Printed Regular Short Sleeve Shirt",
+      "role": "link"
+    },
+    "e172": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e173": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e174": {
+      "name": "Men's Printed Regular Short Sleeve Shirt",
+      "role": "link"
+    },
+    "e175": {
+      "name": "₱1,099.00",
+      "role": "link"
+    },
+    "e176": {
+      "name": "Men's Checkered Short Sleeve Shirt",
+      "role": "link"
+    },
+    "e177": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e178": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e179": {
+      "name": "Men's Checkered Short Sleeve Shirt",
+      "role": "link"
+    },
+    "e18": {
+      "name": "Open cart",
+      "role": "link"
+    },
+    "e180": {
+      "name": "₱899.00",
+      "role": "link"
+    },
+    "e181": {
+      "name": "Men's Long Sleeve Shirt",
+      "role": "link"
+    },
+    "e182": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e183": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e184": {
+      "name": "Men's Long Sleeve Shirt",
+      "role": "link"
+    },
+    "e185": {
+      "name": "₱1,199.00",
+      "role": "link"
+    },
+    "e186": {
+      "name": "Men's Long Sleeve Shirt",
+      "role": "link"
+    },
+    "e187": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e188": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e189": {
+      "name": "Men's Long Sleeve Shirt",
+      "role": "link"
+    },
+    "e19": {
+      "name": "Home",
+      "role": "link"
+    },
+    "e190": {
+      "name": "₱1,099.00",
+      "role": "link"
+    },
+    "e191": {
+      "name": "Men's Regular Long Sleeve Shirt",
+      "role": "link"
+    },
+    "e192": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e193": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e194": {
+      "name": "Men's Regular Long Sleeve Shirt",
+      "role": "link"
+    },
+    "e195": {
+      "name": "₱999.00",
+      "role": "link"
+    },
+    "e196": {
+      "name": "Men's Long Sleeve Shirt",
+      "role": "link"
+    },
+    "e197": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e198": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e199": {
+      "name": "Men's Long Sleeve Shirt",
+      "role": "link"
+    },
+    "e2": {
+      "name": "Manage preferences",
+      "role": "button"
+    },
+    "e20": {
+      "name": "Sort by",
+      "role": "button"
+    },
+    "e200": {
+      "name": "₱1,099.00",
+      "role": "link"
+    },
+    "e201": {
+      "name": "Men's Checkered Long Sleeve Shirt",
+      "role": "link"
+    },
+    "e202": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e203": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e204": {
+      "name": "Men's Checkered Long Sleeve Shirt",
+      "role": "link"
+    },
+    "e205": {
+      "name": "₱999.00",
+      "role": "link"
+    },
+    "e206": {
+      "name": "Men's Rain Jacket",
+      "role": "link"
+    },
+    "e207": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e208": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e209": {
+      "name": "Men's Rain Jacket",
+      "role": "link"
+    },
+    "e21": {
+      "name": "STOCK STATUS",
+      "role": "button"
+    },
+    "e210": {
+      "name": "₱1,199.00",
+      "role": "link"
+    },
+    "e211": {
+      "name": "Men's Rain Jacket",
+      "role": "link"
+    },
+    "e212": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e213": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e214": {
+      "name": "Men's Rain Jacket",
+      "role": "link"
+    },
+    "e215": {
+      "name": "₱1,299.00",
+      "role": "link"
+    },
+    "e216": {
+      "name": "Men's Pullover",
+      "role": "link"
+    },
+    "e217": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e218": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e219": {
+      "name": "Men's Pullover",
+      "role": "link"
+    },
+    "e22": {
+      "name": "In stock",
+      "role": "checkbox"
+    },
+    "e220": {
+      "name": "₱799.00",
+      "role": "link"
+    },
+    "e221": {
+      "name": "Men's Oversized Pullover",
+      "role": "link"
+    },
+    "e222": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e223": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e224": {
+      "name": "Men's Oversized Pullover",
+      "role": "link"
+    },
+    "e225": {
+      "name": "₱799.00",
+      "role": "link"
+    },
+    "e226": {
+      "name": "Men's Crew Neck Pullover",
+      "role": "link"
+    },
+    "e227": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e228": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e229": {
+      "name": "Men's Crew Neck Pullover",
+      "role": "link"
+    },
+    "e23": {
+      "name": "Out of stock",
+      "role": "checkbox"
+    },
+    "e230": {
+      "name": "₱799.00",
+      "role": "link"
+    },
+    "e231": {
+      "name": "Men's Turtle Neck Pullover",
+      "role": "link"
+    },
+    "e232": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e233": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e234": {
+      "name": "Men's Turtle Neck Pullover",
+      "role": "link"
+    },
+    "e235": {
+      "name": "₱899.00",
+      "role": "link"
+    },
+    "e236": {
+      "name": "Men's Sleeveless Flat Knit Vest",
+      "role": "link"
+    },
+    "e237": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e238": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e239": {
+      "name": "Men's Sleeveless Flat Knit Vest",
+      "role": "link"
+    },
+    "e24": {
+      "name": "CATEGORY",
+      "role": "button"
+    },
+    "e240": {
+      "name": "₱799.00",
+      "role": "link"
+    },
+    "e241": {
+      "name": "Men's Printed Pullover",
+      "role": "link"
+    },
+    "e242": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e243": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e244": {
+      "name": "Men's Printed Pullover",
+      "role": "link"
+    },
+    "e245": {
+      "name": "₱599.00",
+      "role": "link"
+    },
+    "e246": {
+      "name": "Men's Hoodie Jacket",
+      "role": "link"
+    },
+    "e247": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e248": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e249": {
+      "name": "Men's Hoodie Jacket",
+      "role": "link"
+    },
+    "e25": {
+      "name": "PRICE",
+      "role": "button"
+    },
+    "e250": {
+      "name": "₱599.00",
+      "role": "link"
+    },
+    "e251": {
+      "name": "Men's Printed Round Neck T-Shirt",
+      "role": "link"
+    },
+    "e252": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e253": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e254": {
+      "name": "Men's Printed Round Neck T-Shirt",
+      "role": "link"
+    },
+    "e255": {
+      "name": "₱599.00",
+      "role": "link"
+    },
+    "e256": {
+      "name": "Men's Round Neck T-Shirt",
+      "role": "link"
+    },
+    "e257": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e258": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e259": {
+      "name": "Men's Round Neck T-Shirt",
+      "role": "link"
+    },
+    "e26": {
+      "name": "SIZE",
+      "role": "button"
+    },
+    "e260": {
+      "name": "₱459.00",
+      "role": "link"
+    },
+    "e261": {
+      "name": "Men's Round Neck Classic T-Shirt",
+      "role": "link"
+    },
+    "e262": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e263": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e264": {
+      "name": "Men's Round Neck Classic T-Shirt",
+      "role": "link"
+    },
+    "e265": {
+      "name": "₱399.00",
+      "role": "link"
+    },
+    "e266": {
+      "name": "Men's Round Neck Volleyball T-Shirt",
+      "role": "link"
+    },
+    "e267": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e268": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e269": {
+      "name": "Men's Round Neck Volleyball T-Shirt",
+      "role": "link"
+    },
+    "e27": {
+      "name": "COLOR",
+      "role": "button"
+    },
+    "e270": {
+      "name": "₱639.00",
+      "role": "link"
+    },
+    "e271": {
+      "name": "2",
+      "role": "link"
+    },
+    "e272": {
+      "name": "Next page",
+      "role": "link"
+    },
+    "e273": {
+      "name": "Next page",
+      "role": "button"
+    },
+    "e274": {
+      "role": "link"
+    },
+    "e275": {
+      "name": "Explore",
+      "role": "button"
+    },
+    "e276": {
+      "name": "Our Story",
+      "role": "link"
+    },
+    "e277": {
+      "name": "Careers",
+      "role": "link"
+    },
+    "e278": {
+      "name": "Lifestyle Rewards",
+      "role": "link"
+    },
+    "e279": {
+      "name": "Terms of Use",
+      "role": "link"
+    },
+    "e28": {
+      "name": "BRAND",
+      "role": "button"
+    },
+    "e280": {
+      "name": "Privacy Policy",
+      "role": "link"
+    },
+    "e281": {
+      "name": "Customer Care",
+      "role": "button"
+    },
+    "e282": {
+      "name": "Contact Us",
+      "role": "link"
+    },
+    "e283": {
+      "name": "Track Order",
+      "role": "link"
+    },
+    "e284": {
+      "name": "FAQ",
+      "role": "link"
+    },
+    "e285": {
+      "name": "Your email",
+      "role": "textbox"
+    },
+    "e286": {
+      "name": "Sign up",
+      "role": "button"
+    },
+    "e287": {
+      "name": "App Store",
+      "role": "link"
+    },
+    "e288": {
+      "name": "Google Play",
+      "role": "link"
+    },
+    "e289": {
+      "name": "Social 1",
+      "role": "link"
+    },
+    "e29": {
+      "name": "Gender",
+      "role": "button"
+    },
+    "e290": {
+      "name": "Social 2",
+      "role": "link"
+    },
+    "e291": {
+      "name": "Social 3",
+      "role": "link"
+    },
+    "e292": {
+      "name": "Social 4",
+      "role": "link"
+    },
+    "e293": {
+      "name": "Social 5",
+      "role": "link"
+    },
+    "e3": {
+      "name": "Accept",
+      "role": "button"
+    },
+    "e30": {
+      "name": "Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt",
+      "role": "link"
+    },
+    "e31": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e32": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e33": {
+      "name": "Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt",
+      "role": "link"
+    },
+    "e34": {
+      "name": "₱539.00",
+      "role": "link"
+    },
+    "e35": {
+      "name": "Men's Classic Polo Shirt",
+      "role": "link"
+    },
+    "e36": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e37": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e38": {
+      "name": "Men's Classic Polo Shirt",
+      "role": "link"
+    },
+    "e39": {
+      "name": "₱639.00",
+      "role": "link"
+    },
+    "e4": {
+      "name": "Decline",
+      "role": "button"
+    },
+    "e40": {
+      "name": "Men's Quarter Socks",
+      "role": "link"
+    },
+    "e41": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e42": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e43": {
+      "name": "Men's Quarter Socks",
+      "role": "link"
+    },
+    "e44": {
+      "name": "₱119.00",
+      "role": "link"
+    },
+    "e45": {
+      "name": "Men's Casual Shoes",
+      "role": "link"
+    },
+    "e46": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e47": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e48": {
+      "name": "Men's Casual Shoes",
+      "role": "link"
+    },
+    "e49": {
+      "name": "₱1,799.00",
+      "role": "link"
+    },
+    "e5": {
+      "name": "Skip to content",
+      "role": "link"
+    },
+    "e50": {
+      "name": "SHOP NOW",
+      "role": "link"
+    },
+    "e51": {
+      "name": "Bench x Lomon Men's Basic Walking Shorts",
+      "role": "link"
+    },
+    "e52": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e53": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e54": {
+      "name": "Bench x Lomon Men's Basic Walking Shorts",
+      "role": "link"
+    },
+    "e55": {
+      "name": "₱499.00",
+      "role": "link"
+    },
+    "e56": {
+      "name": "Bennch x Lomon Men's Basic Walking Shorts",
+      "role": "link"
+    },
+    "e57": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e58": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e59": {
+      "name": "Bennch x Lomon Men's Basic Walking Shorts",
+      "role": "link"
+    },
+    "e6": {
+      "name": "Apparel and Underwear",
+      "role": "link"
+    },
+    "e60": {
+      "name": "₱499.00",
+      "role": "link"
+    },
+    "e61": {
+      "name": "Men's Walking Shorts",
+      "role": "link"
+    },
+    "e62": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e63": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e64": {
+      "name": "Men's Walking Shorts",
+      "role": "link"
+    },
+    "e65": {
+      "name": "₱699.00",
+      "role": "link"
+    },
+    "e66": {
+      "name": "Men's Jogging Shorts",
+      "role": "link"
+    },
+    "e67": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e68": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e69": {
+      "name": "Men's Jogging Shorts",
+      "role": "link"
+    },
+    "e7": {
+      "name": "Bench Online",
+      "role": "link"
+    },
+    "e70": {
+      "name": "₱699.00",
+      "role": "link"
+    },
+    "e71": {
+      "name": "Men's Jogging Shorts",
+      "role": "link"
+    },
+    "e72": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e73": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e74": {
+      "name": "Men's Jogging Shorts",
+      "role": "link"
+    },
+    "e75": {
+      "name": "₱599.00",
+      "role": "link"
+    },
+    "e76": {
+      "name": "Men's Straight Denim Pants",
+      "role": "link"
+    },
+    "e77": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e78": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e79": {
+      "name": "Men's Straight Denim Pants",
+      "role": "link"
+    },
+    "e8": {
+      "name": "Bench Online",
+      "role": "link"
+    },
+    "e80": {
+      "name": "₱1,299.00",
+      "role": "link"
+    },
+    "e81": {
+      "name": "Mens Wide Leg Tapered Pants",
+      "role": "link"
+    },
+    "e82": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e83": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e84": {
+      "name": "Mens Wide Leg Tapered Pants",
+      "role": "link"
+    },
+    "e85": {
+      "name": "₱1,599.00",
+      "role": "link"
+    },
+    "e86": {
+      "name": "Men's Tapered Baggy Pants",
+      "role": "link"
+    },
+    "e87": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e88": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e89": {
+      "name": "Men's Tapered Baggy Pants",
+      "role": "link"
+    },
+    "e9": {
+      "name": "MEN",
+      "role": "link"
+    },
+    "e90": {
+      "name": "₱1,499.00",
+      "role": "link"
+    },
+    "e91": {
+      "name": "Men's Straight Denim Pants",
+      "role": "link"
+    },
+    "e92": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e93": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e94": {
+      "name": "Men's Straight Denim Pants",
+      "role": "link"
+    },
+    "e95": {
+      "name": "₱999.00",
+      "role": "link"
+    },
+    "e96": {
+      "name": "Men's Varsity Jacket",
+      "role": "link"
+    },
+    "e97": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e98": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e99": {
+      "name": "Men's Varsity Jacket",
+      "role": "link"
+    }
+  },
+  "snapshot": "- link \"Privacy and Cookie Policy\" [ref=e1]\n- button \"Manage preferences\" [ref=e2]\n- button \"Accept\" [ref=e3]\n- button \"Decline\" [ref=e4]\n- link \"Skip to content\" [ref=e5]\n- link \"Apparel and Underwear\" [ref=e6]\n- link \"Bench Online\" [ref=e7]\n- link \"Bench Online\" [ref=e8] [nth=1]\n- link \"MEN\" [ref=e9]\n- link \"WOMEN\" [ref=e10]\n- link \"BODY & BATH\" [ref=e11]\n- link \"SALE\" [ref=e12]\n- link \"COLLECTIONS\" [ref=e13]\n- link \"BRANDS\" [ref=e14]\n- button \"Open search bar\" [ref=e15]\n- link \"Go to wishlist page\" [ref=e16]\n- link \"My Account\" [ref=e17]\n- link \"Open cart\" [ref=e18]\n- link \"Home\" [ref=e19]\n- button \"Sort by\" [ref=e20]\n- button \"STOCK STATUS\" [ref=e21] [expanded]\n- checkbox \"In stock\" [ref=e22]\n- checkbox \"Out of stock\" [ref=e23]\n- button \"CATEGORY\" [ref=e24]\n- button \"PRICE\" [ref=e25]\n- button \"SIZE\" [ref=e26]\n- button \"COLOR\" [ref=e27]\n- button \"BRAND\" [ref=e28]\n- button \"Gender\" [ref=e29]\n- link \"Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt\" [ref=e30]\n- button \"Add to wishlist\" [ref=e31]\n- link \"Quick Buy\" [ref=e32]\n- link \"Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt\" [ref=e33] [nth=1]\n- link \"₱539.00\" [ref=e34]\n- link \"Men's Classic Polo Shirt\" [ref=e35]\n- button \"Add to wishlist\" [ref=e36] [nth=1]\n- link \"Quick Buy\" [ref=e37] [nth=1]\n- link \"Men's Classic Polo Shirt\" [ref=e38] [nth=1]\n- link \"₱639.00\" [ref=e39]\n- link \"Men's Quarter Socks\" [ref=e40]\n- button \"Add to wishlist\" [ref=e41] [nth=2]\n- link \"Quick Buy\" [ref=e42] [nth=2]\n- link \"Men's Quarter Socks\" [ref=e43] [nth=1]\n- link \"₱119.00\" [ref=e44]\n- link \"Men's Casual Shoes\" [ref=e45]\n- button \"Add to wishlist\" [ref=e46] [nth=3]\n- link \"Quick Buy\" [ref=e47] [nth=3]\n- link \"Men's Casual Shoes\" [ref=e48] [nth=1]\n- link \"₱1,799.00\" [ref=e49]\n- link \"SHOP NOW\" [ref=e50]\n- link \"Bench x Lomon Men's Basic Walking Shorts\" [ref=e51]\n- button \"Add to wishlist\" [ref=e52] [nth=4]\n- link \"Quick Buy\" [ref=e53] [nth=4]\n- link \"Bench x Lomon Men's Basic Walking Shorts\" [ref=e54] [nth=1]\n- link \"₱499.00\" [ref=e55]\n- link \"Bennch x Lomon Men's Basic Walking Shorts\" [ref=e56]\n- button \"Add to wishlist\" [ref=e57] [nth=5]\n- link \"Quick Buy\" [ref=e58] [nth=5]\n- link \"Bennch x Lomon Men's Basic Walking Shorts\" [ref=e59] [nth=1]\n- link \"₱499.00\" [ref=e60] [nth=1]\n- link \"Men's Walking Shorts\" [ref=e61]\n- button \"Add to wishlist\" [ref=e62] [nth=6]\n- link \"Quick Buy\" [ref=e63] [nth=6]\n- link \"Men's Walking Shorts\" [ref=e64] [nth=1]\n- link \"₱699.00\" [ref=e65]\n- link \"Men's Jogging Shorts\" [ref=e66]\n- button \"Add to wishlist\" [ref=e67] [nth=7]\n- link \"Quick Buy\" [ref=e68] [nth=7]\n- link \"Men's Jogging Shorts\" [ref=e69] [nth=1]\n- link \"₱699.00\" [ref=e70] [nth=1]\n- link \"Men's Jogging Shorts\" [ref=e71] [nth=2]\n- button \"Add to wishlist\" [ref=e72] [nth=8]\n- link \"Quick Buy\" [ref=e73] [nth=8]\n- link \"Men's Jogging Shorts\" [ref=e74] [nth=3]\n- link \"₱599.00\" [ref=e75]\n- link \"Men's Straight Denim Pants\" [ref=e76]\n- button \"Add to wishlist\" [ref=e77] [nth=9]\n- link \"Quick Buy\" [ref=e78] [nth=9]\n- link \"Men's Straight Denim Pants\" [ref=e79] [nth=1]\n- link \"₱1,299.00\" [ref=e80]\n- link \"Mens Wide Leg Tapered Pants\" [ref=e81]\n- button \"Add to wishlist\" [ref=e82] [nth=10]\n- link \"Quick Buy\" [ref=e83] [nth=10]\n- link \"Mens Wide Leg Tapered Pants\" [ref=e84] [nth=1]\n- link \"₱1,599.00\" [ref=e85]\n- link \"Men's Tapered Baggy Pants\" [ref=e86]\n- button \"Add to wishlist\" [ref=e87] [nth=11]\n- link \"Quick Buy\" [ref=e88] [nth=11]\n- link \"Men's Tapered Baggy Pants\" [ref=e89] [nth=1]\n- link \"₱1,499.00\" [ref=e90]\n- link \"Men's Straight Denim Pants\" [ref=e91] [nth=2]\n- button \"Add to wishlist\" [ref=e92] [nth=12]\n- link \"Quick Buy\" [ref=e93] [nth=12]\n- link \"Men's Straight Denim Pants\" [ref=e94] [nth=3]\n- link \"₱999.00\" [ref=e95]\n- link \"Men's Varsity Jacket\" [ref=e96]\n- button \"Add to wishlist\" [ref=e97] [nth=13]\n- link \"Quick Buy\" [ref=e98] [nth=13]\n- link \"Men's Varsity Jacket\" [ref=e99] [nth=1]\n- link \"₱1,899.00\" [ref=e100]\n- link \"Men's Logo Varsity Jacket\" [ref=e101]\n- button \"Add to wishlist\" [ref=e102] [nth=14]\n- link \"Quick Buy\" [ref=e103] [nth=14]\n- link \"Men's Logo Varsity Jacket\" [ref=e104] [nth=1]\n- link \"₱1,899.00\" [ref=e105] [nth=1]\n- link \"Men's Logo Varsity Jacket\" [ref=e106] [nth=2]\n- button \"Add to wishlist\" [ref=e107] [nth=15]\n- link \"Quick Buy\" [ref=e108] [nth=15]\n- link \"Men's Logo Varsity Jacket\" [ref=e109] [nth=3]\n- link \"₱1,599.00\" [ref=e110] [nth=1]\n- link \"Bench x SB19 Men's Regular Fit Varsity Jacket\" [ref=e111]\n- button \"Add to wishlist\" [ref=e112] [nth=16]\n- link \"Quick Buy\" [ref=e113] [nth=16]\n- link \"Bench x SB19 Men's Regular Fit Varsity Jacket\" [ref=e114] [nth=1]\n- link \"₱1,499.00\" [ref=e115] [nth=1]\n- link \"Men's Crew Neck T-Shirt\" [ref=e116]\n- button \"Add to wishlist\" [ref=e117] [nth=17]\n- link \"Quick Buy\" [ref=e118] [nth=17]\n- link \"Men's Crew Neck T-Shirt\" [ref=e119] [nth=1]\n- link \"₱499.00\" [ref=e120] [nth=2]\n- link \"Men's Knitted Hoodie Jacket\" [ref=e121]\n- button \"Add to wishlist\" [ref=e122] [nth=18]\n- link \"Quick Buy\" [ref=e123] [nth=18]\n- link \"Men's Knitted Hoodie Jacket\" [ref=e124] [nth=1]\n- link \"₱999.00\" [ref=e125] [nth=1]\n- link \"Men's Oversized Hoodie Jacket\" [ref=e126]\n- button \"Add to wishlist\" [ref=e127] [nth=19]\n- link \"Quick Buy\" [ref=e128] [nth=19]\n- link \"Men's Oversized Hoodie Jacket\" [ref=e129] [nth=1]\n- link \"₱899.00\" [ref=e130]\n- link \"Men's Hoodie Jacket\" [ref=e131]\n- button \"Add to wishlist\" [ref=e132] [nth=20]\n- link \"Quick Buy\" [ref=e133] [nth=20]\n- link \"Men's Hoodie Jacket\" [ref=e134] [nth=1]\n- link \"₱899.00\" [ref=e135] [nth=1]\n- link \"Men's Hoodie Jacket\" [ref=e136] [nth=2]\n- button \"Add to wishlist\" [ref=e137] [nth=21]\n- link \"Quick Buy\" [ref=e138] [nth=21]\n- link \"Men's Hoodie Jacket\" [ref=e139] [nth=3]\n- link \"₱1,099.00\" [ref=e140]\n- link \"Men's Polo Shirt\" [ref=e141]\n- button \"Add to wishlist\" [ref=e142] [nth=22]\n- link \"Quick Buy\" [ref=e143] [nth=22]\n- link \"Men's Polo Shirt\" [ref=e144] [nth=1]\n- link \"₱739.00\" [ref=e145]\n- link \"Men's Short Sleeve Shirt\" [ref=e146]\n- button \"Add to wishlist\" [ref=e147] [nth=23]\n- link \"Quick Buy\" [ref=e148] [nth=23]\n- link \"Men's Short Sleeve Shirt\" [ref=e149] [nth=1]\n- link \"₱999.00\" [ref=e150] [nth=2]\n- link \"Men's Short Sleeve Shirt\" [ref=e151] [nth=2]\n- button \"Add to wishlist\" [ref=e152] [nth=24]\n- link \"Quick Buy\" [ref=e153] [nth=24]\n- link \"Men's Short Sleeve Shirt\" [ref=e154] [nth=3]\n- link \"₱1,099.00\" [ref=e155] [nth=1]\n- link \"Men's Short Sleeve Shirt\" [ref=e156] [nth=4]\n- button \"Add to wishlist\" [ref=e157] [nth=25]\n- link \"Quick Buy\" [ref=e158] [nth=25]\n- link \"Men's Short Sleeve Shirt\" [ref=e159] [nth=5]\n- link \"₱1,099.00\" [ref=e160] [nth=2]\n- link \"Men's Short Sleeve Shirt\" [ref=e161] [nth=6]\n- button \"Add to wishlist\" [ref=e162] [nth=26]\n- link \"Quick Buy\" [ref=e163] [nth=26]\n- link \"Men's Short Sleeve Shirt\" [ref=e164] [nth=7]\n- link \"₱999.00\" [ref=e165] [nth=3]\n- link \"Men's Short Sleeve Shirt\" [ref=e166] [nth=8]\n- button \"Add to wishlist\" [ref=e167] [nth=27]\n- link \"Quick Buy\" [ref=e168] [nth=27]\n- link \"Men's Short Sleeve Shirt\" [ref=e169] [nth=9]\n- link \"₱999.00\" [ref=e170] [nth=4]\n- link \"Men's Printed Regular Short Sleeve Shirt\" [ref=e171]\n- button \"Add to wishlist\" [ref=e172] [nth=28]\n- link \"Quick Buy\" [ref=e173] [nth=28]\n- link \"Men's Printed Regular Short Sleeve Shirt\" [ref=e174] [nth=1]\n- link \"₱1,099.00\" [ref=e175] [nth=3]\n- link \"Men's Checkered Short Sleeve Shirt\" [ref=e176]\n- button \"Add to wishlist\" [ref=e177] [nth=29]\n- link \"Quick Buy\" [ref=e178] [nth=29]\n- link \"Men's Checkered Short Sleeve Shirt\" [ref=e179] [nth=1]\n- link \"₱899.00\" [ref=e180] [nth=2]\n- link \"Men's Long Sleeve Shirt\" [ref=e181]\n- button \"Add to wishlist\" [ref=e182] [nth=30]\n- link \"Quick Buy\" [ref=e183] [nth=30]\n- link \"Men's Long Sleeve Shirt\" [ref=e184] [nth=1]\n- link \"₱1,199.00\" [ref=e185]\n- link \"Men's Long Sleeve Shirt\" [ref=e186] [nth=2]\n- button \"Add to wishlist\" [ref=e187] [nth=31]\n- link \"Quick Buy\" [ref=e188] [nth=31]\n- link \"Men's Long Sleeve Shirt\" [ref=e189] [nth=3]\n- link \"₱1,099.00\" [ref=e190] [nth=4]\n- link \"Men's Regular Long Sleeve Shirt\" [ref=e191]\n- button \"Add to wishlist\" [ref=e192] [nth=32]\n- link \"Quick Buy\" [ref=e193] [nth=32]\n- link \"Men's Regular Long Sleeve Shirt\" [ref=e194] [nth=1]\n- link \"₱999.00\" [ref=e195] [nth=5]\n- link \"Men's Long Sleeve Shirt\" [ref=e196] [nth=4]\n- button \"Add to wishlist\" [ref=e197] [nth=33]\n- link \"Quick Buy\" [ref=e198] [nth=33]\n- link \"Men's Long Sleeve Shirt\" [ref=e199] [nth=5]\n- link \"₱1,099.00\" [ref=e200] [nth=5]\n- link \"Men's Checkered Long Sleeve Shirt\" [ref=e201]\n- button \"Add to wishlist\" [ref=e202] [nth=34]\n- link \"Quick Buy\" [ref=e203] [nth=34]\n- link \"Men's Checkered Long Sleeve Shirt\" [ref=e204] [nth=1]\n- link \"₱999.00\" [ref=e205] [nth=6]\n- link \"Men's Rain Jacket\" [ref=e206]\n- button \"Add to wishlist\" [ref=e207] [nth=35]\n- link \"Quick Buy\" [ref=e208] [nth=35]\n- link \"Men's Rain Jacket\" [ref=e209] [nth=1]\n- link \"₱1,199.00\" [ref=e210] [nth=1]\n- link \"Men's Rain Jacket\" [ref=e211] [nth=2]\n- button \"Add to wishlist\" [ref=e212] [nth=36]\n- link \"Quick Buy\" [ref=e213] [nth=36]\n- link \"Men's Rain Jacket\" [ref=e214] [nth=3]\n- link \"₱1,299.00\" [ref=e215] [nth=1]\n- link \"Men's Pullover\" [ref=e216]\n- button \"Add to wishlist\" [ref=e217] [nth=37]\n- link \"Quick Buy\" [ref=e218] [nth=37]\n- link \"Men's Pullover\" [ref=e219] [nth=1]\n- link \"₱799.00\" [ref=e220]\n- link \"Men's Oversized Pullover\" [ref=e221]\n- button \"Add to wishlist\" [ref=e222] [nth=38]\n- link \"Quick Buy\" [ref=e223] [nth=38]\n- link \"Men's Oversized Pullover\" [ref=e224] [nth=1]\n- link \"₱799.00\" [ref=e225] [nth=1]\n- link \"Men's Crew Neck Pullover\" [ref=e226]\n- button \"Add to wishlist\" [ref=e227] [nth=39]\n- link \"Quick Buy\" [ref=e228] [nth=39]\n- link \"Men's Crew Neck Pullover\" [ref=e229] [nth=1]\n- link \"₱799.00\" [ref=e230] [nth=2]\n- link \"Men's Turtle Neck Pullover\" [ref=e231]\n- button \"Add to wishlist\" [ref=e232] [nth=40]\n- link \"Quick Buy\" [ref=e233] [nth=40]\n- link \"Men's Turtle Neck Pullover\" [ref=e234] [nth=1]\n- link \"₱899.00\" [ref=e235] [nth=3]\n- link \"Men's Sleeveless Flat Knit Vest\" [ref=e236]\n- button \"Add to wishlist\" [ref=e237] [nth=41]\n- link \"Quick Buy\" [ref=e238] [nth=41]\n- link \"Men's Sleeveless Flat Knit Vest\" [ref=e239] [nth=1]\n- link \"₱799.00\" [ref=e240] [nth=3]\n- link \"Men's Printed Pullover\" [ref=e241]\n- button \"Add to wishlist\" [ref=e242] [nth=42]\n- link \"Quick Buy\" [ref=e243] [nth=42]\n- link \"Men's Printed Pullover\" [ref=e244] [nth=1]\n- link \"₱599.00\" [ref=e245] [nth=1]\n- link \"Men's Hoodie Jacket\" [ref=e246] [nth=4]\n- button \"Add to wishlist\" [ref=e247] [nth=43]\n- link \"Quick Buy\" [ref=e248] [nth=43]\n- link \"Men's Hoodie Jacket\" [ref=e249] [nth=5]\n- link \"₱599.00\" [ref=e250] [nth=2]\n- link \"Men's Printed Round Neck T-Shirt\" [ref=e251]\n- button \"Add to wishlist\" [ref=e252] [nth=44]\n- link \"Quick Buy\" [ref=e253] [nth=44]\n- link \"Men's Printed Round Neck T-Shirt\" [ref=e254] [nth=1]\n- link \"₱599.00\" [ref=e255] [nth=3]\n- link \"Men's Round Neck T-Shirt\" [ref=e256]\n- button \"Add to wishlist\" [ref=e257] [nth=45]\n- link \"Quick Buy\" [ref=e258] [nth=45]\n- link \"Men's Round Neck T-Shirt\" [ref=e259] [nth=1]\n- link \"₱459.00\" [ref=e260]\n- link \"Men's Round Neck Classic T-Shirt\" [ref=e261]\n- button \"Add to wishlist\" [ref=e262] [nth=46]\n- link \"Quick Buy\" [ref=e263] [nth=46]\n- link \"Men's Round Neck Classic T-Shirt\" [ref=e264] [nth=1]\n- link \"₱399.00\" [ref=e265]\n- link \"Men's Round Neck Volleyball T-Shirt\" [ref=e266]\n- button \"Add to wishlist\" [ref=e267] [nth=47]\n- link \"Quick Buy\" [ref=e268] [nth=47]\n- link \"Men's Round Neck Volleyball T-Shirt\" [ref=e269] [nth=1]\n- link \"₱639.00\" [ref=e270] [nth=1]\n- link \"2\" [ref=e271]\n- link \"Next page\" [ref=e272]\n- button \"Next page\" [ref=e273]\n- link [ref=e274]\n- button \"Explore\" [ref=e275]\n- link \"Our Story\" [ref=e276]\n- link \"Careers\" [ref=e277]\n- link \"Lifestyle Rewards\" [ref=e278]\n- link \"Terms of Use\" [ref=e279]\n- link \"Privacy Policy\" [ref=e280]\n- button \"Customer Care\" [ref=e281]\n- link \"Contact Us\" [ref=e282]\n- link \"Track Order\" [ref=e283]\n- link \"FAQ\" [ref=e284]\n- textbox \"Your email\" [ref=e285]\n- button \"Sign up\" [ref=e286]\n- link \"App Store\" [ref=e287]\n- link \"Google Play\" [ref=e288]\n- link \"Social 1\" [ref=e289]\n- link \"Social 2\" [ref=e290]\n- link \"Social 3\" [ref=e291]\n- link \"Social 4\" [ref=e292]\n- link \"Social 5\" [ref=e293]"
+}
