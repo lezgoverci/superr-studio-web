@@ -279,7 +279,7 @@ const plugins = [
 
 export const auth = betterAuth({
   baseURL: getBaseURL(),
-  trustedOrigins: ["http://localhost:3000"],
+  trustedOrigins: ["http://localhost:3000", "http://localhost:3001"],
   database: drizzleAdapter(db, {
     provider: "pg",
     schema,
