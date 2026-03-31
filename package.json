@@ -16,6 +16,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "echo '⚠ db:push is disabled (hangs on Supabase). Use: pnpm db:generate && pnpm db:migrate' && exit 1",
     "db:studio": "drizzle-kit studio",
+    "notebooklm:service": "python3 -m uvicorn main:app --app-dir services/notebooklm-service --host 127.0.0.1 --port 8000",
     "discover-plugins": "tsx scripts/discover-plugins.ts",
     "create-plugin": "tsx scripts/create-plugin.ts",
     "skill:update-actions": "tsx scripts/export-skill-actions.ts",

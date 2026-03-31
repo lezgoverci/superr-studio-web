@@ -203,6 +203,71 @@ export const userPreferences = pgTable(
   })
 );
 
+export type MemberLevel = 1 | 2 | 3 | 4;
+export type MemberSkillLevel = "starting" | "developing" | "advanced";
+export type MemberAiFamiliarity = "new" | "comfortable" | "power-user";
+export type MemberCareerPressure = "low" | "medium" | "high";
+
+export const memberProfiles = pgTable(
+  "member_profiles",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    level: integer("level").notNull().default(1).$type<MemberLevel>(),
+    displayName: text("display_name"),
+    bio: text("bio"),
+    location: text("location"),
+    avatarUrl: text("avatar_url"),
+    isPublic: boolean("is_public").notNull().default(false),
+    currentRole: text("current_role"),
+    targetRole: text("target_role"),
+    skillLevel: text("skill_level").$type<MemberSkillLevel>(),
+    aiFamiliarity: text("ai_familiarity").$type<MemberAiFamiliarity>(),
+    careerPressure: text("career_pressure").$type<MemberCareerPressure>(),
+    firstGoal: text("first_goal"),
+    whopAffiliateId: text("whop_affiliate_id"),
+    notebooklmNotebookId: text("notebooklm_notebook_id"),
+    onboardingCompletedAt: timestamp("onboarding_completed_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdUnique: uniqueIndex("member_profiles_user_id_unique").on(
+      table.userId
+    ),
+    levelIdx: index("member_profiles_level_idx").on(table.level),
+  })
+);
+
+export const memberProgress = pgTable(
+  "member_progress",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    trackId: text("track_id").notNull(),
+    taskId: text("task_id").notNull(),
+    completedAt: timestamp("completed_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index("member_progress_user_id_idx").on(table.userId),
+    taskUnique: uniqueIndex("member_progress_user_task_unique").on(
+      table.userId,
+      table.trackId,
+      table.taskId
+    ),
+  })
+);
+
 // User skills table to track installed AI agent skills per user
 export type SkillStatus = "installed" | "installing" | "failed";
 
@@ -483,6 +548,10 @@ export type ArtifactPublication = typeof artifactPublications.$inferSelect;
 export type NewArtifactPublication = typeof artifactPublications.$inferInsert;
 export type UserPreference = typeof userPreferences.$inferSelect;
 export type NewUserPreference = typeof userPreferences.$inferInsert;
+export type MemberProfile = typeof memberProfiles.$inferSelect;
+export type NewMemberProfile = typeof memberProfiles.$inferInsert;
+export type MemberProgress = typeof memberProgress.$inferSelect;
+export type NewMemberProgress = typeof memberProgress.$inferInsert;
 export type UserSkill = typeof userSkills.$inferSelect;
 export type NewUserSkill = typeof userSkills.$inferInsert;
 export type SandboxRecord = typeof sandboxes.$inferSelect;

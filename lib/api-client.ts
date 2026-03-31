@@ -8,6 +8,14 @@ import type {
   ArtifactRecord,
   ArtifactWithPublicationRecord,
 } from "./artifacts/types";
+import type {
+  HubBrainResponse,
+  HubBrainSourceMutationResponse,
+  HubEarnResponse,
+  HubLevelCheckResponse,
+  HubMemberProfile,
+  HubProgressResponse,
+} from "./hub/types";
 import type { IntegrationConfig, IntegrationType } from "./types/integration";
 import type { WorkflowEdge, WorkflowNode } from "./workflow-store";
 
@@ -746,6 +754,66 @@ export const userPreferencesApi = {
     }),
 };
 
+export const hubApi = {
+  profile: {
+    get: () => apiCall<HubMemberProfile>("/api/hub/profile"),
+    update: (data: {
+      displayName?: string | null;
+      bio?: string | null;
+      location?: string | null;
+      avatarUrl?: string | null;
+      isPublic?: boolean;
+      currentRole?: string | null;
+      targetRole?: string | null;
+      skillLevel?: HubMemberProfile["skillLevel"];
+      aiFamiliarity?: HubMemberProfile["aiFamiliarity"];
+      careerPressure?: HubMemberProfile["careerPressure"];
+      firstGoal?: string | null;
+      completeOnboarding?: boolean;
+    }) =>
+      apiCall<HubMemberProfile>("/api/hub/profile", {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
+  },
+  progress: {
+    get: () => apiCall<HubProgressResponse>("/api/hub/progress"),
+    update: (data: { trackId: string; taskId: string; completed?: boolean }) =>
+      apiCall<HubProgressResponse>("/api/hub/progress", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+  },
+  brain: {
+    get: () => apiCall<HubBrainResponse>("/api/hub/brain"),
+    provision: (data?: { force?: boolean }) =>
+      apiCall<HubBrainResponse>("/api/hub/brain/provision", {
+        method: "POST",
+        body: JSON.stringify(data ?? {}),
+      }),
+    addUrlSource: (data: { url: string }) =>
+      apiCall<HubBrainSourceMutationResponse>("/api/hub/brain/sources/url", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    addTextSource: (data: { title: string; content: string }) =>
+      apiCall<HubBrainSourceMutationResponse>("/api/hub/brain/sources/text", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+  },
+  earn: {
+    get: () => apiCall<HubEarnResponse>("/api/hub/earn"),
+  },
+  level: {
+    check: () => apiCall<HubLevelCheckResponse>("/api/hub/level"),
+    up: () =>
+      apiCall<HubLevelCheckResponse>("/api/hub/level", {
+        method: "POST",
+      }),
+  },
+};
+
 // Skills types
 export type SkillStatus = "installed" | "installing" | "failed";
 
@@ -805,6 +873,7 @@ export const api = {
   artifact: artifactApi,
   aiGateway: aiGatewayApi,
   agentWorkflow: agentWorkflowApi,
+  hub: hubApi,
 
   integration: integrationApi,
   opencode: opencodeApi,

@@ -2,14 +2,26 @@
 
 import type { ReactNode } from "react";
 import { createContext, useContext } from "react";
+import type { HubMemberProfile, MemberLevel } from "@/lib/hub/types";
 import type { ShellNavItem, ShellUser } from "./types";
+
+export type AppShellArea = "workspace" | "builder";
 
 export type AppShellContextValue = {
   user: ShellUser;
   isAuthPending: boolean;
   permissions: Set<string>;
   hasPermission: (permission: string) => boolean;
+  memberProfile: HubMemberProfile | null;
+  memberLevel: MemberLevel;
+  isBuilderUnlocked: boolean;
+  currentArea: AppShellArea;
+  builderEntryHref: string;
+  workspaceNavItems: ShellNavItem[];
+  builderNavItems: ShellNavItem[];
   navItems: ShellNavItem[];
+  refreshMemberProfile: () => Promise<HubMemberProfile | null>;
+  setMemberProfile: (profile: HubMemberProfile | null) => void;
 };
 
 const AppShellContext = createContext<AppShellContextValue | null>(null);

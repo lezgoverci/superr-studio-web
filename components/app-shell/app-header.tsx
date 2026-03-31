@@ -211,8 +211,16 @@ export function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { navItems } = useAppShellContext();
+  const {
+    builderEntryHref,
+    builderNavItems,
+    currentArea,
+    workspaceNavItems,
+  } = useAppShellContext();
   const isWorkflowSection = pathname.startsWith("/app/workflows");
+  const isBuilderSection = currentArea === "builder";
+  const mobileNavItems =
+    currentArea === "builder" ? builderNavItems : workspaceNavItems;
   const isWorkflowEditor =
     pathname === "/app/workflows/new" || WORKFLOW_EDITOR_PATH.test(pathname);
 
@@ -251,13 +259,42 @@ export function AppHeader() {
                     </Link>
                   </div>
                   <div className="w-full flex-1 overflow-y-auto p-4">
-                    <div className="mb-4 px-3">
-                      <div className="font-semibold text-muted-foreground text-xs uppercase tracking-wider">
-                        Workspace
+                    <div className="mb-4 space-y-4">
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          className="justify-center"
+                          onClick={() => {
+                            router.push("/app");
+                            setIsMobileMenuOpen(false);
+                          }}
+                          size="sm"
+                          type="button"
+                          variant={isBuilderSection ? "outline" : "default"}
+                        >
+                          Workspace
+                        </Button>
+                        <Button
+                          className="justify-center"
+                          onClick={() => {
+                            router.push(builderEntryHref);
+                            setIsMobileMenuOpen(false);
+                          }}
+                          size="sm"
+                          type="button"
+                          variant={isBuilderSection ? "default" : "outline"}
+                        >
+                          Builder
+                        </Button>
+                      </div>
+
+                      <div className="px-3">
+                        <div className="font-semibold text-muted-foreground text-xs uppercase tracking-wider">
+                          {isBuilderSection ? "Builder" : "Workspace"}
+                        </div>
                       </div>
                     </div>
                     <NavContent
-                      items={navItems}
+                      items={mobileNavItems}
                       onItemClick={() => setIsMobileMenuOpen(false)}
                     />
                   </div>
@@ -286,13 +323,13 @@ export function AppHeader() {
             <div
               className={cn(
                 "absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-full bg-background shadow-sm transition-transform duration-300",
-                isWorkflowSection ? "translate-x-full" : "translate-x-0"
+                isBuilderSection ? "translate-x-full" : "translate-x-0"
               )}
             />
             <button
               className={cn(
                 "relative z-10 flex-1 rounded-full font-medium text-xs transition-colors",
-                isWorkflowSection ? "text-muted-foreground" : "text-foreground"
+                isBuilderSection ? "text-muted-foreground" : "text-foreground"
               )}
               onClick={() => router.push("/app")}
               type="button"
@@ -302,9 +339,9 @@ export function AppHeader() {
             <button
               className={cn(
                 "relative z-10 flex-1 rounded-full font-medium text-xs transition-colors",
-                isWorkflowSection ? "text-foreground" : "text-muted-foreground"
+                isBuilderSection ? "text-foreground" : "text-muted-foreground"
               )}
-              onClick={() => router.push("/app/workflows/new")}
+              onClick={() => router.push(builderEntryHref)}
               type="button"
             >
               Builder

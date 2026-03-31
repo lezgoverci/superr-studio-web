@@ -1,6 +1,7 @@
 "use client";
 
-import { Key, LogOut, Moon, Plug, Sun } from "lucide-react";
+import { Key, LogOut, Moon, Plug, Settings, Sun } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
   AuthDialog,
@@ -27,6 +28,7 @@ import {
 import { signOut, useSession } from "@/lib/auth-client";
 
 export const UserMenu = () => {
+  const router = useRouter();
   const { data: session, isPending } = useSession();
   const { theme, setTheme } = useTheme();
   const { open: openOverlay } = useOverlay();
@@ -107,6 +109,10 @@ export const UserMenu = () => {
         <DropdownMenuItem onClick={() => openOverlay(ApiKeysOverlay)}>
           <Key className="size-4" />
           <span>API Keys</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => router.push("/app/settings")}>
+          <Settings className="size-4" />
+          <span>Settings</span>
         </DropdownMenuItem>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
