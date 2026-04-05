@@ -9,7 +9,7 @@ import {
 
 const AddTextSourceSchema = z.object({
   title: z.string().min(1).max(120),
-  content: z.string().min(1).max(10000),
+  content: z.string().min(1).max(10_000),
 });
 
 export async function POST(request: Request) {

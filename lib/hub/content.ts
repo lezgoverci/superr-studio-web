@@ -14,10 +14,13 @@ import type {
 } from "./types";
 
 export const LEVEL_LABELS: Record<MemberLevel, string> = {
-  1: "Explorer",
-  2: "Creator",
-  3: "Shadow Operator",
-  4: "Founder",
+  1: "F-Class",
+  2: "E-Class",
+  3: "D-Class",
+  4: "C-Class",
+  5: "B-Class",
+  6: "A-Class",
+  7: "S-Class",
 };
 
 export const ROLE_OPTIONS = [
@@ -53,18 +56,19 @@ export const CAREER_PRESSURE_OPTIONS: Array<{
   label: string;
 }> = [
   { value: "low", label: "Exploring without pressure" },
-  { value: "medium", label: "Trying to level up soon" },
+  { value: "medium", label: "Trying to rank up soon" },
   { value: "high", label: "Need momentum now" },
 ];
 
 export const JOURNEY_TRACKS: HubJourneyTrack[] = [
   {
-    id: "foundation",
-    title: "Foundation",
-    description: "Get clear on your direction and train your daily workflow.",
+    id: "awakening",
+    title: "Awakening",
+    description:
+      "Your eyes open. Find your path and prepare for the journey ahead.",
     tasks: [
       {
-        trackId: "foundation",
+        trackId: "awakening",
         taskId: "finish-onboarding",
         title: "Finish onboarding",
         description: "Set your role, skill level, and first goal.",
@@ -72,7 +76,7 @@ export const JOURNEY_TRACKS: HubJourneyTrack[] = [
         minimumLevel: 1,
       },
       {
-        trackId: "foundation",
+        trackId: "awakening",
         taskId: "seed-brain",
         title: "Seed your Brain",
         description: "Add context so your workspace reflects your real work.",
@@ -80,7 +84,7 @@ export const JOURNEY_TRACKS: HubJourneyTrack[] = [
         minimumLevel: 1,
       },
       {
-        trackId: "foundation",
+        trackId: "awakening",
         taskId: "define-goal",
         title: "Lock your first sprint",
         description: "Write the one outcome you want this month.",
@@ -90,12 +94,13 @@ export const JOURNEY_TRACKS: HubJourneyTrack[] = [
     ],
   },
   {
-    id: "creation",
-    title: "Creation",
-    description: "Turn your learning into visible output and distribution.",
+    id: "forge",
+    title: "Forge",
+    description:
+      "Turn your learning into visible power. Create, share, and begin to earn.",
     tasks: [
       {
-        trackId: "creation",
+        trackId: "forge",
         taskId: "share-link",
         title: "Set up your share link",
         description: "Start earning from the content and invites you publish.",
@@ -103,35 +108,36 @@ export const JOURNEY_TRACKS: HubJourneyTrack[] = [
         minimumLevel: 1,
       },
       {
-        trackId: "creation",
+        trackId: "forge",
         taskId: "publish-weekly",
         title: "Publish your weekly artifact",
         description: "Capture a result, lesson, or breakdown from your work.",
         href: "/app",
-        minimumLevel: 2,
+        minimumLevel: 3,
       },
     ],
   },
   {
-    id: "builder",
-    title: "Builder",
-    description: "Graduate into campaign systems and advanced tooling.",
+    id: "command",
+    title: "Command",
+    description:
+      "Architect systems. Wield the advanced tools. Shape the flow of the ecosystem.",
     tasks: [
       {
-        trackId: "builder",
-        taskId: "unlock-builder",
-        title: "Reach Builder access",
-        description: "Level up into the workflow and operations toolset.",
+        trackId: "command",
+        taskId: "unlock-command",
+        title: "Reach Command access",
+        description: "Rank up into the workflow and operations toolset.",
         href: "/app/studio",
-        minimumLevel: 3,
+        minimumLevel: 5,
       },
       {
-        trackId: "builder",
+        trackId: "command",
         taskId: "launch-workflow",
         title: "Launch your first workflow",
         description: "Build or adapt an automation you can actually reuse.",
         href: "/app/workflows/new",
-        minimumLevel: 3,
+        minimumLevel: 5,
       },
     ],
   },
@@ -165,9 +171,9 @@ function createPathSource(profile: HubMemberProfile): HubStarterSource {
     description: "A short guide for what to focus on next inside the Hub.",
     type: "text",
     value: [
-      `Current level: ${levelLabel}`,
-      `Next focus: ${profile.level >= 3 ? "Ship systems and reusable assets." : "Build visible reps and a consistent learning loop."}`,
-      "Use the Brain to collect context, the Journey to track progress, and Earn to distribute what you make.",
+      `Current rank: ${levelLabel}`,
+      `Next focus: ${profile.level >= 5 ? "Ship systems and reusable assets." : "Build visible reps and a consistent learning loop."}`,
+      "Use the Brain to collect context, the Quest Log to track progress, and Earn to distribute what you make.",
     ].join("\n\n"),
   };
 }
@@ -184,12 +190,14 @@ function createFirstSprintSource(profile: HubMemberProfile): HubStarterSource {
       "Sprint rhythm:",
       "- Add new context to Brain when you learn something useful.",
       "- Publish one artifact or insight each week.",
-      "- Review your Journey tasks every time you finish a sprint.",
+      "- Review your quests every time you finish a sprint.",
     ].join("\n"),
   };
 }
 
-export function getStarterSources(profile: HubMemberProfile): HubStarterSource[] {
+export function getStarterSources(
+  profile: HubMemberProfile
+): HubStarterSource[] {
   return [
     createBriefSource(profile),
     createPathSource(profile),
@@ -248,24 +256,24 @@ function isTrackComplete(tracks: HubJourneyTrackState[], trackId: string) {
   return track ? track.completedTasks >= track.totalTasks : false;
 }
 
-const L1_TO_L2_CRITERIA: LevelCriterionSpec[] = [
+const F_TO_E_CRITERIA: LevelCriterionSpec[] = [
   {
     id: "onboarding-done",
     label: "Complete onboarding",
     check: (ctx) => Boolean(ctx.profile.onboardingCompletedAt),
   },
   {
-    id: "foundation-track",
-    label: "Finish all Foundation tasks",
-    check: (ctx) => isTrackComplete(ctx.tracks, "foundation"),
+    id: "awakening-track",
+    label: "Finish all Awakening quests",
+    check: (ctx) => isTrackComplete(ctx.tracks, "awakening"),
   },
 ];
 
-const L2_TO_L3_CRITERIA: LevelCriterionSpec[] = [
+const E_TO_D_CRITERIA: LevelCriterionSpec[] = [
   {
-    id: "creation-track",
-    label: "Finish all Creation tasks",
-    check: (ctx) => isTrackComplete(ctx.tracks, "creation"),
+    id: "forge-track",
+    label: "Finish all Forge quests",
+    check: (ctx) => isTrackComplete(ctx.tracks, "forge"),
   },
   {
     id: "brain-provisioned",
@@ -279,11 +287,11 @@ const L2_TO_L3_CRITERIA: LevelCriterionSpec[] = [
   },
 ];
 
-const L3_TO_L4_CRITERIA: LevelCriterionSpec[] = [
+const D_TO_C_CRITERIA: LevelCriterionSpec[] = [
   {
-    id: "builder-track",
-    label: "Finish all Builder tasks",
-    check: (ctx) => isTrackComplete(ctx.tracks, "builder"),
+    id: "command-track",
+    label: "Finish all Command quests",
+    check: (ctx) => isTrackComplete(ctx.tracks, "command"),
   },
   {
     id: "workflow-created",
@@ -295,11 +303,11 @@ const L3_TO_L4_CRITERIA: LevelCriterionSpec[] = [
 function getCriteriaForLevel(level: MemberLevel): LevelCriterionSpec[] {
   switch (level) {
     case 1:
-      return L1_TO_L2_CRITERIA;
+      return F_TO_E_CRITERIA;
     case 2:
-      return L2_TO_L3_CRITERIA;
+      return E_TO_D_CRITERIA;
     case 3:
-      return L3_TO_L4_CRITERIA;
+      return D_TO_C_CRITERIA;
     default:
       return [];
   }
@@ -308,7 +316,7 @@ function getCriteriaForLevel(level: MemberLevel): LevelCriterionSpec[] {
 export function checkLevelUp(ctx: LevelCheckContext): HubLevelCheckResponse {
   const currentLevel = ctx.profile.level;
 
-  if (currentLevel >= 4) {
+  if (currentLevel >= 7) {
     return {
       currentLevel,
       eligible: false,

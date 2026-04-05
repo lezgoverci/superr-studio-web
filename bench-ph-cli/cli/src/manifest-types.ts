@@ -130,7 +130,7 @@ function asRecord(value: unknown, label: string): Record<string, unknown> {
 
 function optionalString(value: unknown, label: string): string | undefined {
   if (value === undefined || value === null || value === "") {
-    return undefined;
+    return;
   }
 
   assert(typeof value === "string", `${label} must be a string.`);
@@ -147,7 +147,7 @@ function requiredString(value: unknown, label: string): string {
 function asStringArray(value: unknown, label: string): string[] {
   assert(Array.isArray(value), `${label} must be an array.`);
   return value.map((entry, index) =>
-    requiredString(entry, `${label}[${index}]`),
+    requiredString(entry, `${label}[${index}]`)
   );
 }
 
@@ -164,14 +164,14 @@ export function validateManifestShape(input: unknown): AppCliManifest {
   const platform = requiredString(app.platform, "Manifest app.platform");
   assert(
     PLATFORM_VALUES.includes(platform as AppPlatform),
-    `Manifest app.platform must be one of ${PLATFORM_VALUES.join(", ")}.`,
+    `Manifest app.platform must be one of ${PLATFORM_VALUES.join(", ")}.`
   );
 
   const defaultMode =
     optionalString(app.defaultMode, "Manifest app.defaultMode") ?? "auto";
   assert(
     MODE_VALUES.includes(defaultMode as CliMode),
-    `Manifest app.defaultMode must be one of ${MODE_VALUES.join(", ")}.`,
+    `Manifest app.defaultMode must be one of ${MODE_VALUES.join(", ")}.`
   );
 
   const normalizedApp: ManifestApp = {
@@ -186,7 +186,7 @@ export function validateManifestShape(input: unknown): AppCliManifest {
     defaultSessionName:
       optionalString(
         app.defaultSessionName,
-        "Manifest app.defaultSessionName",
+        "Manifest app.defaultSessionName"
       ) ?? requiredString(app.slug, "Manifest app.slug"),
     ...(optionalString(app.baseUrl, "Manifest app.baseUrl")
       ? { baseUrl: optionalString(app.baseUrl, "Manifest app.baseUrl") }
@@ -196,7 +196,7 @@ export function validateManifestShape(input: unknown): AppCliManifest {
   if (normalizedApp.platform === "web") {
     assert(
       normalizedApp.baseUrl,
-      'Manifest app.baseUrl is required for "web" targets.',
+      'Manifest app.baseUrl is required for "web" targets.'
     );
   }
 
@@ -206,25 +206,22 @@ export function validateManifestShape(input: unknown): AppCliManifest {
       cdpPort: Number.isFinite(Number(electron.cdpPort))
         ? Number(electron.cdpPort)
         : 9222,
-      ...(optionalString(
-        electron.appName,
-        "Manifest app.electron.appName",
-      )
+      ...(optionalString(electron.appName, "Manifest app.electron.appName")
         ? {
             appName: optionalString(
               electron.appName,
-              "Manifest app.electron.appName",
+              "Manifest app.electron.appName"
             ),
           }
         : {}),
       ...(optionalString(
         electron.launchCommand,
-        "Manifest app.electron.launchCommand",
+        "Manifest app.electron.launchCommand"
       )
         ? {
             launchCommand: optionalString(
               electron.launchCommand,
-              "Manifest app.electron.launchCommand",
+              "Manifest app.electron.launchCommand"
             ),
           }
         : {}),
@@ -236,7 +233,7 @@ export function validateManifestShape(input: unknown): AppCliManifest {
     optionalString(auth.strategy, "Manifest auth.strategy") ?? "none";
   assert(
     AUTH_STRATEGY_VALUES.includes(authStrategy as AuthStrategy),
-    `Manifest auth.strategy must be one of ${AUTH_STRATEGY_VALUES.join(", ")}.`,
+    `Manifest auth.strategy must be one of ${AUTH_STRATEGY_VALUES.join(", ")}.`
   );
 
   const normalizedAuth: ManifestAuth = {
@@ -251,22 +248,25 @@ export function validateManifestShape(input: unknown): AppCliManifest {
       ? {
           loginFlowId: optionalString(
             auth.loginFlowId,
-            "Manifest auth.loginFlowId",
+            "Manifest auth.loginFlowId"
           ),
         }
       : {}),
     env: Array.isArray(auth.env)
       ? auth.env.map((entry, index) => {
-          const normalizedEntry = asRecord(entry, `Manifest auth.env[${index}]`);
+          const normalizedEntry = asRecord(
+            entry,
+            `Manifest auth.env[${index}]`
+          );
           return {
             name: requiredString(
               normalizedEntry.name,
-              `Manifest auth.env[${index}].name`,
+              `Manifest auth.env[${index}].name`
             ),
             description:
               optionalString(
                 normalizedEntry.description,
-                `Manifest auth.env[${index}].description`,
+                `Manifest auth.env[${index}].description`
               ) ?? "",
             secret: Boolean(normalizedEntry.secret),
           };
@@ -279,7 +279,7 @@ export function validateManifestShape(input: unknown): AppCliManifest {
         const normalizedEntry = asRecord(entry, `Manifest entities[${index}]`);
         const name = requiredString(
           normalizedEntry.name,
-          `Manifest entities[${index}].name`,
+          `Manifest entities[${index}].name`
         );
 
         return {
@@ -287,16 +287,16 @@ export function validateManifestShape(input: unknown): AppCliManifest {
           plural:
             optionalString(
               normalizedEntry.plural,
-              `Manifest entities[${index}].plural`,
+              `Manifest entities[${index}].plural`
             ) ?? `${name}s`,
           ...(optionalString(
             normalizedEntry.description,
-            `Manifest entities[${index}].description`,
+            `Manifest entities[${index}].description`
           )
             ? {
                 description: optionalString(
                   normalizedEntry.description,
-                  `Manifest entities[${index}].description`,
+                  `Manifest entities[${index}].description`
                 ),
               }
             : {}),
@@ -305,36 +305,36 @@ export function validateManifestShape(input: unknown): AppCliManifest {
     : [];
 
   const requestRecipes: ManifestRequestRecipe[] = Array.isArray(
-    manifest.requestRecipes,
+    manifest.requestRecipes
   )
     ? manifest.requestRecipes.map((entry, index) => {
         const normalizedEntry = asRecord(
           entry,
-          `Manifest requestRecipes[${index}]`,
+          `Manifest requestRecipes[${index}]`
         );
         const responseType =
           optionalString(
             normalizedEntry.responseType,
-            `Manifest requestRecipes[${index}].responseType`,
+            `Manifest requestRecipes[${index}].responseType`
           ) ?? "json";
 
         assert(
           RESPONSE_TYPE_VALUES.includes(responseType as ResponseType),
-          `Manifest requestRecipes[${index}] responseType must be one of ${RESPONSE_TYPE_VALUES.join(", ")}.`,
+          `Manifest requestRecipes[${index}] responseType must be one of ${RESPONSE_TYPE_VALUES.join(", ")}.`
         );
 
         return {
           id: requiredString(
             normalizedEntry.id,
-            `Manifest requestRecipes[${index}].id`,
+            `Manifest requestRecipes[${index}].id`
           ),
           method: requiredString(
             normalizedEntry.method,
-            `Manifest requestRecipes[${index}].method`,
+            `Manifest requestRecipes[${index}].method`
           ).toUpperCase(),
           url: requiredString(
             normalizedEntry.url,
-            `Manifest requestRecipes[${index}].url`,
+            `Manifest requestRecipes[${index}].url`
           ),
           headers: isRecord(normalizedEntry.headers)
             ? cloneJson(normalizedEntry.headers)
@@ -361,14 +361,14 @@ export function validateManifestShape(input: unknown): AppCliManifest {
           ? normalizedEntry.steps.map((step, stepIndex) => {
               const normalizedStep = asRecord(
                 step,
-                `Manifest flow "${normalizedEntry.id ?? index}" step ${stepIndex + 1}`,
+                `Manifest flow "${normalizedEntry.id ?? index}" step ${stepIndex + 1}`
               );
 
               return {
                 ...cloneJson(normalizedStep),
                 action: requiredString(
                   normalizedStep.action,
-                  `Manifest flow "${normalizedEntry.id ?? index}" step ${stepIndex + 1} action`,
+                  `Manifest flow "${normalizedEntry.id ?? index}" step ${stepIndex + 1} action`
                 ),
               };
             })
@@ -376,19 +376,17 @@ export function validateManifestShape(input: unknown): AppCliManifest {
 
         assert(
           steps.length > 0,
-          `Manifest flow "${normalizedEntry.id ?? index}" must include at least one step.`,
+          `Manifest flow "${normalizedEntry.id ?? index}" must include at least one step.`
         );
 
         return {
-          id: requiredString(
-            normalizedEntry.id,
-            `Manifest flows[${index}].id`,
-          ),
+          id: requiredString(normalizedEntry.id, `Manifest flows[${index}].id`),
           description:
             optionalString(
               normalizedEntry.description,
-              `Manifest flows[${index}].description`,
-            ) ?? requiredString(normalizedEntry.id, `Manifest flows[${index}].id`),
+              `Manifest flows[${index}].description`
+            ) ??
+            requiredString(normalizedEntry.id, `Manifest flows[${index}].id`),
           steps,
           ...(isRecord(normalizedEntry.result)
             ? { result: cloneJson(normalizedEntry.result) }
@@ -403,20 +401,20 @@ export function validateManifestShape(input: unknown): AppCliManifest {
         return {
           id: requiredString(
             normalizedEntry.id,
-            `Manifest selectors[${index}].id`,
+            `Manifest selectors[${index}].id`
           ),
           value: requiredString(
             normalizedEntry.value,
-            `Manifest selectors[${index}].value`,
+            `Manifest selectors[${index}].value`
           ),
           ...(optionalString(
             normalizedEntry.notes,
-            `Manifest selectors[${index}].notes`,
+            `Manifest selectors[${index}].notes`
           )
             ? {
                 notes: optionalString(
                   normalizedEntry.notes,
-                  `Manifest selectors[${index}].notes`,
+                  `Manifest selectors[${index}].notes`
                 ),
               }
             : {}),
@@ -430,48 +428,50 @@ export function validateManifestShape(input: unknown): AppCliManifest {
         const mode =
           optionalString(
             normalizedEntry.mode,
-            `Manifest commands[${index}].mode`,
+            `Manifest commands[${index}].mode`
           ) ?? normalizedApp.defaultMode;
 
         assert(
           MODE_VALUES.includes(mode as CliMode),
-          `Manifest command "${normalizedEntry.id ?? index}" mode must be one of ${MODE_VALUES.join(", ")}.`,
+          `Manifest command "${normalizedEntry.id ?? index}" mode must be one of ${MODE_VALUES.join(", ")}.`
         );
 
-        const inputs: ManifestCommandInput[] = Array.isArray(normalizedEntry.inputs)
+        const inputs: ManifestCommandInput[] = Array.isArray(
+          normalizedEntry.inputs
+        )
           ? normalizedEntry.inputs.map((input, inputIndex) => {
               const normalizedInput = asRecord(
                 input,
-                `Manifest command "${normalizedEntry.id ?? index}" input ${inputIndex + 1}`,
+                `Manifest command "${normalizedEntry.id ?? index}" input ${inputIndex + 1}`
               );
               const type =
                 optionalString(
                   normalizedInput.type,
-                  `Manifest command "${normalizedEntry.id ?? index}" input ${inputIndex + 1} type`,
+                  `Manifest command "${normalizedEntry.id ?? index}" input ${inputIndex + 1} type`
                 ) ?? "string";
 
               assert(
                 INPUT_TYPE_VALUES.includes(type as CommandInputType),
-                `Manifest command "${normalizedEntry.id ?? index}" input type must be one of ${INPUT_TYPE_VALUES.join(", ")}.`,
+                `Manifest command "${normalizedEntry.id ?? index}" input type must be one of ${INPUT_TYPE_VALUES.join(", ")}.`
               );
 
               return {
                 name: requiredString(
                   normalizedInput.name,
-                  `Manifest command "${normalizedEntry.id ?? index}" input ${inputIndex + 1} name`,
+                  `Manifest command "${normalizedEntry.id ?? index}" input ${inputIndex + 1} name`
                 ),
                 flag: requiredString(
                   normalizedInput.flag,
-                  `Manifest command "${normalizedEntry.id ?? index}" input ${inputIndex + 1} flag`,
+                  `Manifest command "${normalizedEntry.id ?? index}" input ${inputIndex + 1} flag`
                 ),
                 ...(optionalString(
                   normalizedInput.alias,
-                  `Manifest command "${normalizedEntry.id ?? index}" input ${inputIndex + 1} alias`,
+                  `Manifest command "${normalizedEntry.id ?? index}" input ${inputIndex + 1} alias`
                 )
                   ? {
                       alias: optionalString(
                         normalizedInput.alias,
-                        `Manifest command "${normalizedEntry.id ?? index}" input ${inputIndex + 1} alias`,
+                        `Manifest command "${normalizedEntry.id ?? index}" input ${inputIndex + 1} alias`
                       ),
                     }
                   : {}),
@@ -479,7 +479,7 @@ export function validateManifestShape(input: unknown): AppCliManifest {
                 description:
                   optionalString(
                     normalizedInput.description,
-                    `Manifest command "${normalizedEntry.id ?? index}" input ${inputIndex + 1} description`,
+                    `Manifest command "${normalizedEntry.id ?? index}" input ${inputIndex + 1} description`
                   ) ?? "",
                 required: Boolean(normalizedInput.required),
               };
@@ -492,47 +492,47 @@ export function validateManifestShape(input: unknown): AppCliManifest {
         const outputType =
           optionalString(
             output.type,
-            `Manifest command "${normalizedEntry.id ?? index}" output.type`,
+            `Manifest command "${normalizedEntry.id ?? index}" output.type`
           ) ?? "text";
 
         assert(
           RESPONSE_TYPE_VALUES.includes(outputType as ResponseType),
-          `Manifest command "${normalizedEntry.id ?? index}" output.type must be one of ${RESPONSE_TYPE_VALUES.join(", ")}.`,
+          `Manifest command "${normalizedEntry.id ?? index}" output.type must be one of ${RESPONSE_TYPE_VALUES.join(", ")}.`
         );
 
         return {
           id: requiredString(
             normalizedEntry.id,
-            `Manifest commands[${index}].id`,
+            `Manifest commands[${index}].id`
           ),
           path: asStringArray(
             normalizedEntry.path,
-            `Manifest command "${normalizedEntry.id ?? index}" path`,
+            `Manifest command "${normalizedEntry.id ?? index}" path`
           ),
           description: requiredString(
             normalizedEntry.description,
-            `Manifest command "${normalizedEntry.id ?? index}" description`,
+            `Manifest command "${normalizedEntry.id ?? index}" description`
           ),
           mode: mode as CliMode,
           ...(optionalString(
             normalizedEntry.requestRecipeId,
-            `Manifest command "${normalizedEntry.id ?? index}" requestRecipeId`,
+            `Manifest command "${normalizedEntry.id ?? index}" requestRecipeId`
           )
             ? {
                 requestRecipeId: optionalString(
                   normalizedEntry.requestRecipeId,
-                  `Manifest command "${normalizedEntry.id ?? index}" requestRecipeId`,
+                  `Manifest command "${normalizedEntry.id ?? index}" requestRecipeId`
                 ),
               }
             : {}),
           ...(optionalString(
             normalizedEntry.flowId,
-            `Manifest command "${normalizedEntry.id ?? index}" flowId`,
+            `Manifest command "${normalizedEntry.id ?? index}" flowId`
           )
             ? {
                 flowId: optionalString(
                   normalizedEntry.flowId,
-                  `Manifest command "${normalizedEntry.id ?? index}" flowId`,
+                  `Manifest command "${normalizedEntry.id ?? index}" flowId`
                 ),
               }
             : {}),
@@ -550,20 +550,20 @@ export function validateManifestShape(input: unknown): AppCliManifest {
   for (const command of commands) {
     assert(
       command.requestRecipeId || command.flowId,
-      `Command "${command.id}" must provide a requestRecipeId, a flowId, or both.`,
+      `Command "${command.id}" must provide a requestRecipeId, a flowId, or both.`
     );
 
     if (command.requestRecipeId) {
       assert(
         requestRecipeIds.has(command.requestRecipeId),
-        `Command "${command.id}" references missing request recipe "${command.requestRecipeId}".`,
+        `Command "${command.id}" references missing request recipe "${command.requestRecipeId}".`
       );
     }
 
     if (command.flowId) {
       assert(
         flowIds.has(command.flowId),
-        `Command "${command.id}" references missing flow "${command.flowId}".`,
+        `Command "${command.id}" references missing flow "${command.flowId}".`
       );
     }
   }
@@ -571,7 +571,7 @@ export function validateManifestShape(input: unknown): AppCliManifest {
   if (normalizedAuth.strategy === "state-file" && normalizedAuth.loginFlowId) {
     assert(
       flowIds.has(normalizedAuth.loginFlowId),
-      `Manifest auth.loginFlowId "${normalizedAuth.loginFlowId}" does not match any flow.`,
+      `Manifest auth.loginFlowId "${normalizedAuth.loginFlowId}" does not match any flow.`
     );
   }
 
@@ -592,14 +592,14 @@ export function validateManifestShape(input: unknown): AppCliManifest {
       capturedAt:
         optionalString(
           regeneration.capturedAt,
-          "Manifest regeneration.capturedAt",
+          "Manifest regeneration.capturedAt"
         ) ?? new Date().toISOString(),
       source:
         optionalString(regeneration.source, "Manifest regeneration.source") ??
         "runtime-observation",
       sourceNotes: Array.isArray(regeneration.sourceNotes)
         ? regeneration.sourceNotes.map((entry, index) =>
-            requiredString(entry, `Manifest regeneration.sourceNotes[${index}]`),
+            requiredString(entry, `Manifest regeneration.sourceNotes[${index}]`)
           )
         : [],
       fingerprints: isRecord(regeneration.fingerprints)

@@ -6,10 +6,7 @@
   "pathname": "/products/biy0041-mens-classic-polo-shirt",
   "kind": "detail",
   "primaryPrefix": "products",
-  "pathSegments": [
-    "products",
-    "biy0041-mens-classic-polo-shirt"
-  ],
+  "pathSegments": ["products", "biy0041-mens-classic-polo-shirt"],
   "headings": [
     {
       "level": "h2",

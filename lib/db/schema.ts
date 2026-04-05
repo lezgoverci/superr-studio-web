@@ -203,7 +203,7 @@ export const userPreferences = pgTable(
   })
 );
 
-export type MemberLevel = 1 | 2 | 3 | 4;
+export type MemberLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type MemberSkillLevel = "starting" | "developing" | "advanced";
 export type MemberAiFamiliarity = "new" | "comfortable" | "power-user";
 export type MemberCareerPressure = "low" | "medium" | "high";

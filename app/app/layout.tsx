@@ -21,8 +21,6 @@ export default async function AppLayout({ children }: AppLayoutProps) {
     : null;
 
   return (
-    <AppShell initialMemberProfile={initialMemberProfile}>
-      {children}
-    </AppShell>
+    <AppShell initialMemberProfile={initialMemberProfile}>{children}</AppShell>
   );
 }

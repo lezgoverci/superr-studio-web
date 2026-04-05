@@ -211,12 +211,8 @@ export function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const {
-    builderEntryHref,
-    builderNavItems,
-    currentArea,
-    workspaceNavItems,
-  } = useAppShellContext();
+  const { builderEntryHref, builderNavItems, currentArea, workspaceNavItems } =
+    useAppShellContext();
   const isWorkflowSection = pathname.startsWith("/app/workflows");
   const isBuilderSection = currentArea === "builder";
   const mobileNavItems =

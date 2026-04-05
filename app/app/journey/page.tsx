@@ -60,7 +60,9 @@ export default function JourneyPage() {
   };
 
   const completionPercent = progress
-    ? Math.round((progress.completedTasks / Math.max(progress.totalTasks, 1)) * 100)
+    ? Math.round(
+        (progress.completedTasks / Math.max(progress.totalTasks, 1)) * 100
+      )
     : 0;
 
   return (
@@ -77,7 +79,9 @@ export default function JourneyPage() {
         <Card>
           <CardContent className="flex flex-col gap-3 p-6 md:flex-row md:items-end md:justify-between">
             <div className="space-y-1">
-              <p className="text-muted-foreground text-sm">Overall completion</p>
+              <p className="text-muted-foreground text-sm">
+                Overall completion
+              </p>
               <div className="font-semibold text-4xl">{completionPercent}%</div>
             </div>
             <p className="text-muted-foreground text-sm">
@@ -110,7 +114,8 @@ export default function JourneyPage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {track.tasks.map((task) => {
-                  const pending = mutatingTaskId === `${task.trackId}:${task.taskId}`;
+                  const pending =
+                    mutatingTaskId === `${task.trackId}:${task.taskId}`;
 
                   return (
                     <div
@@ -140,13 +145,19 @@ export default function JourneyPage() {
                         <Button
                           disabled={pending || !task.isAvailable}
                           onClick={() =>
-                            toggleTask(task.trackId, task.taskId, !task.isCompleted)
+                            toggleTask(
+                              task.trackId,
+                              task.taskId,
+                              !task.isCompleted
+                            )
                           }
                           type="button"
                           variant={task.isCompleted ? "outline" : "default"}
                         >
                           {pending ? <Spinner className="mr-2 size-4" /> : null}
-                          {task.isCompleted ? "Mark Incomplete" : "Mark Complete"}
+                          {task.isCompleted
+                            ? "Mark Incomplete"
+                            : "Mark Complete"}
                         </Button>
                       </div>
                     </div>

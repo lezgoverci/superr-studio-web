@@ -1,5 +1,8 @@
-export const MEMBER_LEVELS = [1, 2, 3, 4] as const;
+export const MEMBER_LEVELS = [1, 2, 3, 4, 5, 6, 7] as const;
 export type MemberLevel = (typeof MEMBER_LEVELS)[number];
+
+export const MEMBER_ROLES = ["hero", "mage", "warrior", "priest"] as const;
+export type MemberRole = (typeof MEMBER_ROLES)[number];
 
 export const MEMBER_SKILL_LEVELS = [
   "starting",
@@ -22,6 +25,7 @@ export type HubMemberProfile = {
   id: string;
   userId: string;
   level: MemberLevel;
+  role: MemberRole | null;
   displayName: string | null;
   bio: string | null;
   location: string | null;
@@ -147,7 +151,18 @@ export type HubLevelCheckResponse = {
   leveledUp: boolean;
 };
 
-export function clampMemberLevel(value: number | null | undefined): MemberLevel {
+export function clampMemberLevel(
+  value: number | null | undefined
+): MemberLevel {
+  if (value === 7) {
+    return 7;
+  }
+  if (value === 6) {
+    return 6;
+  }
+  if (value === 5) {
+    return 5;
+  }
   if (value === 4) {
     return 4;
   }
@@ -176,4 +191,10 @@ export function isMemberCareerPressure(
   value: string | null | undefined
 ): value is MemberCareerPressure {
   return MEMBER_CAREER_PRESSURE.includes(value as MemberCareerPressure);
+}
+
+export function isMemberRole(
+  value: string | null | undefined
+): value is MemberRole {
+  return MEMBER_ROLES.includes(value as MemberRole);
 }

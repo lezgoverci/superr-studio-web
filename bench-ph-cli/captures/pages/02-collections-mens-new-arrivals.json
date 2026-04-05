@@ -6,10 +6,7 @@
   "pathname": "/collections/mens-new-arrivals",
   "kind": "list",
   "primaryPrefix": "collections",
-  "pathSegments": [
-    "collections",
-    "mens-new-arrivals"
-  ],
+  "pathSegments": ["collections", "mens-new-arrivals"],
   "headings": [
     {
       "level": "h2",

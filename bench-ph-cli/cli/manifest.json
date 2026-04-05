@@ -25,10 +25,7 @@
   "commands": [
     {
       "id": "home-title",
-      "path": [
-        "home",
-        "title"
-      ],
+      "path": ["home", "title"],
       "description": "Read the home page title.",
       "mode": "ui",
       "inputs": [],
@@ -39,10 +36,7 @@
     },
     {
       "id": "collections-list",
-      "path": [
-        "collections",
-        "list"
-      ],
+      "path": ["collections", "list"],
       "description": "List all product categories/collections.",
       "mode": "ui",
       "inputs": [],
@@ -53,10 +47,7 @@
     },
     {
       "id": "categories-list",
-      "path": [
-        "categories",
-        "list"
-      ],
+      "path": ["categories", "list"],
       "description": "List all available categories.",
       "mode": "ui",
       "inputs": [],
@@ -67,10 +58,7 @@
     },
     {
       "id": "products-get",
-      "path": [
-        "products",
-        "get"
-      ],
+      "path": ["products", "get"],
       "description": "Get product details by handle.",
       "mode": "auto",
       "inputs": [
@@ -90,10 +78,7 @@
     },
     {
       "id": "products-search",
-      "path": [
-        "products",
-        "search"
-      ],
+      "path": ["products", "search"],
       "description": "Search for products by query.",
       "mode": "auto",
       "inputs": [
@@ -112,10 +97,7 @@
     },
     {
       "id": "products-list",
-      "path": [
-        "products",
-        "list"
-      ],
+      "path": ["products", "list"],
       "description": "List products in a collection.",
       "mode": "auto",
       "inputs": [
@@ -134,10 +116,7 @@
     },
     {
       "id": "cart-view",
-      "path": [
-        "cart",
-        "view"
-      ],
+      "path": ["cart", "view"],
       "description": "View items in cart.",
       "mode": "auto",
       "inputs": [],
@@ -148,10 +127,7 @@
     },
     {
       "id": "cart-add",
-      "path": [
-        "cart",
-        "add"
-      ],
+      "path": ["cart", "add"],
       "description": "Add item to cart.",
       "mode": "auto",
       "inputs": [
@@ -344,9 +320,7 @@
     "fingerprints": {
       "target": "https://shop.bench.com.ph/",
       "totalPages": 6,
-      "detailPrefixes": [
-        "products"
-      ],
+      "detailPrefixes": ["products"],
       "shopifyDetected": true
     }
   }

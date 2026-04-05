@@ -114,8 +114,9 @@ export default function BrainPage() {
         <div className="space-y-2">
           <h1 className="font-semibold text-3xl tracking-tight">Brain</h1>
           <p className="max-w-2xl text-muted-foreground text-sm md:text-base">
-            Your Brain is a platform-managed NotebookLM workspace. Members use the
-            Hub UI while the platform handles provisioning and notebook access.
+            Your Brain is a platform-managed NotebookLM workspace. Members use
+            the Hub UI while the platform handles provisioning and notebook
+            access.
           </p>
         </div>
 
@@ -134,11 +135,15 @@ export default function BrainPage() {
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-1">
                   <p className="text-muted-foreground text-sm">Status</p>
-                  <p className="font-medium">{brain?.status || "Not provisioned"}</p>
+                  <p className="font-medium">
+                    {brain?.status || "Not provisioned"}
+                  </p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-muted-foreground text-sm">Notebook</p>
-                  <p className="font-medium">{brain?.notebookTitle || "Not provisioned"}</p>
+                  <p className="font-medium">
+                    {brain?.notebookTitle || "Not provisioned"}
+                  </p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-muted-foreground text-sm">Sources</p>
@@ -170,7 +175,10 @@ export default function BrainPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {brain?.starterSources.map((source) => (
-                <div className="rounded-lg border bg-muted/30 p-4" key={source.id}>
+                <div
+                  className="rounded-lg border bg-muted/30 p-4"
+                  key={source.id}
+                >
                   <p className="font-medium text-sm">{source.title}</p>
                   <p className="mt-1 text-muted-foreground text-sm">
                     {source.description}

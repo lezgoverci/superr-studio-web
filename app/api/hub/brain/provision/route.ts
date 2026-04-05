@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getHubMemberProfile, updateMemberProfile } from "@/lib/hub/member-profiles";
+import {
+  getHubMemberProfile,
+  updateMemberProfile,
+} from "@/lib/hub/member-profiles";
 import { getBrainState, provisionBrain } from "@/lib/hub/notebooklm-service";
 import {
   getAuthenticatedHubUser,
@@ -21,7 +24,7 @@ export async function POST(request: Request) {
 
     const rawBody = await request
       .json()
-      .catch(() => ({} satisfies z.input<typeof ProvisionSchema>));
+      .catch(() => ({}) satisfies z.input<typeof ProvisionSchema>);
     const parsed = ProvisionSchema.safeParse(rawBody);
 
     if (!parsed.success) {

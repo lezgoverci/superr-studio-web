@@ -43,33 +43,33 @@ export async function getHubProgressResponse(
   let items = [...storedItems];
   items = withDerivedItem(
     items,
-    "foundation",
+    "awakening",
     "finish-onboarding",
     profile.onboardingCompletedAt
   );
   items = withDerivedItem(
     items,
-    "foundation",
+    "awakening",
     "seed-brain",
     profile.notebooklmNotebookId ? profile.updatedAt : null
   );
   items = withDerivedItem(
     items,
-    "foundation",
+    "awakening",
     "define-goal",
     profile.firstGoal ? profile.updatedAt : null
   );
   items = withDerivedItem(
     items,
-    "creation",
+    "forge",
     "share-link",
     profile.whopAffiliateId ? profile.updatedAt : null
   );
   items = withDerivedItem(
     items,
-    "builder",
-    "unlock-builder",
-    profile.level >= 3 ? profile.updatedAt : null
+    "command",
+    "unlock-command",
+    profile.level >= 5 ? profile.updatedAt : null
   );
 
   const tracks = buildJourneyState(profile.level, items);

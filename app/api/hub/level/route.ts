@@ -14,9 +14,7 @@ import {
 } from "@/lib/hub/request";
 import type { HubLevelCheckResponse, MemberLevel } from "@/lib/hub/types";
 
-async function buildLevelCheck(
-  userId: string
-): Promise<HubLevelCheckResponse> {
+async function buildLevelCheck(userId: string): Promise<HubLevelCheckResponse> {
   const [profile, progress, userWorkflows] = await Promise.all([
     getHubMemberProfile(userId),
     getHubProgressResponse(userId),
@@ -51,8 +49,7 @@ export async function GET(request: Request) {
     console.error("[hub/level] Failed to check level:", error);
     return NextResponse.json(
       {
-        error:
-          error instanceof Error ? error.message : "Failed to check level",
+        error: error instanceof Error ? error.message : "Failed to check level",
       },
       { status: 500 }
     );

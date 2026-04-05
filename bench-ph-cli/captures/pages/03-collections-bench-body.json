@@ -6,10 +6,7 @@
   "pathname": "/collections/bench-body",
   "kind": "list",
   "primaryPrefix": "collections",
-  "pathSegments": [
-    "collections",
-    "bench-body"
-  ],
+  "pathSegments": ["collections", "bench-body"],
   "headings": [
     {
       "level": "h2",

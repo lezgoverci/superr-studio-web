@@ -86,5 +86,6 @@ The daemon will start on `127.0.0.1:32156` and a Superr icon will appear in your
 - **Frontend:** Next.js (React), TailwindCSS, `reactflow` for the workflow canvas.
 - **Backend/Bridge:** Go (Golang) tray daemon orchestrating `opencode-ai`.
 - **Integrations:** Plug-and-play architecture for rapidly adding new integrations (e.g., `bash`, `github`, `stripe`, `slack`).
+- **Docs index:** Start with [`docs/README.md`](./docs/README.md) for repo-level technical documentation and product-surface implementation docs.
 
 For detailed documentation on the underlying operations, explore the `/components/ai-elements` and `hooks/use-opencode.ts` directories.

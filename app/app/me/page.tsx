@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { PageContainer } from "@/components/app-shell/page-container";
 import { useAppShellContext } from "@/components/app-shell/shell-context";
+import { LevelBadge } from "@/components/hub/level-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,6 @@ import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api-client";
-import { LevelBadge } from "@/components/hub/level-badge";
 
 export default function ProfilePage() {
   const { memberLevel, refreshMemberProfile, setMemberProfile } =
@@ -96,7 +96,10 @@ export default function ProfilePage() {
           <CardContent className="grid gap-4 md:grid-cols-3">
             <div className="rounded-lg border bg-muted/30 p-4">
               <p className="text-muted-foreground text-sm">Level</p>
-              <LevelBadge className="mt-1 font-medium normal-case tracking-normal" level={memberLevel} />
+              <LevelBadge
+                className="mt-1 font-medium normal-case tracking-normal"
+                level={memberLevel}
+              />
             </div>
             <div className="rounded-lg border bg-muted/30 p-4">
               <p className="text-muted-foreground text-sm">Current Role</p>

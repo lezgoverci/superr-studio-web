@@ -19,28 +19,39 @@ import type {
   HubProgressResponse,
 } from "@/lib/hub/types";
 
-function getLevelSummary(level: 1 | 2 | 3 | 4) {
-  switch (level) {
-    case 4:
-      return "Run the platform like an owner. Your priority is shipping leverage and reusable systems.";
-    case 3:
-      return "You have Builder access. Turn your operating knowledge into workflows, sandboxes, and artifacts.";
-    case 2:
-      return "You are in creation mode. Keep publishing, collecting context, and distributing what you make.";
-    default:
-      return "Start by clarifying direction, building your Brain, and stacking visible reps inside the platform.";
+function getLevelSummary(level: number) {
+  if (level >= 7) {
+    return "You've reached Legend status. Build your own world and carry the fire forward.";
   }
+  if (level >= 6) {
+    return "Elite operator. Run systems, mentor others, and lead the next generation.";
+  }
+  if (level >= 5) {
+    return "You have Builder access. Turn your operating knowledge into workflows, sandboxes, and artifacts.";
+  }
+  if (level >= 3) {
+    return "You are in creation mode. Keep publishing, collecting context, and distributing what you make.";
+  }
+  return "Start by clarifying direction, building your Brain, and finding your team.";
 }
 
 export default function HubHomePage() {
-  const { builderEntryHref, isBuilderUnlocked, memberLevel, memberProfile, refreshMemberProfile, setMemberProfile } =
-    useAppShellContext();
+  const {
+    builderEntryHref,
+    isBuilderUnlocked,
+    memberLevel,
+    memberProfile,
+    refreshMemberProfile,
+    setMemberProfile,
+  } = useAppShellContext();
   const [loading, setLoading] = useState(true);
   const [levelingUp, setLevelingUp] = useState(false);
   const [progress, setProgress] = useState<HubProgressResponse | null>(null);
   const [brain, setBrain] = useState<HubBrainResponse | null>(null);
   const [earn, setEarn] = useState<HubEarnResponse | null>(null);
-  const [levelCheck, setLevelCheck] = useState<HubLevelCheckResponse | null>(null);
+  const [levelCheck, setLevelCheck] = useState<HubLevelCheckResponse | null>(
+    null
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -48,12 +59,13 @@ export default function HubHomePage() {
     async function loadHomeData() {
       setLoading(true);
 
-      const [progressResult, brainResult, earnResult, levelResult] = await Promise.allSettled([
-        api.hub.progress.get(),
-        api.hub.brain.get(),
-        api.hub.earn.get(),
-        api.hub.level.check(),
-      ]);
+      const [progressResult, brainResult, earnResult, levelResult] =
+        await Promise.allSettled([
+          api.hub.progress.get(),
+          api.hub.brain.get(),
+          api.hub.earn.get(),
+          api.hub.level.check(),
+        ]);
 
       if (cancelled) {
         return;
@@ -91,9 +103,13 @@ export default function HubHomePage() {
   }, []);
 
   const completionPercent = progress
-    ? Math.round((progress.completedTasks / Math.max(progress.totalTasks, 1)) * 100)
+    ? Math.round(
+        (progress.completedTasks / Math.max(progress.totalTasks, 1)) * 100
+      )
     : 0;
-  const welcomeHref = memberProfile?.onboardingCompletedAt ? "/app/me" : "/app/welcome";
+  const welcomeHref = memberProfile?.onboardingCompletedAt
+    ? "/app/me"
+    : "/app/welcome";
 
   const handleLevelUp = async () => {
     try {
@@ -107,7 +123,7 @@ export default function HubHomePage() {
           setMemberProfile(refreshed);
         }
         toast.success(
-          `You've reached Level ${result.currentLevel}: ${LEVEL_LABELS[result.currentLevel]}!`
+          `You've ranked up to ${LEVEL_LABELS[result.currentLevel]}!`
         );
       }
     } catch (error) {
@@ -139,7 +155,13 @@ export default function HubHomePage() {
 
             <div className="flex flex-wrap gap-3">
               <Button asChild>
-                <Link href={memberProfile?.onboardingCompletedAt ? "/app/journey" : "/app/welcome"}>
+                <Link
+                  href={
+                    memberProfile?.onboardingCompletedAt
+                      ? "/app/journey"
+                      : "/app/welcome"
+                  }
+                >
                   {memberProfile?.onboardingCompletedAt
                     ? "Continue Journey"
                     : "Finish Onboarding"}
@@ -159,7 +181,7 @@ export default function HubHomePage() {
             <CardContent className="flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
               <div className="space-y-1">
                 <h2 className="font-semibold text-xl">
-                  Ready for Level {levelCheck.nextLevel}: {LEVEL_LABELS[levelCheck.nextLevel]}
+                  Ready for {LEVEL_LABELS[levelCheck.nextLevel]}
                 </h2>
                 <p className="text-muted-foreground text-sm">
                   You have met all the criteria. Claim your next level now.
@@ -176,7 +198,7 @@ export default function HubHomePage() {
         {levelCheck && !levelCheck.eligible && levelCheck.nextLevel ? (
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm">Level Progress</CardTitle>
+              <CardTitle className="text-sm">Rank Progress</CardTitle>
             </CardHeader>
             <CardContent>
               <LevelProgressBar
@@ -216,7 +238,8 @@ export default function HubHomePage() {
               <p className="text-muted-foreground text-sm">
                 {brain?.configured
                   ? `${brain.status} · ${brain.notebookTitle ?? "Managed notebook"}`
-                  : brain?.serviceMessage || "Provision your Brain and seed it with context."}
+                  : brain?.serviceMessage ||
+                    "Provision your Brain and seed it with context."}
               </p>
             </CardContent>
           </Card>
@@ -249,7 +272,7 @@ export default function HubHomePage() {
               <p className="text-muted-foreground text-sm">
                 {isBuilderUnlocked
                   ? "Workflows, sandboxes, and library access are available."
-                  : "Reach Level 3 to unlock the full Builder toolset."}
+                  : "Reach B-Class to unlock the full Builder toolset."}
               </p>
             </CardContent>
           </Card>
@@ -277,7 +300,8 @@ export default function HubHomePage() {
                   <CardContent className="space-y-2 p-4">
                     <p className="font-medium">Feed your Brain</p>
                     <p className="text-muted-foreground text-sm">
-                      Add source material so the platform can reason over your work.
+                      Add source material so the platform can reason over your
+                      work.
                     </p>
                   </CardContent>
                 </Card>
@@ -301,7 +325,7 @@ export default function HubHomePage() {
                     <p className="text-muted-foreground text-sm">
                       {isBuilderUnlocked
                         ? "Go straight into the workflow builder."
-                        : "Preview what opens up at Level 3."}
+                        : "Preview what opens up at B-Class."}
                     </p>
                   </CardContent>
                 </Card>

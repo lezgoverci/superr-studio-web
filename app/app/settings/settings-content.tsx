@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { PageContainer } from "@/components/app-shell/page-container";
+import { useAppShellContext } from "@/components/app-shell/shell-context";
 import { AddConnectionOverlay } from "@/components/overlays/add-connection-overlay";
 import {
   DeleteConnectionOverlay,
@@ -27,7 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Integration } from "@/lib/api-client";
 import { api } from "@/lib/api-client";
 import { LEVEL_LABELS } from "@/lib/hub/content";
-import { useAppShellContext } from "@/components/app-shell/shell-context";
+import type { MemberLevel } from "@/lib/hub/types";
 
 const SETTINGS_TAB_VALUES = [
   "account",
@@ -61,7 +62,7 @@ function AccountSection() {
   const [firstGoal, setFirstGoal] = useState("");
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
-  const [memberLevel, setMemberLevel] = useState<1 | 2 | 3 | 4>(1);
+  const [memberLevel, setMemberLevel] = useState<MemberLevel>(1);
 
   const loadAccount = useCallback(async () => {
     try {
@@ -197,7 +198,7 @@ function AccountSection() {
               <div className="space-y-1">
                 <p className="font-medium text-sm">Member Level</p>
                 <p className="text-muted-foreground text-sm">
-                  {memberLevel} · {LEVEL_LABELS[memberLevel]}
+                  {LEVEL_LABELS[memberLevel]}
                 </p>
               </div>
             </div>

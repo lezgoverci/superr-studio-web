@@ -6,7 +6,10 @@ import {
   memberProgress,
   users,
 } from "@/lib/db/schema";
-import { HUB_MIGRATION_REQUIRED_MESSAGE, isMissingRelationError } from "./errors";
+import {
+  HUB_MIGRATION_REQUIRED_MESSAGE,
+  isMissingRelationError,
+} from "./errors";
 import type {
   HubMemberProfile,
   HubProgressItem,
@@ -60,15 +63,38 @@ function normalizeOptionalText(value: string | null | undefined) {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+function getDevLevelOverride(): MemberLevel | null {
+  if (process.env.NODE_ENV === "production") {
+    return null;
+  }
+
+  const raw = process.env.DEV_MEMBER_LEVEL?.trim();
+
+  if (!raw) {
+    return null;
+  }
+
+  const parsed = Number(raw);
+
+  if (parsed >= 1 && parsed <= 4) {
+    return parsed as MemberLevel;
+  }
+
+  return null;
+}
+
 function serializeMemberProfileRecord(
   profile: typeof memberProfiles.$inferSelect,
   identity: MemberProfileIdentity,
   providerId: string | null
 ): HubMemberProfile {
+  const devLevel = getDevLevelOverride();
+
   return {
     id: profile.id,
     userId: profile.userId,
-    level: clampMemberLevel(profile.level),
+    level: devLevel ?? clampMemberLevel(profile.level),
+    role: null,
     displayName: profile.displayName,
     bio: profile.bio,
     location: profile.location,
@@ -103,7 +129,8 @@ function buildFallbackMemberProfile(
   return {
     id: `hub-fallback-${userId}`,
     userId,
-    level: 1,
+    level: getDevLevelOverride() ?? 1,
+    role: null,
     displayName: normalizeOptionalText(defaults?.name ?? identity.name),
     bio: null,
     location: null,
@@ -216,7 +243,9 @@ export async function getHubMemberProfile(
     );
   } catch (error) {
     if (isMissingRelationError(error, "member_profiles")) {
-      console.warn("[hub] member_profiles table is missing; using fallback profile.");
+      console.warn(
+        "[hub] member_profiles table is missing; using fallback profile."
+      );
       return buildFallbackMemberProfile(
         userId,
         identity,
@@ -252,7 +281,10 @@ export async function updateMemberProfile(
         updates.displayName === undefined
           ? existing.displayName
           : normalizeOptionalText(updates.displayName),
-      bio: updates.bio === undefined ? existing.bio : normalizeOptionalText(updates.bio),
+      bio:
+        updates.bio === undefined
+          ? existing.bio
+          : normalizeOptionalText(updates.bio),
       location:
         updates.location === undefined
           ? existing.location
@@ -271,7 +303,9 @@ export async function updateMemberProfile(
           ? existing.targetRole
           : normalizeOptionalText(updates.targetRole),
       skillLevel:
-        updates.skillLevel === undefined ? existing.skillLevel : updates.skillLevel,
+        updates.skillLevel === undefined
+          ? existing.skillLevel
+          : updates.skillLevel,
       aiFamiliarity:
         updates.aiFamiliarity === undefined
           ? existing.aiFamiliarity
@@ -344,7 +378,9 @@ export async function listMemberProgress(
     });
   } catch (error) {
     if (isMissingRelationError(error, "member_progress")) {
-      console.warn("[hub] member_progress table is missing; returning empty progress.");
+      console.warn(
+        "[hub] member_progress table is missing; returning empty progress."
+      );
       return [];
     }
     throw error;

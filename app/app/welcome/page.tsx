@@ -68,8 +68,12 @@ export default function WelcomePage() {
   const [finishing, setFinishing] = useState(false);
   const [brain, setBrain] = useState<HubBrainResponse | null>(null);
 
-  const [displayName, setDisplayName] = useState(memberProfile?.displayName || "");
-  const [currentRole, setCurrentRole] = useState(memberProfile?.currentRole || "");
+  const [displayName, setDisplayName] = useState(
+    memberProfile?.displayName || ""
+  );
+  const [currentRole, setCurrentRole] = useState(
+    memberProfile?.currentRole || ""
+  );
   const [targetRole, setTargetRole] = useState(memberProfile?.targetRole || "");
   const [skillLevel, setSkillLevel] = useState(memberProfile?.skillLevel || "");
   const [aiFamiliarity, setAiFamiliarity] = useState(
@@ -99,11 +103,13 @@ export default function WelcomePage() {
 
   const saveTriage = async () => {
     if (
-      !currentRole ||
-      !targetRole ||
-      !skillLevel ||
-      !aiFamiliarity ||
-      !careerPressure
+      !(
+        currentRole &&
+        targetRole &&
+        skillLevel &&
+        aiFamiliarity &&
+        careerPressure
+      )
     ) {
       toast.error("Complete each onboarding field before continuing.");
       return;
@@ -182,8 +188,9 @@ export default function WelcomePage() {
             Set up your Hub workspace
           </h1>
           <p className="max-w-2xl text-muted-foreground text-sm md:text-base">
-            This flow captures your current stage, provisions your platform-managed
-            Brain, and locks the first goal your Journey should optimize for.
+            This flow captures your current stage, provisions your
+            platform-managed Brain, and locks the first goal your Journey should
+            optimize for.
           </p>
         </div>
 
@@ -329,7 +336,8 @@ export default function WelcomePage() {
             <CardContent className="space-y-4">
               <p className="text-muted-foreground text-sm">
                 The platform manages NotebookLM setup behind the scenes. Your
-                onboarding answers seed the first notebook context automatically.
+                onboarding answers seed the first notebook context
+                automatically.
               </p>
 
               <div className="grid gap-3 md:grid-cols-3">
@@ -352,11 +360,17 @@ export default function WelcomePage() {
               ) : null}
 
               <div className="flex gap-3">
-                <Button onClick={() => setStep(1)} type="button" variant="outline">
+                <Button
+                  onClick={() => setStep(1)}
+                  type="button"
+                  variant="outline"
+                >
                   Back
                 </Button>
                 <Button disabled={provisioningBrain} onClick={provisionBrain}>
-                  {provisioningBrain ? <Spinner className="mr-2 size-4" /> : null}
+                  {provisioningBrain ? (
+                    <Spinner className="mr-2 size-4" />
+                  ) : null}
                   Provision Brain
                 </Button>
               </div>
@@ -386,7 +400,11 @@ export default function WelcomePage() {
               </div>
 
               <div className="flex gap-3">
-                <Button onClick={() => setStep(2)} type="button" variant="outline">
+                <Button
+                  onClick={() => setStep(2)}
+                  type="button"
+                  variant="outline"
+                >
                   Back
                 </Button>
                 <Button disabled={finishing} onClick={finishOnboarding}>

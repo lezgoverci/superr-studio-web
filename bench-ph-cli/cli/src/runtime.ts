@@ -90,7 +90,7 @@ function readPath(target: unknown, pathExpression: string): unknown {
 
   for (const segment of segments) {
     if (!(current && typeof current === "object")) {
-      return undefined;
+      return;
     }
 
     current = (current as Record<string, unknown>)[segment];
@@ -119,16 +119,19 @@ function normalizeTemplateValue(value: unknown): string {
   return JSON.stringify(value);
 }
 
-function renderTemplateString(template: string, context: TemplateContext): unknown {
+function renderTemplateString(
+  template: string,
+  context: TemplateContext
+): unknown {
   const exactMatch = template.match(/^\{\{\s*([^}]+)\s*\}\}$/);
   if (exactMatch) {
     const expression = exactMatch[1];
     return readPath(context, expression?.trim() ?? "") ?? "";
   }
 
-  return template.replace(/\{\{\s*([^}]+)\s*\}\}/g, (_match, key) => {
-    return normalizeTemplateValue(readPath(context, key.trim()));
-  });
+  return template.replace(/\{\{\s*([^}]+)\s*\}\}/g, (_match, key) =>
+    normalizeTemplateValue(readPath(context, key.trim()))
+  );
 }
 
 function renderValue<T>(value: T, context: TemplateContext): T {
@@ -154,7 +157,7 @@ function renderValue<T>(value: T, context: TemplateContext): T {
 async function runProcess(
   command: string,
   args: string[],
-  options: { stdin?: string; capture?: boolean; env?: NodeJS.ProcessEnv } = {},
+  options: { stdin?: string; capture?: boolean; env?: NodeJS.ProcessEnv } = {}
 ): Promise<ProcessResult> {
   const capture = options.capture ?? true;
 
@@ -170,8 +173,8 @@ async function runProcess(
     child.on("error", (error: Error) => {
       reject(
         new Error(
-          `Failed to run "${command}". Make sure it is installed and on PATH. ${error.message}`,
-        ),
+          `Failed to run "${command}". Make sure it is installed and on PATH. ${error.message}`
+        )
       );
     });
 
@@ -213,7 +216,7 @@ async function runAgentBrowser(
   manifest: AppCliManifest,
   globals: GlobalOptions,
   args: string[],
-  options: { stdin?: string } = {},
+  options: { stdin?: string } = {}
 ): Promise<string> {
   const sessionName = globals.sessionName ?? manifest.app.defaultSessionName;
   const finalArgs = sessionName ? ["--session", sessionName, ...args] : args;
@@ -224,7 +227,9 @@ async function runAgentBrowser(
 
   if (result.exitCode !== 0) {
     const output = result.stderr.trim() || result.stdout.trim();
-    throw new Error(output || `agent-browser failed with exit code ${result.exitCode}.`);
+    throw new Error(
+      output || `agent-browser failed with exit code ${result.exitCode}.`
+    );
   }
 
   return result.stdout.trimEnd();
@@ -233,7 +238,7 @@ async function runAgentBrowser(
 export async function executeRawAgentBrowser(
   manifest: AppCliManifest,
   globals: GlobalOptions,
-  args: string[],
+  args: string[]
 ): Promise<number> {
   const hasSessionOverride = args.includes("--session");
   const finalArgs = [...args];
@@ -247,7 +252,11 @@ export async function executeRawAgentBrowser(
     finalArgs[1] = globals.sessionName;
   }
 
-  if (globals.headed && finalArgs[2] === "open" && !finalArgs.includes("--headed")) {
+  if (
+    globals.headed &&
+    finalArgs[2] === "open" &&
+    !finalArgs.includes("--headed")
+  ) {
     finalArgs.push("--headed");
   }
 
@@ -259,7 +268,7 @@ export async function executeRawAgentBrowser(
 }
 
 export async function readManifestFromProject(
-  projectRoot: string,
+  projectRoot: string
 ): Promise<AppCliManifest> {
   const manifestPath = resolveProjectManifestPath(projectRoot);
   const raw = await fs.readFile(manifestPath, "utf8");
@@ -268,10 +277,14 @@ export async function readManifestFromProject(
 
 export async function writeManifestToProject(
   projectRoot: string,
-  manifest: AppCliManifest,
+  manifest: AppCliManifest
 ): Promise<void> {
   const manifestPath = resolveProjectManifestPath(projectRoot);
-  await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  await fs.writeFile(
+    manifestPath,
+    `${JSON.stringify(manifest, null, 2)}\n`,
+    "utf8"
+  );
 }
 
 function getStateDirectory(manifest: AppCliManifest): string {
@@ -282,7 +295,9 @@ export function getStateFilePath(manifest: AppCliManifest): string {
   return path.join(getStateDirectory(manifest), manifest.auth.stateFile);
 }
 
-export async function deleteStateFile(manifest: AppCliManifest): Promise<boolean> {
+export async function deleteStateFile(
+  manifest: AppCliManifest
+): Promise<boolean> {
   try {
     await fs.unlink(getStateFilePath(manifest));
     return true;
@@ -306,11 +321,13 @@ export function assertAuthEnvironment(manifest: AppCliManifest): void {
 
   assert(
     missing.length === 0,
-    `Missing required auth environment variables: ${missing.join(", ")}`,
+    `Missing required auth environment variables: ${missing.join(", ")}`
   );
 }
 
-async function loadStorageState(manifest: AppCliManifest): Promise<StorageState | null> {
+async function loadStorageState(
+  manifest: AppCliManifest
+): Promise<StorageState | null> {
   try {
     const raw = await fs.readFile(getStateFilePath(manifest), "utf8");
     return JSON.parse(raw) as StorageState;
@@ -325,11 +342,15 @@ async function loadStorageState(manifest: AppCliManifest): Promise<StorageState 
 
 async function saveStorageState(
   manifest: AppCliManifest,
-  storageState: StorageState,
+  storageState: StorageState
 ): Promise<void> {
   const stateFilePath = getStateFilePath(manifest);
   await fs.mkdir(path.dirname(stateFilePath), { recursive: true });
-  await fs.writeFile(stateFilePath, JSON.stringify(storageState, null, 2), "utf8");
+  await fs.writeFile(
+    stateFilePath,
+    JSON.stringify(storageState, null, 2),
+    "utf8"
+  );
 }
 
 function flattenStorageState(storageState: StorageState | null): {
@@ -337,7 +358,7 @@ function flattenStorageState(storageState: StorageState | null): {
   localStorage: Record<string, string>;
 } {
   const cookies = Object.fromEntries(
-    (storageState?.cookies ?? []).map((entry) => [entry.name, entry.value]),
+    (storageState?.cookies ?? []).map((entry) => [entry.name, entry.value])
   );
 
   const localStorageEntries: Array<[string, string]> = [];
@@ -370,7 +391,7 @@ function matchesCookie(cookie: StorageStateCookie, requestUrl: URL): boolean {
 
 function buildCookieHeader(
   storageState: StorageState | null,
-  requestUrl: URL,
+  requestUrl: URL
 ): string | null {
   const matches = (storageState?.cookies ?? [])
     .filter((entry) => matchesCookie(entry, requestUrl))
@@ -387,7 +408,10 @@ function resolveUrl(manifest: AppCliManifest, value: unknown): string {
     return url;
   }
 
-  assert(manifest.app.baseUrl, "Relative URLs require app.baseUrl in the manifest.");
+  assert(
+    manifest.app.baseUrl,
+    "Relative URLs require app.baseUrl in the manifest."
+  );
   return new URL(url, manifest.app.baseUrl).toString();
 }
 
@@ -395,7 +419,7 @@ function buildTemplateContext(
   manifest: AppCliManifest,
   args: CommandArgs,
   captures: Record<string, unknown>,
-  storageState: StorageState | null,
+  storageState: StorageState | null
 ): TemplateContext {
   return {
     app: manifest.app,
@@ -414,11 +438,12 @@ async function runFlowStep(
   globals: GlobalOptions,
   args: CommandArgs,
   captures: Record<string, unknown>,
-  storageState: StorageState | null,
+  storageState: StorageState | null
 ): Promise<{ output?: unknown; storageState: StorageState | null }> {
   const context = buildTemplateContext(manifest, args, captures, storageState);
   const renderedStep = renderValue(step, context) as Record<string, unknown>;
-  const action = typeof renderedStep.action === "string" ? renderedStep.action : "";
+  const action =
+    typeof renderedStep.action === "string" ? renderedStep.action : "";
   const stateFilePath = getStateFilePath(manifest);
 
   switch (action) {
@@ -430,17 +455,25 @@ async function runFlowStep(
           return { storageState };
         }
         throw new Error(
-          `No saved auth state found at ${stateFilePath}. Run "${manifest.app.bin} auth login" first.`,
+          `No saved auth state found at ${stateFilePath}. Run "${manifest.app.bin} auth login" first.`
         );
       }
 
-      await runAgentBrowser(manifest, globals, ["state", "load", stateFilePath]);
+      await runAgentBrowser(manifest, globals, [
+        "state",
+        "load",
+        stateFilePath,
+      ]);
       return { storageState: await loadStorageState(manifest) };
     }
 
     case "saveState": {
       await fs.mkdir(path.dirname(stateFilePath), { recursive: true });
-      await runAgentBrowser(manifest, globals, ["state", "save", stateFilePath]);
+      await runAgentBrowser(manifest, globals, [
+        "state",
+        "save",
+        stateFilePath,
+      ]);
       return { storageState: await loadStorageState(manifest) };
     }
 
@@ -469,7 +502,9 @@ async function runFlowStep(
 
     case "waitForLoad": {
       const loadState =
-        typeof renderedStep.state === "string" ? renderedStep.state : "networkidle";
+        typeof renderedStep.state === "string"
+          ? renderedStep.state
+          : "networkidle";
       const output = await runAgentBrowser(manifest, globals, [
         "wait",
         "--load",
@@ -495,7 +530,10 @@ async function runFlowStep(
             : "";
 
       if (target) {
-        const output = await runAgentBrowser(manifest, globals, ["wait", target]);
+        const output = await runAgentBrowser(manifest, globals, [
+          "wait",
+          target,
+        ]);
         return { output, storageState };
       }
 
@@ -526,7 +564,9 @@ async function runFlowStep(
         return { output, storageState };
       }
 
-      throw new Error(`Flow "${flow.id}" has a wait step without a supported condition.`);
+      throw new Error(
+        `Flow "${flow.id}" has a wait step without a supported condition.`
+      );
     }
 
     case "snapshot": {
@@ -539,10 +579,7 @@ async function runFlowStep(
       }
       const output = await runAgentBrowser(manifest, globals, snapshotArgs);
       return {
-        output:
-          renderedStep.json && output
-            ? JSON.parse(output)
-            : output,
+        output: renderedStep.json && output ? JSON.parse(output) : output,
         storageState,
       };
     }
@@ -555,7 +592,10 @@ async function runFlowStep(
             ? renderedStep.selector
             : "";
       assert(target, `Flow "${flow.id}" click step requires target.`);
-      const output = await runAgentBrowser(manifest, globals, ["click", target]);
+      const output = await runAgentBrowser(manifest, globals, [
+        "click",
+        target,
+      ]);
       return { output, storageState };
     }
 
@@ -570,7 +610,11 @@ async function runFlowStep(
             : "";
       assert(target, `Flow "${flow.id}" ${action} step requires target.`);
       const value = String(renderedStep.value ?? "");
-      const output = await runAgentBrowser(manifest, globals, [action, target, value]);
+      const output = await runAgentBrowser(manifest, globals, [
+        action,
+        target,
+        value,
+      ]);
       return { output, storageState };
     }
 
@@ -589,7 +633,11 @@ async function runFlowStep(
             ? renderedStep.selector
             : "";
       assert(target, `Flow "${flow.id}" getText step requires target.`);
-      const output = await runAgentBrowser(manifest, globals, ["get", "text", target]);
+      const output = await runAgentBrowser(manifest, globals, [
+        "get",
+        "text",
+        target,
+      ]);
       return { output, storageState };
     }
 
@@ -610,7 +658,7 @@ async function runFlowStep(
         manifest,
         globals,
         ["eval", "--stdin"],
-        { stdin: script },
+        { stdin: script }
       );
       return { output, storageState };
     }
@@ -646,7 +694,7 @@ function resolveFlowResult(
   args: CommandArgs,
   captures: Record<string, unknown>,
   lastOutput: unknown,
-  storageState: StorageState | null,
+  storageState: StorageState | null
 ): unknown {
   const context = buildTemplateContext(manifest, args, captures, storageState);
   const result = flow.result;
@@ -674,7 +722,7 @@ async function executeFlow(
   manifest: AppCliManifest,
   flow: ManifestFlow,
   globals: GlobalOptions,
-  args: CommandArgs,
+  args: CommandArgs
 ): Promise<unknown> {
   const captures: Record<string, unknown> = {};
   let storageState = await loadStorageState(manifest);
@@ -688,7 +736,7 @@ async function executeFlow(
       globals,
       args,
       captures,
-      storageState,
+      storageState
     );
 
     storageState = result.storageState;
@@ -700,13 +748,20 @@ async function executeFlow(
     }
   }
 
-  return resolveFlowResult(flow, manifest, args, captures, lastOutput, storageState);
+  return resolveFlowResult(
+    flow,
+    manifest,
+    args,
+    captures,
+    lastOutput,
+    storageState
+  );
 }
 
 async function executeRequestRecipe(
   manifest: AppCliManifest,
   recipe: ManifestRequestRecipe,
-  args: CommandArgs,
+  args: CommandArgs
 ): Promise<unknown> {
   const storageState = await loadStorageState(manifest);
   const context = buildTemplateContext(manifest, args, {}, storageState);
@@ -759,16 +814,20 @@ async function executeRequestRecipe(
 
   if (!response.ok) {
     throw new Error(
-      `${renderedRecipe.method} ${requestUrl.toString()} failed with ${response.status} ${response.statusText}.`,
+      `${renderedRecipe.method} ${requestUrl.toString()} failed with ${response.status} ${response.statusText}.`
     );
   }
 
   if (renderedRecipe.useCookies) {
     const setCookies = (response.headers as any).getSetCookie?.() ?? [];
     if (setCookies.length > 0) {
-      const storageState = (await loadStorageState(manifest)) || { cookies: [] };
+      const storageState = (await loadStorageState(manifest)) || {
+        cookies: [],
+      };
       for (const cookieStr of setCookies) {
-        const [nameValue, ...attrs] = cookieStr.split(";").map((s: string) => s.trim());
+        const [nameValue, ...attrs] = cookieStr
+          .split(";")
+          .map((s: string) => s.trim());
         const splitIdx = nameValue.indexOf("=");
         if (splitIdx === -1) continue;
         const name = nameValue.slice(0, splitIdx);
@@ -783,7 +842,9 @@ async function executeRequestRecipe(
           };
 
           for (const attr of attrs) {
-            const [attrName, attrValue] = attr.split("=").map((s: string) => s.trim());
+            const [attrName, attrValue] = attr
+              .split("=")
+              .map((s: string) => s.trim());
             const lowerAttrName = attrName.toLowerCase();
             if (lowerAttrName === "domain" && attrValue) {
               cookie.domain = attrValue.replace(/^\./, "");
@@ -800,7 +861,10 @@ async function executeRequestRecipe(
 
           storageState.cookies = storageState.cookies || [];
           const existingIdx = storageState.cookies.findIndex(
-            (c) => c.name === name && c.domain === cookie.domain && c.path === cookie.path,
+            (c) =>
+              c.name === name &&
+              c.domain === cookie.domain &&
+              c.path === cookie.path
           );
           if (existingIdx !== -1) {
             storageState.cookies[existingIdx] = cookie;
@@ -824,25 +888,29 @@ async function executeRequestRecipe(
   }
 }
 
-function resolveFlow(manifest: AppCliManifest, command: ManifestCommand): ManifestFlow | undefined {
+function resolveFlow(
+  manifest: AppCliManifest,
+  command: ManifestCommand
+): ManifestFlow | undefined {
   return manifest.flows.find((entry) => entry.id === command.flowId);
 }
 
 function resolveRecipe(
   manifest: AppCliManifest,
-  command: ManifestCommand,
+  command: ManifestCommand
 ): ManifestRequestRecipe | undefined {
   return manifest.requestRecipes.find(
-    (entry) => entry.id === command.requestRecipeId,
+    (entry) => entry.id === command.requestRecipeId
   );
 }
 
 function resolveExecutionMode(
   manifest: AppCliManifest,
   command: ManifestCommand,
-  globals: GlobalOptions,
+  globals: GlobalOptions
 ): CliMode {
-  const requestedMode = globals.mode ?? command.mode ?? manifest.app.defaultMode;
+  const requestedMode =
+    globals.mode ?? command.mode ?? manifest.app.defaultMode;
   const hasRecipe = Boolean(command.requestRecipeId);
   const hasFlow = Boolean(command.flowId);
 
@@ -860,7 +928,10 @@ function resolveExecutionMode(
     return "api";
   }
 
-  assert(hasFlow, `Command "${command.id}" does not define an executable path.`);
+  assert(
+    hasFlow,
+    `Command "${command.id}" does not define an executable path.`
+  );
   return "ui";
 }
 
@@ -868,7 +939,7 @@ export async function runManifestCommand(
   manifest: AppCliManifest,
   command: ManifestCommand,
   globals: GlobalOptions,
-  args: CommandArgs,
+  args: CommandArgs
 ): Promise<{ modeUsed: "api" | "ui"; result: unknown }> {
   const recipe = resolveRecipe(manifest, command);
   const flow = resolveFlow(manifest, command);
@@ -880,11 +951,13 @@ export async function runManifestCommand(
       const result = await executeRequestRecipe(manifest, recipe, args);
       return { modeUsed: "api", result };
     } catch (error) {
-      if (globals.mode === "auto" || globals.mode === undefined) {
-        if (flow && command.mode === "auto") {
-          const result = await executeFlow(manifest, flow, globals, args);
-          return { modeUsed: "ui", result };
-        }
+      if (
+        (globals.mode === "auto" || globals.mode === undefined) &&
+        flow &&
+        command.mode === "auto"
+      ) {
+        const result = await executeFlow(manifest, flow, globals, args);
+        return { modeUsed: "ui", result };
       }
       throw error;
     }
@@ -895,7 +968,9 @@ export async function runManifestCommand(
   return { modeUsed: "ui", result };
 }
 
-export function buildInspectReport(manifest: AppCliManifest): Record<string, unknown> {
+export function buildInspectReport(
+  manifest: AppCliManifest
+): Record<string, unknown> {
   return {
     app: {
       name: manifest.app.name,

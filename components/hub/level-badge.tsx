@@ -1,8 +1,8 @@
 "use client";
 
-import { cn } from "@/lib/utils";
-import type { MemberLevel } from "@/lib/hub/types";
 import { LEVEL_LABELS } from "@/lib/hub/content";
+import type { MemberLevel } from "@/lib/hub/types";
+import { cn } from "@/lib/utils";
 
 type LevelBadgeProps = {
   level: MemberLevel;
@@ -17,7 +17,7 @@ export function LevelBadge({ level, className }: LevelBadgeProps) {
         className
       )}
     >
-      Level {level} · {LEVEL_LABELS[level]}
+      {LEVEL_LABELS[level]}
     </div>
   );
 }

@@ -1,5 +1,9 @@
-import { getHubMemberProfile, getWhopAccountIdentity, updateMemberProfile } from "./member-profiles";
 import { HUB_MIGRATION_REQUIRED_MESSAGE } from "./errors";
+import {
+  getHubMemberProfile,
+  getWhopAccountIdentity,
+  updateMemberProfile,
+} from "./member-profiles";
 import type { HubEarnResponse } from "./types";
 
 const WHOP_API_BASE_URL = "https://api.whop.com/api/v1";
@@ -80,7 +84,9 @@ async function whopAffiliateCall<T>(
 
   if (!response.ok) {
     const message = await response.text();
-    throw new Error(`Whop affiliate request failed (${response.status}): ${message}`);
+    throw new Error(
+      `Whop affiliate request failed (${response.status}): ${message}`
+    );
   }
 
   return response.json() as Promise<T>;
@@ -96,7 +102,9 @@ function mapAffiliateToResponse(
     configured,
     affiliateId: affiliate.id,
     username: affiliate.user?.username ?? null,
-    shareLink: baseUrl ? buildShareLink(baseUrl, affiliate.user?.username) : null,
+    shareLink: baseUrl
+      ? buildShareLink(baseUrl, affiliate.user?.username)
+      : null,
     totals: {
       earningsUsd: parseUsdAmount(affiliate.total_referral_earnings_usd),
       revenueUsd: parseUsdAmount(affiliate.total_revenue_usd),
@@ -168,7 +176,9 @@ async function ensureAffiliate(userId: string) {
   return affiliate;
 }
 
-export async function getEarnDashboard(userId: string): Promise<HubEarnResponse> {
+export async function getEarnDashboard(
+  userId: string
+): Promise<HubEarnResponse> {
   const config = getWhopAffiliateConfig();
 
   if (!isWhopAffiliateConfigured()) {

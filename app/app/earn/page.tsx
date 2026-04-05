@@ -62,8 +62,8 @@ export default function EarnPage() {
           <h1 className="font-semibold text-3xl tracking-tight">Earn</h1>
           <p className="max-w-2xl text-muted-foreground text-sm md:text-base">
             Affiliate mechanics run through Whop behind the scenes. This page
-            keeps the earning view inside the Hub instead of sending members into
-            an external dashboard.
+            keeps the earning view inside the Hub instead of sending members
+            into an external dashboard.
           </p>
         </div>
 
@@ -127,7 +127,10 @@ export default function EarnPage() {
             <CardTitle>Share Link</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Input readOnly value={earn?.shareLink || "No share link available yet"} />
+            <Input
+              readOnly
+              value={earn?.shareLink || "No share link available yet"}
+            />
             <div className="flex flex-wrap gap-3">
               <Button
                 disabled={copying || !earn?.shareLink}

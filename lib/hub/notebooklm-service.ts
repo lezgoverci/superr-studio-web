@@ -1,9 +1,9 @@
+import { getStarterSources } from "./content";
 import type {
   HubBrainResponse,
   HubBrainSourceMutationResponse,
   HubMemberProfile,
 } from "./types";
-import { getStarterSources } from "./content";
 
 const STUB_NOTEBOOK_ID_PREFIX = "stub-notebook-";
 const LOCAL_NOTEBOOKLM_SERVICE_URL = "http://127.0.0.1:8000";
@@ -88,7 +88,8 @@ function buildStubBrain(profile: HubMemberProfile): HubBrainResponse {
       process.env.NODE_ENV === "production"
         ? "NotebookLM service is not configured yet. Set NOTEBOOKLM_SERVICE_URL and NOTEBOOKLM_SERVICE_TOKEN to enable live notebooks."
         : `NotebookLM service is not reachable. Start the local service at ${config.baseUrl || LOCAL_NOTEBOOKLM_SERVICE_URL}.`,
-    notebookId: profile.notebooklmNotebookId ?? getStubNotebookId(profile.userId),
+    notebookId:
+      profile.notebooklmNotebookId ?? getStubNotebookId(profile.userId),
     notebookTitle: `${profile.displayName ?? profile.userName ?? "Member"} Brain`,
     status: profile.notebooklmNotebookId ? "stubbed" : "not_provisioned",
     summary:
@@ -108,7 +109,8 @@ function mapNotebookToBrain(
     serviceMessage: null,
     notebookId: notebook.id,
     notebookTitle:
-      notebook.title ?? `${profile.displayName ?? profile.userName ?? "Member"} Brain`,
+      notebook.title ??
+      `${profile.displayName ?? profile.userName ?? "Member"} Brain`,
     status: notebook.status ?? "ready",
     summary: notebook.summary ?? null,
     sourceCount: notebook.sourceCount ?? 0,
@@ -121,13 +123,13 @@ function getBrainTitle(profile: HubMemberProfile) {
 }
 
 function getTemplateKey(profile: HubMemberProfile) {
+  if (profile.level >= 5) {
+    return "sage";
+  }
   if (profile.level >= 3) {
-    return "shadow-operator";
+    return "adept";
   }
-  if (profile.level === 2) {
-    return "creator";
-  }
-  return "explorer";
+  return "seeker";
 }
 
 export async function getBrainState(

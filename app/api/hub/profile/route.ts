@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  MEMBER_AI_FAMILIARITY,
-  MEMBER_CAREER_PRESSURE,
-  MEMBER_SKILL_LEVELS,
-} from "@/lib/hub/types";
-import { getHubMemberProfile, updateMemberProfile } from "@/lib/hub/member-profiles";
+  getHubMemberProfile,
+  updateMemberProfile,
+} from "@/lib/hub/member-profiles";
 import {
   getAuthenticatedHubUser,
   unauthorizedHubResponse,
 } from "@/lib/hub/request";
+import {
+  MEMBER_AI_FAMILIARITY,
+  MEMBER_CAREER_PRESSURE,
+  MEMBER_SKILL_LEVELS,
+} from "@/lib/hub/types";
 
 const ProfilePatchSchema = z.object({
   displayName: z.string().max(120).nullable().optional(),

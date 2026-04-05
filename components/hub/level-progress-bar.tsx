@@ -1,7 +1,7 @@
 "use client";
 
-import type { HubLevelCriterion, MemberLevel } from "@/lib/hub/types";
 import { LEVEL_LABELS } from "@/lib/hub/content";
+import type { HubLevelCriterion, MemberLevel } from "@/lib/hub/types";
 
 type LevelProgressBarProps = {
   nextLevel: MemberLevel | null;
@@ -15,7 +15,8 @@ export function LevelProgressBar({
   remainingCriteria,
 }: LevelProgressBarProps) {
   const total = completedCriteria.length + remainingCriteria.length;
-  const percent = total > 0 ? Math.round((completedCriteria.length / total) * 100) : 0;
+  const percent =
+    total > 0 ? Math.round((completedCriteria.length / total) * 100) : 0;
   const allCriteria = [
     ...completedCriteria.map((c) => ({ ...c, completed: true as const })),
     ...remainingCriteria.map((c) => ({ ...c, completed: false as const })),
@@ -25,7 +26,7 @@ export function LevelProgressBar({
     <div className="space-y-3">
       {nextLevel ? (
         <p className="text-muted-foreground text-sm">
-          Progress toward Level {nextLevel}: {LEVEL_LABELS[nextLevel]}
+          Progress toward {LEVEL_LABELS[nextLevel]}
         </p>
       ) : null}
 
@@ -38,15 +39,10 @@ export function LevelProgressBar({
 
       <ul className="space-y-1.5">
         {allCriteria.map((criterion) => (
-          <li
-            className="flex items-center gap-2 text-sm"
-            key={criterion.id}
-          >
+          <li className="flex items-center gap-2 text-sm" key={criterion.id}>
             <span
               className={
-                criterion.completed
-                  ? "text-primary"
-                  : "text-muted-foreground"
+                criterion.completed ? "text-primary" : "text-muted-foreground"
               }
             >
               {criterion.completed ? "\u2713" : "\u25CB"}

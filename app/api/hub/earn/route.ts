@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { getAuthenticatedHubUser, unauthorizedHubResponse } from "@/lib/hub/request";
+import {
+  getAuthenticatedHubUser,
+  unauthorizedHubResponse,
+} from "@/lib/hub/request";
 import { getEarnDashboard } from "@/lib/hub/whop-affiliates";
 
 export async function GET(request: Request) {

@@ -9,17 +9,17 @@ import type {
   ManifestCommandInput,
 } from "./manifest-types.js";
 import { validateManifestShape } from "./manifest-types.js";
+import type { GlobalOptions } from "./runtime.js";
 import {
   assertAuthEnvironment,
   buildInspectReport,
   deleteStateFile,
   executeRawAgentBrowser,
+  getStateFilePath,
   readManifestFromProject,
   runManifestCommand,
-  getStateFilePath,
   writeManifestToProject,
 } from "./runtime.js";
-import type { GlobalOptions } from "./runtime.js";
 
 type ParsedGlobalFlags = {
   globals: GlobalOptions & { help?: boolean };
@@ -31,7 +31,10 @@ type ParsedCommandInputs = {
   values: Record<string, string | number | boolean | undefined>;
 };
 
-const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const PROJECT_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  ".."
+);
 
 function parseGlobalFlags(argv: string[]): ParsedGlobalFlags {
   const globals: ParsedGlobalFlags["globals"] = {};
@@ -75,12 +78,12 @@ function parseGlobalFlags(argv: string[]): ParsedGlobalFlags {
 
 function findCommand(
   manifest: AppCliManifest,
-  tokens: string[],
+  tokens: string[]
 ): ManifestCommand | undefined {
   return [...manifest.commands]
     .sort((left, right) => right.path.length - left.path.length)
     .find((command) =>
-      command.path.every((segment, index) => tokens[index] === segment),
+      command.path.every((segment, index) => tokens[index] === segment)
     );
 }
 
@@ -97,7 +100,7 @@ function parseBooleanValue(value: string): boolean {
 
 function parseCommandInputs(
   tokens: string[],
-  inputs: ManifestCommandInput[],
+  inputs: ManifestCommandInput[]
 ): ParsedCommandInputs {
   const values: ParsedCommandInputs["values"] = {};
   const lookup = new Map<string, ManifestCommandInput>();
@@ -198,7 +201,7 @@ ${commandLines || "  (none yet)"}
 
 function renderCommandHelp(
   manifest: AppCliManifest,
-  command: ManifestCommand,
+  command: ManifestCommand
 ): string {
   const inputLines = command.inputs
     .map((input) => {
@@ -221,7 +224,9 @@ ${inputLines || "  No command-specific options."}
 function printResult(value: unknown, jsonPreferred: boolean): void {
   if (value instanceof Uint8Array) {
     if (jsonPreferred) {
-      process.stdout.write(`${JSON.stringify({ bytes: Buffer.from(value).toString("base64") }, null, 2)}\n`);
+      process.stdout.write(
+        `${JSON.stringify({ bytes: Buffer.from(value).toString("base64") }, null, 2)}\n`
+      );
       return;
     }
 
@@ -237,7 +242,10 @@ function printResult(value: unknown, jsonPreferred: boolean): void {
   process.stdout.write(`${String(value ?? "")}\n`);
 }
 
-function parseRegenArgs(tokens: string[]): { fromPath?: string; help: boolean } {
+function parseRegenArgs(tokens: string[]): {
+  fromPath?: string;
+  help: boolean;
+} {
   if (tokens.includes("--help") || tokens.includes("-h")) {
     return { help: true };
   }
@@ -257,7 +265,7 @@ function parseRegenArgs(tokens: string[]): { fromPath?: string; help: boolean } 
 async function handleAuthCommand(
   manifest: AppCliManifest,
   globals: GlobalOptions,
-  tokens: string[],
+  tokens: string[]
 ): Promise<void> {
   const subcommand = tokens[0] ?? "status";
 
@@ -269,7 +277,7 @@ async function handleAuthCommand(
 
       assertAuthEnvironment(manifest);
       const loginCommand = manifest.commands.find(
-        (command) => command.flowId === manifest.auth.loginFlowId,
+        (command) => command.flowId === manifest.auth.loginFlowId
       );
 
       if (loginCommand) {
@@ -287,7 +295,9 @@ async function handleAuthCommand(
         await runManifestCommand(manifest, flowCommand, globals, {});
       }
 
-      process.stdout.write(`Saved auth state to ${getStateFilePath(manifest)}\n`);
+      process.stdout.write(
+        `Saved auth state to ${getStateFilePath(manifest)}\n`
+      );
       return;
     }
 
@@ -296,7 +306,7 @@ async function handleAuthCommand(
       process.stdout.write(
         deleted
           ? `Removed ${getStateFilePath(manifest)}\n`
-          : `No saved state found at ${getStateFilePath(manifest)}\n`,
+          : `No saved state found at ${getStateFilePath(manifest)}\n`
       );
       return;
     }
@@ -316,7 +326,7 @@ async function handleAuthCommand(
           exists,
           loginUrl: manifest.auth.loginUrl ?? null,
         },
-        Boolean(globals.json),
+        Boolean(globals.json)
       );
       return;
     }
@@ -339,7 +349,7 @@ async function handleRegenCommand(tokens: string[]): Promise<void> {
   if (parsed.fromPath) {
     const sourcePath = path.resolve(process.cwd(), parsed.fromPath);
     const nextManifest = validateManifestShape(
-      JSON.parse(await fs.readFile(sourcePath, "utf8")),
+      JSON.parse(await fs.readFile(sourcePath, "utf8"))
     );
     await writeManifestToProject(PROJECT_ROOT, nextManifest);
     process.stdout.write(`Updated manifest.json from ${sourcePath}\n`);
@@ -348,7 +358,7 @@ async function handleRegenCommand(tokens: string[]): Promise<void> {
 
   const manifest = await readManifestFromProject(PROJECT_ROOT);
   process.stdout.write(
-    `Manifest is valid. Commands: ${manifest.commands.length}. Flows: ${manifest.flows.length}. Request recipes: ${manifest.requestRecipes.length}.\n`,
+    `Manifest is valid. Commands: ${manifest.commands.length}. Flows: ${manifest.flows.length}. Request recipes: ${manifest.requestRecipes.length}.\n`
   );
 }
 
@@ -380,7 +390,11 @@ async function main(): Promise<void> {
       if (tail.length === 0) {
         throw new Error("raw requires agent-browser arguments.");
       }
-      const exitCode = await executeRawAgentBrowser(manifest, parsed.globals, tail);
+      const exitCode = await executeRawAgentBrowser(
+        manifest,
+        parsed.globals,
+        tail
+      );
       process.exitCode = exitCode;
       return;
     }
@@ -407,10 +421,12 @@ async function main(): Promise<void> {
     manifest,
     command,
     parsed.globals,
-    parsedInputs.values,
+    parsedInputs.values
   );
 
-  const jsonPreferred = Boolean(parsed.globals.json || command.output.type === "json");
+  const jsonPreferred = Boolean(
+    parsed.globals.json || command.output.type === "json"
+  );
   if (!parsed.globals.json) {
     process.stderr.write(`mode: ${execution.modeUsed}\n`);
   }
@@ -419,7 +435,7 @@ async function main(): Promise<void> {
 
 await main().catch((error) => {
   process.stderr.write(
-    `${error instanceof Error ? error.message : "CLI execution failed."}\n`,
+    `${error instanceof Error ? error.message : "CLI execution failed."}\n`
   );
   process.exitCode = 1;
 });

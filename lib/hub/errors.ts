@@ -13,7 +13,7 @@ function getErrorCode(error: unknown): string | undefined {
     return typeof value === "string" ? value : undefined;
   }
 
-  return undefined;
+  return;
 }
 
 function getErrorMessage(error: unknown): string {
@@ -36,7 +36,7 @@ function getErrorCause(error: unknown): unknown {
     return (error as ErrorLike).cause;
   }
 
-  return undefined;
+  return;
 }
 
 export function isMissingRelationError(
@@ -48,7 +48,10 @@ export function isMissingRelationError(
   const message = getErrorMessage(error);
   const causeMessage = getErrorMessage(getErrorCause(error));
   const relationMatch = relationName
-    ? [`relation "${relationName}" does not exist`, `${relationName} does not exist`]
+    ? [
+        `relation "${relationName}" does not exist`,
+        `${relationName} does not exist`,
+      ]
     : [];
 
   return (

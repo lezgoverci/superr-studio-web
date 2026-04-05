@@ -58,7 +58,7 @@ export default function StudioPage() {
           setMemberProfile(refreshed);
         }
         toast.success(
-          `You've reached Level ${result.currentLevel}: ${LEVEL_LABELS[result.currentLevel]}!`
+          `You've ranked up to ${LEVEL_LABELS[result.currentLevel]}!`
         );
       }
     } catch (error) {
@@ -76,8 +76,8 @@ export default function StudioPage() {
           <LevelBadge level={memberLevel} />
           <h1 className="font-semibold text-3xl tracking-tight">Studio</h1>
           <p className="max-w-2xl text-muted-foreground text-sm md:text-base">
-            The Builder surface is separated from the member workspace. Level and
-            readiness determine how much of the toolset is open right now.
+            The Builder surface is separated from the member workspace. Level
+            and readiness determine how much of the toolset is open right now.
           </p>
         </div>
 
@@ -98,7 +98,7 @@ export default function StudioPage() {
             {levelCheck?.eligible && levelCheck.nextLevel ? (
               <Button disabled={levelingUp} onClick={handleLevelUp}>
                 {levelingUp ? <Spinner className="mr-2 size-4" /> : null}
-                Level Up to {LEVEL_LABELS[levelCheck.nextLevel]}
+                Rank Up to {LEVEL_LABELS[levelCheck.nextLevel]}
               </Button>
             ) : (
               <Button asChild>
@@ -113,7 +113,7 @@ export default function StudioPage() {
         {levelCheck && levelCheck.nextLevel ? (
           <Card>
             <CardHeader>
-              <CardTitle>Level Progress</CardTitle>
+              <CardTitle>Rank Progress</CardTitle>
             </CardHeader>
             <CardContent>
               <LevelProgressBar

@@ -1,7 +1,7 @@
 # Level Up Ta BAI Hub — Implementation Plan
 **Target codebase:** `superr-workflow-builder`
 **Document status:** Living reference — update as phases complete
-**Last updated:** 2026-03-29
+**Last updated:** 2026-04-01
 
 ---
 
@@ -10,6 +10,8 @@
 Level Up Ta BAI (LUTB) is a community platform for Filipino BPO workers, VAs, and freelancers to upskill with AI. Rather than building a separate platform, the LUTB Hub will be implemented as a first-class product surface inside `superr-workflow-builder` (Superr Studio). The existing Workspace / Builder toggle in the app header becomes the primary navigation mechanism: **Workspace = LUTB Hub** (all members), **Builder = Superr Studio workflow canvas** (Level 3+ members only).
 
 The `level-up-ta-bai` repository remains a **product docs repo only** — vision, brand, curriculum, member experience. All code lives in `superr-workflow-builder`. Neither repo duplicates the other's content; they cross-reference.
+
+This plan lives in `docs/level-up-ta-bai/` because it is a **technical planning document** for the LUTB Hub implementation, not a product vision document.
 
 ---
 
@@ -22,7 +24,7 @@ The `level-up-ta-bai` repository remains a **product docs repo only** — vision
 
 **Rule:** Each doc lives in exactly one place. The other place links to it, never copies it.
 
-The `level-up-ta-bai/docs/README.md` must be updated to declare it a product docs repo and point to `superr-workflow-builder` for all implementation detail. `superr-workflow-builder/docs/level-up-ta-bai/README.md` must link back to the product repo for all product context.
+The `level-up-ta-bai/docs/README.md` declares the product-docs boundary and points to `superr-workflow-builder` for implementation detail. `superr-workflow-builder/docs/level-up-ta-bai/README.md` links back to the product repo for all product context.
 
 ---
 
@@ -295,9 +297,9 @@ The Permissions tab in `settings-content.tsx` already notes: "Account identity i
 ### Phase 0 — Documentation bridge (no code changes)
 **Goal:** Establish the two-repo contract in writing before any code is written.
 
-- [ ] Update `level-up-ta-bai/docs/README.md` — declare it a product docs repo, link to `superr-workflow-builder` for implementation
-- [ ] Create `superr-workflow-builder/docs/level-up-ta-bai/README.md` — link back to product repo, outline what technical docs will live here
-- [ ] Add `docs/level-up-ta-bai/hub-architecture.md` skeleton with this plan's structure
+- [x] Update `level-up-ta-bai/docs/README.md` — declare it a product docs repo, link to `superr-workflow-builder` for implementation
+- [x] Create `superr-workflow-builder/docs/level-up-ta-bai/README.md` — link back to product repo, outline what technical docs will live here
+- [x] Add `docs/level-up-ta-bai/hub-architecture.md` skeleton with this plan's structure
 
 **Deliverable:** Both repos have a clear, written contract. No contributor confusion about where things live.
 

@@ -6,10 +6,7 @@
   "pathname": "/collections/men",
   "kind": "list",
   "primaryPrefix": "collections",
-  "pathSegments": [
-    "collections",
-    "men"
-  ],
+  "pathSegments": ["collections", "men"],
   "headings": [
     {
       "level": "h2",

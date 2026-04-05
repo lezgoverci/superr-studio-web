@@ -21,7 +21,7 @@ import type { HubMemberProfile } from "@/lib/hub/types";
 import { cn } from "@/lib/utils";
 import { AppHeader } from "./app-header";
 import { AppNav } from "./app-nav";
-import { AppShellProvider, type AppShellArea } from "./shell-context";
+import { type AppShellArea, AppShellProvider } from "./shell-context";
 import type { ShellNavItem, ShellUser } from "./types";
 
 const DEFAULT_PERMISSIONS = [
@@ -151,10 +151,7 @@ type AppShellProps = {
   initialMemberProfile: HubMemberProfile | null;
 };
 
-export function AppShell({
-  children,
-  initialMemberProfile,
-}: AppShellProps) {
+export function AppShell({ children, initialMemberProfile }: AppShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session, isPending } = useSession();
@@ -195,8 +192,10 @@ export function AppShell({
   }, [initialMemberProfile, refreshMemberProfile, session?.user]);
 
   const memberLevel = memberProfile?.level ?? 1;
-  const isBuilderUnlocked = memberLevel >= 3;
-  const builderEntryHref = isBuilderUnlocked ? "/app/workflows/new" : "/app/studio";
+  const isBuilderUnlocked = memberLevel >= 5;
+  const builderEntryHref = isBuilderUnlocked
+    ? "/app/workflows/new"
+    : "/app/studio";
   const currentArea = resolveShellArea(pathname);
 
   const workspaceNavItems = useMemo(
@@ -212,10 +211,7 @@ export function AppShell({
   const builderNavItems = useMemo(
     () =>
       BUILDER_NAV_ITEMS.filter((item) => {
-        if (
-          !isBuilderUnlocked &&
-          LOCKED_BUILDER_ITEM_IDS.has(item.id)
-        ) {
+        if (!isBuilderUnlocked && LOCKED_BUILDER_ITEM_IDS.has(item.id)) {
           return false;
         }
 
@@ -226,7 +222,8 @@ export function AppShell({
     [hasPermission, isBuilderUnlocked]
   );
 
-  const navItems = currentArea === "builder" ? builderNavItems : workspaceNavItems;
+  const navItems =
+    currentArea === "builder" ? builderNavItems : workspaceNavItems;
 
   const user: ShellUser = session?.user
     ? {
