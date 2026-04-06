@@ -1,6 +1,6 @@
 # Whop Integration
 
-Technical reference for how the LUTB Hub integrates with Whop for affiliate tracking and earnings. For the product-level description of distribution mechanics, see [`level-up-ta-bai/docs/distribution-mechanics.md`](https://github.com/lezgoverci/level-up-ta-bai/tree/main/docs/distribution-mechanics.md).
+Technical reference for how the LUTB Hub integrates with Whop for affiliate tracking and earnings. For the product-level description of distribution mechanics, see [`level-up-ta-bai/docs/distribution-mechanics.md`](../../../../level-up-ta-bai/docs/distribution-mechanics.md).
 
 ## Overview
 

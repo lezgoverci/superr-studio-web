@@ -1,6 +1,6 @@
 # NotebookLM Integration
 
-Technical reference for how the LUTB Hub integrates with NotebookLM as the Xponent Brain. For the product-level Brain architecture, see [`level-up-ta-bai/docs/xponent-brain-architecture.md`](https://github.com/lezgoverci/level-up-ta-bai/tree/main/docs/xponent-brain-architecture.md).
+Technical reference for how the LUTB Hub integrates with NotebookLM as the Xponent Brain. For the product-level Brain architecture, see [`level-up-ta-bai/docs/xponent-brain-architecture.md`](../../../../level-up-ta-bai/docs/xponent-brain-architecture.md).
 
 ## Overview
 

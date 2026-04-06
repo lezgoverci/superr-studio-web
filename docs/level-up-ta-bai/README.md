@@ -2,9 +2,9 @@
 
 This directory contains **technical implementation documentation** for the Level Up Ta BAI (LUTB) Hub, which is built as a first-class product surface inside `superr-workflow-builder` (Superr Studio).
 
-For product vision, brand, curriculum, member experience, and storytelling, see the product docs repo: [`level-up-ta-bai/docs/`](https://github.com/lezgoverci/level-up-ta-bai/tree/main/docs)
+For product vision, brand, curriculum, member experience, and storytelling, see the product docs repo: [`level-up-ta-bai/docs/`](../../../../level-up-ta-bai/docs/README.md)
 
-For rough product ideas, planning drafts, and non-canonical working notes, use [`level-up-ta-bai/notes/`](https://github.com/lezgoverci/level-up-ta-bai/tree/main/notes).
+For rough product ideas, planning drafts, and non-canonical working notes, use [`level-up-ta-bai/notes/`](../../../../level-up-ta-bai/notes/README.md).
 
 ## What Lives Here
 
@@ -20,11 +20,11 @@ For rough product ideas, planning drafts, and non-canonical working notes, use [
 
 | Document | Location |
 |----------|----------|
-| Member Levels (product definition) | `level-up-ta-bai/docs/member-levels.md` |
-| Member Experience | `level-up-ta-bai/docs/member-experience.md` |
-| Xponent Brain Architecture (product) | `level-up-ta-bai/docs/xponent-brain-architecture.md` |
-| Distribution Mechanics | `level-up-ta-bai/docs/distribution-mechanics.md` |
-| Brand and Messaging | `level-up-ta-bai/docs/brand-and-messaging.md` |
+| Member Levels (product definition) | [`level-up-ta-bai/docs/member-levels.md`](../../../../level-up-ta-bai/docs/member-levels.md) |
+| Member Experience | [`level-up-ta-bai/docs/member-experience.md`](../../../../level-up-ta-bai/docs/member-experience.md) |
+| Xponent Brain Architecture (product) | [`level-up-ta-bai/docs/xponent-brain-architecture.md`](../../../../level-up-ta-bai/docs/xponent-brain-architecture.md) |
+| Distribution Mechanics | [`level-up-ta-bai/docs/distribution-mechanics.md`](../../../../level-up-ta-bai/docs/distribution-mechanics.md) |
+| Brand and Messaging | [`level-up-ta-bai/docs/brand-and-messaging.md`](../../../../level-up-ta-bai/docs/brand-and-messaging.md) |
 
 ## Rules
 

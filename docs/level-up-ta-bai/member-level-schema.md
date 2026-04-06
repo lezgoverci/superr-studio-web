@@ -1,6 +1,6 @@
 # Member Level Schema
 
-Technical reference for the member profile and progress database tables. For the product-level description of what each level means, see [`level-up-ta-bai/docs/member-levels.md`](https://github.com/lezgoverci/level-up-ta-bai/tree/main/docs/member-levels.md).
+Technical reference for the member profile and progress database tables. For the product-level description of what each level means, see [`level-up-ta-bai/docs/member-levels.md`](../../../../level-up-ta-bai/docs/member-levels.md).
 
 ## Tables
 
