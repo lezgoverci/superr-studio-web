@@ -1,9 +1,11 @@
 "use client";
 
+import { ExternalLink, Link2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { PageContainer } from "@/components/app-shell/page-container";
 import { useAppShellContext } from "@/components/app-shell/shell-context";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,13 +15,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api-client";
 import type { HubBrainResponse } from "@/lib/hub/types";
 
+const NOTEBOOKLM_URL = "https://notebooklm.google.com/";
+
 export default function BrainPage() {
   const { refreshMemberProfile } = useAppShellContext();
   const [loading, setLoading] = useState(true);
-  const [provisioning, setProvisioning] = useState(false);
+  const [linking, setLinking] = useState(false);
   const [addingUrl, setAddingUrl] = useState(false);
   const [addingText, setAddingText] = useState(false);
   const [brain, setBrain] = useState<HubBrainResponse | null>(null);
+  const [notebookIdOrUrl, setNotebookIdOrUrl] = useState("");
   const [url, setUrl] = useState("");
   const [textTitle, setTextTitle] = useState("");
   const [textContent, setTextContent] = useState("");
@@ -31,6 +36,7 @@ export default function BrainPage() {
       const response = await api.hub.brain.get();
       if (!cancelled) {
         setBrain(response);
+        setNotebookIdOrUrl(response.notebookId ?? "");
         setLoading(false);
       }
     }
@@ -47,18 +53,24 @@ export default function BrainPage() {
     };
   }, []);
 
-  const provision = async () => {
+  const handleLinkBrain = async () => {
+    if (!notebookIdOrUrl.trim()) {
+      toast.error("Paste a NotebookLM notebook URL or ID.");
+      return;
+    }
+
     try {
-      setProvisioning(true);
-      const response = await api.hub.brain.provision();
+      setLinking(true);
+      const response = await api.hub.brain.link({ notebookIdOrUrl });
       setBrain(response);
+      setNotebookIdOrUrl(response.notebookId ?? notebookIdOrUrl);
       await refreshMemberProfile();
-      toast.success("Brain provisioned");
+      toast.success("Brain linked");
     } catch (error) {
-      console.error("[brain] Failed to provision brain:", error);
-      toast.error("Failed to provision the Brain");
+      console.error("[brain] Failed to link brain:", error);
+      toast.error("Failed to link the Brain");
     } finally {
-      setProvisioning(false);
+      setLinking(false);
     }
   };
 
@@ -106,7 +118,7 @@ export default function BrainPage() {
     }
   };
 
-  const canAddSources = Boolean(brain?.configured && brain.notebookId);
+  const canAddSources = Boolean(brain?.isLinked && brain.notebookId);
 
   return (
     <PageContainer contentClassName="max-w-5xl">
@@ -114,11 +126,20 @@ export default function BrainPage() {
         <div className="space-y-2">
           <h1 className="font-semibold text-3xl tracking-tight">Brain</h1>
           <p className="max-w-2xl text-muted-foreground text-sm md:text-base">
-            Your Brain is a platform-managed NotebookLM workspace. Members use
-            the Hub UI while the platform handles provisioning and notebook
-            access.
+            Your Brain lives in your own NotebookLM. Connect it here so the Hub
+            can seed starter context, remember what matters to you, and shape
+            more personal guidance.
           </p>
         </div>
+
+        <Alert>
+          <Link2 />
+          <AlertTitle>Member-owned by design</AlertTitle>
+          <AlertDescription>
+            You keep ownership of the notebook on your Google account. The Hub
+            syncs to it after you paste a notebook URL or raw notebook ID.
+          </AlertDescription>
+        </Alert>
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
@@ -135,14 +156,12 @@ export default function BrainPage() {
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-1">
                   <p className="text-muted-foreground text-sm">Status</p>
-                  <p className="font-medium">
-                    {brain?.status || "Not provisioned"}
-                  </p>
+                  <p className="font-medium">{brain?.status || "Not linked"}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-muted-foreground text-sm">Notebook</p>
                   <p className="font-medium">
-                    {brain?.notebookTitle || "Not provisioned"}
+                    {brain?.notebookTitle || "Not linked"}
                   </p>
                 </div>
                 <div className="space-y-1">
@@ -153,7 +172,7 @@ export default function BrainPage() {
 
               <p className="text-muted-foreground text-sm">
                 {brain?.summary ||
-                  "Provision the Brain to generate a shared NotebookLM workspace for this member."}
+                  "Link your NotebookLM notebook to make your Hub context-aware."}
               </p>
 
               {brain?.serviceMessage ? (
@@ -162,10 +181,14 @@ export default function BrainPage() {
                 </div>
               ) : null}
 
-              <Button disabled={provisioning} onClick={provision}>
-                {provisioning ? <Spinner className="mr-2 size-4" /> : null}
-                {brain?.notebookId ? "Re-provision Brain" : "Provision Brain"}
-              </Button>
+              <div className="flex flex-wrap gap-3">
+                <Button asChild type="button" variant="outline">
+                  <a href={NOTEBOOKLM_URL} rel="noreferrer" target="_blank">
+                    <ExternalLink className="mr-2 size-4" />
+                    Open NotebookLM
+                  </a>
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -192,6 +215,33 @@ export default function BrainPage() {
         <div className="grid gap-4 xl:grid-cols-2">
           <Card>
             <CardHeader>
+              <CardTitle>Connect Your Brain</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="brain-link">Notebook URL or ID</Label>
+                <Input
+                  autoComplete="off"
+                  id="brain-link"
+                  name="brainLink"
+                  onChange={(event) => setNotebookIdOrUrl(event.target.value)}
+                  placeholder="https://notebooklm.google.com/notebook/... or paste the notebook ID…"
+                  value={notebookIdOrUrl}
+                />
+                <p className="text-muted-foreground text-sm">
+                  Use a notebook you already own. We will validate it, store the
+                  linked ID, and apply starter sources once.
+                </p>
+              </div>
+              <Button disabled={linking} onClick={handleLinkBrain}>
+                {linking ? <Spinner className="mr-2 size-4" /> : null}
+                {brain?.isLinked ? "Reconnect Brain" : "Link Brain"}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Add URL Source</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -199,6 +249,7 @@ export default function BrainPage() {
                 <Label htmlFor="brain-url">Source URL</Label>
                 <Input
                   id="brain-url"
+                  name="brainUrl"
                   onChange={(event) => setUrl(event.target.value)}
                   placeholder="https://example.com/article"
                   value={url}
@@ -213,18 +264,21 @@ export default function BrainPage() {
               </Button>
             </CardContent>
           </Card>
+        </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Add Text Source</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Add Text Source</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
               <div className="space-y-2">
                 <Label htmlFor="brain-text-title">Title</Label>
                 <Input
                   id="brain-text-title"
+                  name="brainTextTitle"
                   onChange={(event) => setTextTitle(event.target.value)}
-                  placeholder="Meeting notes"
+                  placeholder="Weekly reflections…"
                   value={textTitle}
                 />
               </div>
@@ -232,21 +286,22 @@ export default function BrainPage() {
                 <Label htmlFor="brain-text-content">Pasted Text</Label>
                 <Textarea
                   id="brain-text-content"
+                  name="brainTextContent"
                   onChange={(event) => setTextContent(event.target.value)}
-                  placeholder="Paste a useful note, transcript, or context block."
+                  placeholder="Paste a useful note, transcript, prompt, or context block…"
                   value={textContent}
                 />
               </div>
-              <Button
-                disabled={addingText || !canAddSources}
-                onClick={addTextSource}
-              >
-                {addingText ? <Spinner className="mr-2 size-4" /> : null}
-                Add Text
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+            <Button
+              disabled={addingText || !canAddSources}
+              onClick={addTextSource}
+            >
+              {addingText ? <Spinner className="mr-2 size-4" /> : null}
+              Add Text
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </PageContainer>
   );

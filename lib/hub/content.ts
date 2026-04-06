@@ -10,6 +10,7 @@ import type {
   MemberAiFamiliarity,
   MemberCareerPressure,
   MemberLevel,
+  MemberRole,
   MemberSkillLevel,
 } from "./types";
 
@@ -24,14 +25,48 @@ export const LEVEL_LABELS: Record<MemberLevel, string> = {
 };
 
 export const ROLE_OPTIONS = [
-  "Student",
+  "BPO / Support",
+  "Virtual Assistant",
   "Freelancer",
-  "Operator",
-  "Marketer",
+  "Career Shifter",
   "Creator",
+  "Marketer",
+  "Operator",
   "Founder",
-  "Team Lead",
+  "Student",
 ] as const;
+
+export const MEMBER_ROLE_DETAILS: Array<{
+  value: MemberRole;
+  label: string;
+  title: string;
+  description: string;
+}> = [
+  {
+    value: "hero",
+    label: "Hero",
+    title: "Leader & Strategist",
+    description: "You like setting direction, organizing people, and keeping momentum clear.",
+  },
+  {
+    value: "mage",
+    label: "Mage",
+    title: "Creator & Storyteller",
+    description: "You turn ideas into content, explanations, and shareable stories.",
+  },
+  {
+    value: "warrior",
+    label: "Warrior",
+    title: "Builder & Operator",
+    description: "You enjoy systems, workflows, implementation, and making tools actually work.",
+  },
+  {
+    value: "priest",
+    label: "Priest",
+    title: "Connector & Support",
+    description: "You help people move, connect opportunities, and keep the team supported.",
+  },
+];
 
 export const SKILL_LEVEL_OPTIONS: Array<{
   value: MemberSkillLevel;
@@ -71,7 +106,7 @@ export const JOURNEY_TRACKS: HubJourneyTrack[] = [
         trackId: "awakening",
         taskId: "finish-onboarding",
         title: "Finish onboarding",
-        description: "Set your role, skill level, and first goal.",
+        description: "Set your work type, skill level, and first goal.",
         href: "/app/welcome",
         minimumLevel: 1,
       },
@@ -79,7 +114,7 @@ export const JOURNEY_TRACKS: HubJourneyTrack[] = [
         trackId: "awakening",
         taskId: "seed-brain",
         title: "Seed your Brain",
-        description: "Add context so your workspace reflects your real work.",
+        description: "Link your NotebookLM and add context from your real work.",
         href: "/app/brain",
         minimumLevel: 1,
       },
@@ -143,6 +178,132 @@ export const JOURNEY_TRACKS: HubJourneyTrack[] = [
   },
 ];
 
+function createTemplateSource(
+  id: string,
+  title: string,
+  description: string,
+  lines: string[]
+): HubStarterSource {
+  return {
+    id,
+    title,
+    description,
+    type: "text",
+    value: lines.join("\n"),
+  };
+}
+
+function createRoleTemplateSources(profile: HubMemberProfile): HubStarterSource[] {
+  const roleText = `${profile.currentRole ?? ""} ${profile.targetRole ?? ""}`
+    .toLowerCase()
+    .trim();
+
+  if (
+    /bpo|support|customer|call center|csr|qa|service/.test(roleText)
+  ) {
+    return [
+      createTemplateSource(
+        "support-workflows",
+        "Support AI Starter",
+        "A guided starting point for customer support and QA work.",
+        [
+          "Focus first on:",
+          "- Summarizing tickets and calls",
+          "- Drafting replies with a human review step",
+          "- Building QA checklists for recurring tasks",
+          "",
+          "Questions to answer in this notebook:",
+          "- Which tasks repeat every day?",
+          "- Where do you lose time or accuracy?",
+          "- Which support workflows could AI assist safely?",
+        ]
+      ),
+    ];
+  }
+
+  if (/virtual assistant|va|executive assistant|assistant/.test(roleText)) {
+    return [
+      createTemplateSource(
+        "va-workflows",
+        "VA AI Starter",
+        "A starter prompt set for assistants and operations support work.",
+        [
+          "Focus first on:",
+          "- Inbox triage and drafting",
+          "- Research summaries",
+          "- SOP capture and checklist creation",
+          "",
+          "Capture here:",
+          "- Repeating admin tasks",
+          "- The best prompts you discover",
+          "- Templates that make your work faster each week",
+        ]
+      ),
+    ];
+  }
+
+  if (/freelancer|client|consultant|agency/.test(roleText)) {
+    return [
+      createTemplateSource(
+        "freelancer-playbook",
+        "Freelancer Growth Starter",
+        "A client-facing notebook outline for offers, delivery, and positioning.",
+        [
+          "Focus first on:",
+          "- Proposal and pitch improvements",
+          "- Faster research and delivery workflows",
+          "- Portfolio proof and case study notes",
+          "",
+          "Capture here:",
+          "- Your strongest results",
+          "- Common client requests",
+          "- Processes you can turn into repeatable systems",
+        ]
+      ),
+    ];
+  }
+
+  if (/career shifter|student|new|learning|upskill/.test(roleText)) {
+    return [
+      createTemplateSource(
+        "career-shift-map",
+        "Career Shift Starter",
+        "A guided map for members building confidence and direction.",
+        [
+          "Focus first on:",
+          "- Clarifying the kind of work you want next",
+          "- Building proof of learning in public",
+          "- Turning notes into visible artifacts",
+          "",
+          "Capture here:",
+          "- Skills you want to build",
+          "- What you are curious about",
+          "- Small wins that show momentum",
+        ]
+      ),
+    ];
+  }
+
+  return [
+    createTemplateSource(
+      "general-workflow-map",
+      "General Brain Starter",
+      "A flexible starting structure for members shaping their next move.",
+      [
+        "Focus first on:",
+        "- Saving useful resources from your real work",
+        "- Turning repeated tasks into simple playbooks",
+        "- Tracking what you learn each week",
+        "",
+        "Capture here:",
+        "- Your best resources",
+        "- Problems worth solving with AI",
+        "- Questions you want the platform to help answer",
+      ]
+    ),
+  ];
+}
+
 function createBriefSource(profile: HubMemberProfile): HubStarterSource {
   const lines = [
     `Current role: ${profile.currentRole ?? "Undeclared"}`,
@@ -202,7 +363,60 @@ export function getStarterSources(
     createBriefSource(profile),
     createPathSource(profile),
     createFirstSprintSource(profile),
+    ...createRoleTemplateSources(profile),
   ];
+}
+
+type RoleRecommendationProfile = Pick<
+  HubMemberProfile,
+  "currentRole" | "targetRole" | "firstGoal" | "aiFamiliarity"
+>;
+
+export function getRecommendedMemberRole(
+  profile: RoleRecommendationProfile
+): MemberRole {
+  const text = [
+    profile.currentRole,
+    profile.targetRole,
+    profile.firstGoal,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  if (
+    /creator|content|story|social|write|brand|marketing|video|design/.test(
+      text
+    )
+  ) {
+    return "mage";
+  }
+
+  if (
+    /build|engineer|developer|automation|workflow|operator|ops|system|tech/.test(
+      text
+    )
+  ) {
+    return "warrior";
+  }
+
+  if (
+    /community|connect|network|sales|support|care|relationship|recruit/.test(
+      text
+    )
+  ) {
+    return "priest";
+  }
+
+  if (/founder|lead|manager|project|strategy|team/.test(text)) {
+    return "hero";
+  }
+
+  if (profile.aiFamiliarity === "power-user") {
+    return "warrior";
+  }
+
+  return "hero";
 }
 
 export function buildJourneyState(
@@ -277,7 +491,7 @@ const E_TO_D_CRITERIA: LevelCriterionSpec[] = [
   },
   {
     id: "brain-provisioned",
-    label: "Provision your Brain",
+    label: "Link your Brain",
     check: (ctx) => Boolean(ctx.profile.notebooklmNotebookId),
   },
   {

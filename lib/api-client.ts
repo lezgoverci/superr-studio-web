@@ -758,6 +758,7 @@ export const hubApi = {
   profile: {
     get: () => apiCall<HubMemberProfile>("/api/hub/profile"),
     update: (data: {
+      role?: HubMemberProfile["role"];
       displayName?: string | null;
       bio?: string | null;
       location?: string | null;
@@ -786,6 +787,11 @@ export const hubApi = {
   },
   brain: {
     get: () => apiCall<HubBrainResponse>("/api/hub/brain"),
+    link: (data: { notebookIdOrUrl: string }) =>
+      apiCall<HubBrainResponse>("/api/hub/brain/link", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
     provision: (data?: { force?: boolean }) =>
       apiCall<HubBrainResponse>("/api/hub/brain/provision", {
         method: "POST",

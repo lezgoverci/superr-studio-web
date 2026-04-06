@@ -57,7 +57,7 @@ const WORKSPACE_NAV_ITEMS: ShellNavItem[] = [
   {
     id: "brain",
     label: "Brain",
-    description: "Platform-managed NotebookLM workspace",
+    description: "Connected NotebookLM context brain",
     href: "/app/brain",
     icon: Brain,
     requiredPermissions: ["route:brain:view"],
@@ -240,10 +240,19 @@ export function AppShell({ children, initialMemberProfile }: AppShellProps) {
       !memberProfile.onboardingCompletedAt &&
       pathname !== "/app/welcome"
   );
+  const shouldRedirectToRole = Boolean(
+    session?.user &&
+      memberProfile?.onboardingCompletedAt &&
+      !memberProfile.role &&
+      pathname !== "/app/role"
+  );
   const shouldRedirectFromWelcome = Boolean(
     session?.user &&
       pathname === "/app/welcome" &&
       memberProfile?.onboardingCompletedAt
+  );
+  const shouldRedirectFromRole = Boolean(
+    session?.user && pathname === "/app/role" && memberProfile?.role
   );
   const shouldRedirectLockedBuilderRoute =
     !isBuilderUnlocked &&
@@ -257,18 +266,31 @@ export function AppShell({ children, initialMemberProfile }: AppShellProps) {
       return;
     }
 
+    if (shouldRedirectToRole) {
+      router.replace("/app/role");
+      return;
+    }
+
     if (shouldRedirectLockedBuilderRoute) {
       router.replace("/app/studio");
       return;
     }
 
     if (shouldRedirectFromWelcome) {
+      router.replace(memberProfile?.role ? "/app" : "/app/role");
+      return;
+    }
+
+    if (shouldRedirectFromRole) {
       router.replace("/app");
     }
   }, [
+    memberProfile?.role,
     router,
     shouldRedirectFromWelcome,
+    shouldRedirectFromRole,
     shouldRedirectLockedBuilderRoute,
+    shouldRedirectToRole,
     shouldRedirectToWelcome,
   ]);
 
@@ -277,7 +299,9 @@ export function AppShell({ children, initialMemberProfile }: AppShellProps) {
 
   if (
     shouldRedirectToWelcome ||
+    shouldRedirectToRole ||
     shouldRedirectFromWelcome ||
+    shouldRedirectFromRole ||
     shouldRedirectLockedBuilderRoute
   ) {
     return <div className="h-dvh w-full bg-background" />;

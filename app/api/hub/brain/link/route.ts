@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getHubMemberProfile } from "@/lib/hub/member-profiles";
-import { addNotebookUrlSource } from "@/lib/hub/notebooklm-service";
+import {
+  getHubMemberProfile,
+  updateMemberProfile,
+} from "@/lib/hub/member-profiles";
+import { linkBrain } from "@/lib/hub/notebooklm-service";
 import {
   getAuthenticatedHubUser,
   unauthorizedHubResponse,
 } from "@/lib/hub/request";
 
-const AddUrlSourceSchema = z.object({
-  url: z.string().url().max(2048),
+const LinkBrainSchema = z.object({
+  notebookIdOrUrl: z.string().min(1).max(2048),
 });
 
 export async function POST(request: Request) {
@@ -20,12 +23,12 @@ export async function POST(request: Request) {
     }
 
     const rawBody = await request.json();
-    const parsed = AddUrlSourceSchema.safeParse(rawBody);
+    const parsed = LinkBrainSchema.safeParse(rawBody);
 
     if (!parsed.success) {
       return NextResponse.json(
         {
-          error: "Invalid URL source payload",
+          error: "Invalid Brain link payload",
           issues: parsed.error.flatten(),
         },
         { status: 400 }
@@ -36,22 +39,20 @@ export async function POST(request: Request) {
       name: user.name ?? null,
       image: user.image ?? null,
     });
+    const linked = await linkBrain(profile, parsed.data);
+    const updatedProfile = await updateMemberProfile(user.id, {
+      notebooklmNotebookId: linked.notebookId,
+    });
 
-    if (!profile.notebooklmNotebookId) {
-      return NextResponse.json(
-        { error: "Link your Brain before adding sources." },
-        { status: 400 }
-      );
-    }
-
-    const result = await addNotebookUrlSource(profile, parsed.data);
-    return NextResponse.json(result);
+    return NextResponse.json({
+      ...linked.brain,
+      notebookId: updatedProfile.notebooklmNotebookId,
+    });
   } catch (error) {
-    console.error("[hub/brain] Failed to add URL source:", error);
+    console.error("[hub/brain] Failed to link brain:", error);
     return NextResponse.json(
       {
-        error:
-          error instanceof Error ? error.message : "Failed to add URL source",
+        error: error instanceof Error ? error.message : "Failed to link Brain",
       },
       { status: 500 }
     );

@@ -11,10 +11,12 @@ import {
 import {
   MEMBER_AI_FAMILIARITY,
   MEMBER_CAREER_PRESSURE,
+  MEMBER_ROLES,
   MEMBER_SKILL_LEVELS,
 } from "@/lib/hub/types";
 
 const ProfilePatchSchema = z.object({
+  role: z.enum(MEMBER_ROLES).nullable().optional(),
   displayName: z.string().max(120).nullable().optional(),
   bio: z.string().max(600).nullable().optional(),
   location: z.string().max(120).nullable().optional(),
@@ -79,7 +81,39 @@ export async function PATCH(request: Request) {
     }
 
     const body = parsed.data;
+    const existingProfile = await getHubMemberProfile(user.id, {
+      name: user.name ?? null,
+      image: user.image ?? null,
+    });
+    const resolvedOnboardingValues = {
+      currentRole: body.currentRole ?? existingProfile.currentRole,
+      skillLevel: body.skillLevel ?? existingProfile.skillLevel,
+      aiFamiliarity: body.aiFamiliarity ?? existingProfile.aiFamiliarity,
+      careerPressure: body.careerPressure ?? existingProfile.careerPressure,
+      firstGoal: body.firstGoal ?? existingProfile.firstGoal,
+    };
+
+    if (
+      body.completeOnboarding &&
+      !(
+        resolvedOnboardingValues.currentRole &&
+        resolvedOnboardingValues.skillLevel &&
+        resolvedOnboardingValues.aiFamiliarity &&
+        resolvedOnboardingValues.careerPressure &&
+        resolvedOnboardingValues.firstGoal
+      )
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Complete your work type, skill level, AI familiarity, career pressure, and first goal before finishing onboarding.",
+        },
+        { status: 400 }
+      );
+    }
+
     const profile = await updateMemberProfile(user.id, {
+      role: body.role,
       displayName: body.displayName,
       bio: body.bio,
       location: body.location,

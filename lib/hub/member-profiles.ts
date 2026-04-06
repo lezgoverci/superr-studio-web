@@ -11,6 +11,7 @@ import {
   isMissingRelationError,
 } from "./errors";
 import type {
+  MemberRole,
   HubMemberProfile,
   HubProgressItem,
   MemberAiFamiliarity,
@@ -34,6 +35,7 @@ type MemberProfileIdentity = {
 
 export type MemberProfileUpdateData = {
   level?: MemberLevel;
+  role?: MemberRole | null;
   displayName?: string | null;
   bio?: string | null;
   location?: string | null;
@@ -94,7 +96,7 @@ function serializeMemberProfileRecord(
     id: profile.id,
     userId: profile.userId,
     level: devLevel ?? clampMemberLevel(profile.level),
-    role: null,
+    role: profile.role ?? null,
     displayName: profile.displayName,
     bio: profile.bio,
     location: profile.location,
@@ -277,6 +279,7 @@ export async function updateMemberProfile(
     .update(memberProfiles)
     .set({
       level: updates.level ?? existing.level,
+      role: updates.role === undefined ? existing.role : updates.role,
       displayName:
         updates.displayName === undefined
           ? existing.displayName

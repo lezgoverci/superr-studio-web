@@ -204,6 +204,7 @@ export const userPreferences = pgTable(
 );
 
 export type MemberLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type MemberRole = "hero" | "mage" | "warrior" | "priest";
 export type MemberSkillLevel = "starting" | "developing" | "advanced";
 export type MemberAiFamiliarity = "new" | "comfortable" | "power-user";
 export type MemberCareerPressure = "low" | "medium" | "high";
@@ -218,6 +219,7 @@ export const memberProfiles = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     level: integer("level").notNull().default(1).$type<MemberLevel>(),
+    role: text("role").$type<MemberRole>(),
     displayName: text("display_name"),
     bio: text("bio"),
     location: text("location"),

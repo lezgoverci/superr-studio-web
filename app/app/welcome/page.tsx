@@ -1,72 +1,101 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { AlertCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import type { FormEvent, RefObject } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { PageContainer } from "@/components/app-shell/page-container";
 import { useAppShellContext } from "@/components/app-shell/shell-context";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api-client";
 import {
   AI_FAMILIARITY_OPTIONS,
   CAREER_PRESSURE_OPTIONS,
-  getStarterSources,
   ROLE_OPTIONS,
   SKILL_LEVEL_OPTIONS,
 } from "@/lib/hub/content";
 import type {
-  HubBrainResponse,
-  HubMemberProfile,
   MemberAiFamiliarity,
   MemberCareerPressure,
   MemberSkillLevel,
 } from "@/lib/hub/types";
+import { cn } from "@/lib/utils";
 
-function resolveInitialStep(profile: HubMemberProfile | null) {
-  if (!profile) {
-    return 1;
-  }
+type OnboardingErrors = {
+  currentRole?: string;
+  skillLevel?: string;
+  aiFamiliarity?: string;
+  careerPressure?: string;
+  firstGoal?: string;
+};
 
-  if (profile.firstGoal) {
-    return 3;
-  }
+type OptionCardGroupProps = {
+  error?: string;
+  id: string;
+  label: string;
+  onChange: (value: string) => void;
+  options: Array<{ value: string; label: string }>;
+  selectedValue: string;
+  triggerRef?: RefObject<HTMLButtonElement | null>;
+};
 
-  if (profile.notebooklmNotebookId) {
-    return 3;
-  }
+function OptionCardGroup({
+  error,
+  id,
+  label,
+  onChange,
+  options,
+  selectedValue,
+  triggerRef,
+}: OptionCardGroupProps) {
+  return (
+    <div className="space-y-3">
+      <Label>{label}</Label>
+      <div className="grid gap-3 md:grid-cols-3">
+        {options.map((option, index) => {
+          const selected = selectedValue === option.value;
 
-  if (
-    profile.currentRole &&
-    profile.targetRole &&
-    profile.skillLevel &&
-    profile.aiFamiliarity &&
-    profile.careerPressure
-  ) {
-    return 2;
-  }
-
-  return 1;
+          return (
+            <Button
+              aria-describedby={error ? `${id}-error` : undefined}
+              aria-invalid={Boolean(error)}
+              aria-pressed={selected}
+              className={cn(
+                "h-auto min-h-20 justify-start whitespace-normal px-4 py-3 text-left",
+                selected ? "border-primary shadow-sm" : "border-border"
+              )}
+              key={option.value}
+              onClick={() => onChange(option.value)}
+              ref={index === 0 ? triggerRef : undefined}
+              type="button"
+              variant={selected ? "default" : "outline"}
+            >
+              <span>{option.label}</span>
+            </Button>
+          );
+        })}
+      </div>
+      {error ? (
+        <p className="text-destructive text-sm" id={`${id}-error`}>
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 export default function WelcomePage() {
-  const { memberProfile, refreshMemberProfile, setMemberProfile } =
-    useAppShellContext();
-  const [step, setStep] = useState(resolveInitialStep(memberProfile));
-  const [savingTriage, setSavingTriage] = useState(false);
-  const [provisioningBrain, setProvisioningBrain] = useState(false);
-  const [finishing, setFinishing] = useState(false);
-  const [brain, setBrain] = useState<HubBrainResponse | null>(null);
+  const router = useRouter();
+  const { memberProfile, setMemberProfile } = useAppShellContext();
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<OnboardingErrors>({});
 
   const [displayName, setDisplayName] = useState(
     memberProfile?.displayName || ""
@@ -74,7 +103,6 @@ export default function WelcomePage() {
   const [currentRole, setCurrentRole] = useState(
     memberProfile?.currentRole || ""
   );
-  const [targetRole, setTargetRole] = useState(memberProfile?.targetRole || "");
   const [skillLevel, setSkillLevel] = useState(memberProfile?.skillLevel || "");
   const [aiFamiliarity, setAiFamiliarity] = useState(
     memberProfile?.aiFamiliarity || ""
@@ -84,6 +112,12 @@ export default function WelcomePage() {
   );
   const [firstGoal, setFirstGoal] = useState(memberProfile?.firstGoal || "");
 
+  const currentRoleRef = useRef<HTMLInputElement>(null);
+  const skillLevelRef = useRef<HTMLButtonElement>(null);
+  const aiFamiliarityRef = useRef<HTMLButtonElement>(null);
+  const careerPressureRef = useRef<HTMLButtonElement>(null);
+  const firstGoalRef = useRef<HTMLTextAreaElement>(null);
+
   useEffect(() => {
     if (!memberProfile) {
       return;
@@ -91,89 +125,76 @@ export default function WelcomePage() {
 
     setDisplayName(memberProfile.displayName || memberProfile.userName || "");
     setCurrentRole(memberProfile.currentRole || "");
-    setTargetRole(memberProfile.targetRole || "");
     setSkillLevel(memberProfile.skillLevel || "");
     setAiFamiliarity(memberProfile.aiFamiliarity || "");
     setCareerPressure(memberProfile.careerPressure || "");
     setFirstGoal(memberProfile.firstGoal || "");
-    setStep(resolveInitialStep(memberProfile));
   }, [memberProfile]);
 
-  const starterSources = memberProfile ? getStarterSources(memberProfile) : [];
+  const validateForm = () => {
+    const nextErrors: OnboardingErrors = {};
+    let firstInvalid: HTMLElement | null = null;
 
-  const saveTriage = async () => {
-    if (
-      !(
-        currentRole &&
-        targetRole &&
-        skillLevel &&
-        aiFamiliarity &&
-        careerPressure
-      )
-    ) {
-      toast.error("Complete each onboarding field before continuing.");
+    if (!currentRole.trim()) {
+      nextErrors.currentRole = "Choose or type your current work type.";
+      firstInvalid = currentRoleRef.current;
+    }
+
+    if (!skillLevel) {
+      nextErrors.skillLevel = "Choose the skill level that fits you now.";
+      firstInvalid ??= skillLevelRef.current;
+    }
+
+    if (!aiFamiliarity) {
+      nextErrors.aiFamiliarity = "Choose how familiar you are with AI.";
+      firstInvalid ??= aiFamiliarityRef.current;
+    }
+
+    if (!careerPressure) {
+      nextErrors.careerPressure = "Choose how urgent your next move feels.";
+      firstInvalid ??= careerPressureRef.current;
+    }
+
+    if (!firstGoal.trim()) {
+      nextErrors.firstGoal = "Write the first result you want this platform to help with.";
+      firstInvalid ??= firstGoalRef.current;
+    }
+
+    setErrors(nextErrors);
+
+    if (firstInvalid) {
+      firstInvalid.focus();
+    }
+
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!validateForm()) {
       return;
     }
 
     try {
-      setSavingTriage(true);
+      setSaving(true);
       const updated = await api.hub.profile.update({
         displayName,
         currentRole,
-        targetRole,
         skillLevel: skillLevel as MemberSkillLevel,
         aiFamiliarity: aiFamiliarity as MemberAiFamiliarity,
         careerPressure: careerPressure as MemberCareerPressure,
-      });
-      setMemberProfile(updated);
-      setStep(2);
-      toast.success("Onboarding profile saved");
-    } catch (error) {
-      console.error("[welcome] Failed to save triage:", error);
-      toast.error("Failed to save onboarding details");
-    } finally {
-      setSavingTriage(false);
-    }
-  };
-
-  const provisionBrain = async () => {
-    try {
-      setProvisioningBrain(true);
-      const provisioned = await api.hub.brain.provision();
-      setBrain(provisioned);
-      const refreshed = await refreshMemberProfile();
-      if (refreshed) {
-        setMemberProfile(refreshed);
-      }
-      setStep(3);
-      toast.success("Brain is ready");
-    } catch (error) {
-      console.error("[welcome] Failed to provision brain:", error);
-      toast.error("Failed to provision the Brain");
-    } finally {
-      setProvisioningBrain(false);
-    }
-  };
-
-  const finishOnboarding = async () => {
-    if (!firstGoal.trim()) {
-      toast.error("Set your first goal before finishing onboarding.");
-      return;
-    }
-
-    try {
-      setFinishing(true);
-      const updated = await api.hub.profile.update({
         firstGoal,
         completeOnboarding: true,
       });
       setMemberProfile(updated);
       toast.success("Onboarding complete");
+      router.replace("/app/role");
     } catch (error) {
       console.error("[welcome] Failed to finish onboarding:", error);
       toast.error("Failed to finish onboarding");
     } finally {
-      setFinishing(false);
+      setSaving(false);
     }
   };
 
@@ -185,236 +206,204 @@ export default function WelcomePage() {
             Welcome
           </div>
           <h1 className="font-semibold text-3xl tracking-tight">
-            Set up your Hub workspace
+            Start Where You Are
           </h1>
           <p className="max-w-2xl text-muted-foreground text-sm md:text-base">
-            This flow captures your current stage, provisions your
-            platform-managed Brain, and locks the first goal your Journey should
-            optimize for.
+            This is a short triage, not a long setup. Tell the Hub what kind of
+            work you do, how urgent your situation feels, and what first result
+            you want so the platform can shape your next steps.
           </p>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-3">
-          {[
-            { id: 1, title: "Profile", description: "Role and direction" },
-            { id: 2, title: "Brain", description: "Provision your notebook" },
-            { id: 3, title: "Goal", description: "Commit your first sprint" },
-          ].map((item) => (
-            <Card
-              className={step === item.id ? "border-primary/50" : ""}
-              key={item.id}
-            >
-              <CardContent className="space-y-1 p-4">
-                <p className="font-medium text-sm">
-                  Step {item.id}: {item.title}
-                </p>
-                <p className="text-muted-foreground text-sm">
-                  {item.description}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Alert>
+          <AlertCircle />
+          <AlertTitle>What happens next</AlertTitle>
+          <AlertDescription>
+            After this triage, you will choose your team role and then connect
+            your own NotebookLM Brain as a separate quest.
+          </AlertDescription>
+        </Alert>
 
-        {step === 1 ? (
+        <form className="space-y-6" onSubmit={handleSubmit}>
           <Card>
             <CardHeader>
-              <CardTitle>Tell the platform where you are now</CardTitle>
+              <CardTitle>About You</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="displayName">Display Name</Label>
                 <Input
+                  autoComplete="nickname"
                   id="displayName"
+                  name="displayName"
                   onChange={(event) => setDisplayName(event.target.value)}
-                  placeholder="How you want to appear in the Hub"
+                  placeholder="How you want your profile to appear…"
                   value={displayName}
                 />
+                <p className="text-muted-foreground text-sm">
+                  Optional. We prefill this from your account when possible.
+                </p>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Current Role</Label>
-                  <Select onValueChange={setCurrentRole} value={currentRole}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Choose your current role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ROLE_OPTIONS.map((role) => (
-                        <SelectItem key={role} value={role}>
-                          {role}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-3">
+                <Label htmlFor="currentRole">Current Work Type</Label>
+                <div className="flex flex-wrap gap-2">
+                  {ROLE_OPTIONS.map((option) => {
+                    const selected = currentRole === option;
 
-                <div className="space-y-2">
-                  <Label>Target Role</Label>
-                  <Select onValueChange={setTargetRole} value={targetRole}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Choose your target role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ROLE_OPTIONS.map((role) => (
-                        <SelectItem key={role} value={role}>
-                          {role}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    return (
+                      <Button
+                        aria-pressed={selected}
+                        key={option}
+                        onClick={() => {
+                          setCurrentRole(option);
+                          setErrors((current) => ({
+                            ...current,
+                            currentRole: undefined,
+                          }));
+                        }}
+                        type="button"
+                        variant={selected ? "default" : "outline"}
+                      >
+                        {option}
+                      </Button>
+                    );
+                  })}
                 </div>
-
-                <div className="space-y-2">
-                  <Label>Skill Level</Label>
-                  <Select onValueChange={setSkillLevel} value={skillLevel}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Choose your level" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SKILL_LEVEL_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>AI Familiarity</Label>
-                  <Select
-                    onValueChange={setAiFamiliarity}
-                    value={aiFamiliarity}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Choose your AI fluency" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {AI_FAMILIARITY_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Career Pressure</Label>
-                  <Select
-                    onValueChange={setCareerPressure}
-                    value={careerPressure}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="How urgent is your next move?" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CAREER_PRESSURE_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Input
+                  aria-describedby={
+                    errors.currentRole ? "current-role-error" : undefined
+                  }
+                  aria-invalid={Boolean(errors.currentRole)}
+                  autoComplete="off"
+                  id="currentRole"
+                  name="currentRole"
+                  onChange={(event) => {
+                    setCurrentRole(event.target.value);
+                    setErrors((current) => ({
+                      ...current,
+                      currentRole: undefined,
+                    }));
+                  }}
+                  placeholder="Or type your work type in your own words…"
+                  ref={currentRoleRef}
+                  value={currentRole}
+                />
+                {errors.currentRole ? (
+                  <p className="text-destructive text-sm" id="current-role-error">
+                    {errors.currentRole}
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground text-sm">
+                    Pick the closest fit or type your own answer.
+                  </p>
+                )}
               </div>
-
-              <Button disabled={savingTriage} onClick={saveTriage}>
-                {savingTriage ? <Spinner className="mr-2 size-4" /> : null}
-                Save and continue
-              </Button>
             </CardContent>
           </Card>
-        ) : null}
 
-        {step === 2 ? (
           <Card>
             <CardHeader>
-              <CardTitle>Provision your Brain</CardTitle>
+              <CardTitle>Readiness Snapshot</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-muted-foreground text-sm">
-                The platform manages NotebookLM setup behind the scenes. Your
-                onboarding answers seed the first notebook context
-                automatically.
-              </p>
+            <CardContent className="space-y-5">
+              <OptionCardGroup
+                error={errors.skillLevel}
+                id="skill-level"
+                label="Skill Level"
+                onChange={(value) => {
+                  setSkillLevel(value);
+                  setErrors((current) => ({
+                    ...current,
+                    skillLevel: undefined,
+                  }));
+                }}
+                options={SKILL_LEVEL_OPTIONS}
+                selectedValue={skillLevel}
+                triggerRef={skillLevelRef}
+              />
 
-              <div className="grid gap-3 md:grid-cols-3">
-                {starterSources.map((source) => (
-                  <Card className="bg-muted/30" key={source.id}>
-                    <CardContent className="space-y-2 p-4">
-                      <p className="font-medium text-sm">{source.title}</p>
-                      <p className="text-muted-foreground text-sm">
-                        {source.description}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              <OptionCardGroup
+                error={errors.aiFamiliarity}
+                id="ai-familiarity"
+                label="AI Familiarity"
+                onChange={(value) => {
+                  setAiFamiliarity(value);
+                  setErrors((current) => ({
+                    ...current,
+                    aiFamiliarity: undefined,
+                  }));
+                }}
+                options={AI_FAMILIARITY_OPTIONS}
+                selectedValue={aiFamiliarity}
+                triggerRef={aiFamiliarityRef}
+              />
 
-              {brain?.serviceMessage ? (
-                <div className="rounded-lg border border-dashed p-4 text-muted-foreground text-sm">
-                  {brain.serviceMessage}
-                </div>
-              ) : null}
-
-              <div className="flex gap-3">
-                <Button
-                  onClick={() => setStep(1)}
-                  type="button"
-                  variant="outline"
-                >
-                  Back
-                </Button>
-                <Button disabled={provisioningBrain} onClick={provisionBrain}>
-                  {provisioningBrain ? (
-                    <Spinner className="mr-2 size-4" />
-                  ) : null}
-                  Provision Brain
-                </Button>
-              </div>
+              <OptionCardGroup
+                error={errors.careerPressure}
+                id="career-pressure"
+                label="Career Pressure"
+                onChange={(value) => {
+                  setCareerPressure(value);
+                  setErrors((current) => ({
+                    ...current,
+                    careerPressure: undefined,
+                  }));
+                }}
+                options={CAREER_PRESSURE_OPTIONS}
+                selectedValue={careerPressure}
+                triggerRef={careerPressureRef}
+              />
             </CardContent>
           </Card>
-        ) : null}
 
-        {step === 3 ? (
           <Card>
             <CardHeader>
-              <CardTitle>Lock your first sprint</CardTitle>
+              <CardTitle>Your First Goal</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="firstGoal">First Goal</Label>
+                <Label htmlFor="firstGoal">What do you want this platform to help with first?</Label>
                 <Textarea
+                  aria-describedby={errors.firstGoal ? "first-goal-error" : undefined}
+                  aria-invalid={Boolean(errors.firstGoal)}
                   id="firstGoal"
-                  onChange={(event) => setFirstGoal(event.target.value)}
-                  placeholder="Describe the next concrete result you want from the platform."
+                  name="firstGoal"
+                  onChange={(event) => {
+                    setFirstGoal(event.target.value);
+                    setErrors((current) => ({
+                      ...current,
+                      firstGoal: undefined,
+                    }));
+                  }}
+                  placeholder="Example: I want to become confident using AI for my client work and publish my first proof-of-work this month…"
+                  ref={firstGoalRef}
                   value={firstGoal}
                 />
+                {errors.firstGoal ? (
+                  <p className="text-destructive text-sm" id="first-goal-error">
+                    {errors.firstGoal}
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground text-sm">
+                    Keep it concrete. We will use this to shape your first quests
+                    and Brain starter context.
+                  </p>
+                )}
               </div>
 
-              <div className="rounded-lg border bg-muted/30 p-4 text-muted-foreground text-sm">
-                The Hub will use this goal to shape your Journey tasks, Brain
-                context, and Builder recommendations.
-              </div>
-
-              <div className="flex gap-3">
-                <Button
-                  onClick={() => setStep(2)}
-                  type="button"
-                  variant="outline"
-                >
-                  Back
-                </Button>
-                <Button disabled={finishing} onClick={finishOnboarding}>
-                  {finishing ? <Spinner className="mr-2 size-4" /> : null}
-                  Finish onboarding
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-muted-foreground text-sm">
+                  This should take about a minute.
+                </p>
+                <Button disabled={saving} type="submit">
+                  {saving ? <Spinner className="mr-2 size-4" /> : null}
+                  Continue to Team Role
                 </Button>
               </div>
             </CardContent>
           </Card>
-        ) : null}
+        </form>
       </div>
     </PageContainer>
   );

@@ -101,6 +101,7 @@ export type HubProgressResponse = {
 export type HubBrainResponse = {
   configured: boolean;
   serviceMode: "external" | "stub";
+  isLinked: boolean;
   serviceMessage: string | null;
   notebookId: string | null;
   notebookTitle: string | null;

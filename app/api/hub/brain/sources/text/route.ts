@@ -40,7 +40,7 @@ export async function POST(request: Request) {
 
     if (!profile.notebooklmNotebookId) {
       return NextResponse.json(
-        { error: "Provision the Brain before adding sources." },
+        { error: "Link your Brain before adding sources." },
         { status: 400 }
       );
     }

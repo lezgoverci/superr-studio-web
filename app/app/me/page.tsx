@@ -9,15 +9,25 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api-client";
+import { MEMBER_ROLE_DETAILS } from "@/lib/hub/content";
+import type { MemberRole } from "@/lib/hub/types";
 
 export default function ProfilePage() {
   const { memberLevel, refreshMemberProfile, setMemberProfile } =
     useAppShellContext();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [role, setRole] = useState<MemberRole | "">("");
   const [displayName, setDisplayName] = useState("");
   const [location, setLocation] = useState("");
   const [bio, setBio] = useState("");
@@ -36,6 +46,7 @@ export default function ProfilePage() {
       }
 
       setDisplayName(profile.displayName || profile.userName || "");
+      setRole(profile.role || "");
       setLocation(profile.location || "");
       setBio(profile.bio || "");
       setCurrentRole(profile.currentRole || "");
@@ -60,6 +71,7 @@ export default function ProfilePage() {
     try {
       setSaving(true);
       const updated = await api.hub.profile.update({
+        role: role || null,
         displayName,
         location,
         bio,
@@ -93,13 +105,20 @@ export default function ProfilePage() {
           <CardHeader>
             <CardTitle>Member Snapshot</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-3">
+          <CardContent className="grid gap-4 md:grid-cols-4">
             <div className="rounded-lg border bg-muted/30 p-4">
               <p className="text-muted-foreground text-sm">Level</p>
               <LevelBadge
                 className="mt-1 font-medium normal-case tracking-normal"
                 level={memberLevel}
               />
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <p className="text-muted-foreground text-sm">Team Role</p>
+              <p className="mt-1 font-medium">
+                {MEMBER_ROLE_DETAILS.find((item) => item.value === role)?.label ||
+                  "Not set"}
+              </p>
             </div>
             <div className="rounded-lg border bg-muted/30 p-4">
               <p className="text-muted-foreground text-sm">Current Role</p>
@@ -124,6 +143,24 @@ export default function ProfilePage() {
             ) : (
               <>
                 <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Team Role</Label>
+                    <Select
+                      onValueChange={(value) => setRole(value as MemberRole)}
+                      value={role || undefined}
+                    >
+                      <SelectTrigger aria-label="Team Role">
+                        <SelectValue placeholder="Choose your party role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MEMBER_ROLE_DETAILS.map((item) => (
+                          <SelectItem key={item.value} value={item.value}>
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="me-display-name">Display Name</Label>
                     <Input

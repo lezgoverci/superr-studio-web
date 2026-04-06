@@ -22,13 +22,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import type { Integration } from "@/lib/api-client";
 import { api } from "@/lib/api-client";
-import { LEVEL_LABELS } from "@/lib/hub/content";
-import type { MemberLevel } from "@/lib/hub/types";
+import { LEVEL_LABELS, MEMBER_ROLE_DETAILS } from "@/lib/hub/content";
+import type { MemberLevel, MemberRole } from "@/lib/hub/types";
 
 const SETTINGS_TAB_VALUES = [
   "account",
@@ -54,6 +61,7 @@ function AccountSection() {
   const { refreshMemberProfile } = useAppShellContext();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [role, setRole] = useState<MemberRole | "">("");
   const [displayName, setDisplayName] = useState("");
   const [location, setLocation] = useState("");
   const [bio, setBio] = useState("");
@@ -67,6 +75,7 @@ function AccountSection() {
   const loadAccount = useCallback(async () => {
     try {
       const data = await api.hub.profile.get();
+      setRole(data.role || "");
       setDisplayName(data.displayName || data.userName || "");
       setLocation(data.location || "");
       setBio(data.bio || "");
@@ -90,6 +99,7 @@ function AccountSection() {
     try {
       setSaving(true);
       await api.hub.profile.update({
+        role: role || null,
         displayName,
         location,
         bio,
@@ -121,6 +131,25 @@ function AccountSection() {
         ) : (
           <>
             <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Team Role</Label>
+                <Select
+                  onValueChange={(value) => setRole(value as MemberRole)}
+                  value={role || undefined}
+                >
+                  <SelectTrigger aria-label="Team Role">
+                    <SelectValue placeholder="Choose your party role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MEMBER_ROLE_DETAILS.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="displayName">Display Name</Label>
                 <Input

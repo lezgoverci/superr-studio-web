@@ -38,9 +38,10 @@ Every Hub component reads from `useAppShellContext()`:
 | Route | Page |
 |-------|------|
 | `/app` | Hub Home (level-aware dashboard) |
-| `/app/welcome` | Onboarding wizard (3-step) |
+| `/app/welcome` | Onboarding triage screen |
+| `/app/role` | Team role recommendation and selection |
 | `/app/journey` | Level progress and task queue |
-| `/app/brain` | Xponent Brain (NotebookLM workspace) |
+| `/app/brain` | Xponent Brain (member-linked NotebookLM) |
 | `/app/earn` | Affiliate dashboard |
 | `/app/me` | Profile and settings |
 
@@ -88,7 +89,9 @@ AppShell (client)
 | Condition | Redirect |
 |-----------|----------|
 | No `onboardingCompletedAt` | `/app/welcome` |
-| On `/app/welcome` with onboarding done | `/app` |
+| Onboarding done but no team role | `/app/role` |
+| On `/app/welcome` with onboarding done | `/app` or `/app/role` depending on role state |
+| On `/app/role` with role already set | `/app` |
 | L1-L2 accessing `/app/workflows`, `/app/sandboxes`, `/app/library` | `/app/studio` |
 
 ## API Routes
@@ -99,7 +102,7 @@ AppShell (client)
 | `/api/hub/progress` | GET, POST | Journey task tracking |
 | `/api/hub/level` | GET, POST | Level check and level-up |
 | `/api/hub/brain` | GET | Brain state |
-| `/api/hub/brain/provision` | POST | Provision notebook |
+| `/api/hub/brain/link` | POST | Validate and link a member-owned notebook |
 | `/api/hub/brain/sources/url` | POST | Add URL source |
 | `/api/hub/brain/sources/text` | POST | Add text source |
 | `/api/hub/earn` | GET | Affiliate dashboard data |

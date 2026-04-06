@@ -1,5 +1,6 @@
 import { buildJourneyState } from "./content";
 import { getHubMemberProfile, listMemberProgress } from "./member-profiles";
+import { getBrainState } from "./notebooklm-service";
 import type { HubProgressItem, HubProgressResponse } from "./types";
 
 function withDerivedItem(
@@ -39,6 +40,7 @@ export async function getHubProgressResponse(
     getHubMemberProfile(userId, defaults),
     listMemberProgress(userId),
   ]);
+  const brain = await getBrainState(profile);
 
   let items = [...storedItems];
   items = withDerivedItem(
@@ -51,7 +53,9 @@ export async function getHubProgressResponse(
     items,
     "awakening",
     "seed-brain",
-    profile.notebooklmNotebookId ? profile.updatedAt : null
+    profile.notebooklmNotebookId && brain.sourceCount > 0
+      ? profile.updatedAt
+      : null
   );
   items = withDerivedItem(
     items,

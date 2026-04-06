@@ -107,9 +107,17 @@ export default function HubHomePage() {
         (progress.completedTasks / Math.max(progress.totalTasks, 1)) * 100
       )
     : 0;
-  const welcomeHref = memberProfile?.onboardingCompletedAt
-    ? "/app/me"
-    : "/app/welcome";
+  const activationHref = !memberProfile?.onboardingCompletedAt
+    ? "/app/welcome"
+    : !memberProfile.role
+      ? "/app/role"
+      : "/app/journey";
+  const activationLabel = !memberProfile?.onboardingCompletedAt
+    ? "Finish Onboarding"
+    : !memberProfile.role
+      ? "Choose Team Role"
+      : "Continue Journey";
+  const profileHref = memberProfile?.role ? "/app/me" : "/app/role";
 
   const handleLevelUp = async () => {
     try {
@@ -155,17 +163,7 @@ export default function HubHomePage() {
 
             <div className="flex flex-wrap gap-3">
               <Button asChild>
-                <Link
-                  href={
-                    memberProfile?.onboardingCompletedAt
-                      ? "/app/journey"
-                      : "/app/welcome"
-                  }
-                >
-                  {memberProfile?.onboardingCompletedAt
-                    ? "Continue Journey"
-                    : "Finish Onboarding"}
-                </Link>
+                <Link href={activationHref}>{activationLabel}</Link>
               </Button>
               <Button asChild variant="outline">
                 <Link href={builderEntryHref}>
@@ -236,10 +234,10 @@ export default function HubHomePage() {
                 {brain?.sourceCount ?? 0}
               </div>
               <p className="text-muted-foreground text-sm">
-                {brain?.configured
-                  ? `${brain.status} · ${brain.notebookTitle ?? "Managed notebook"}`
+                {brain?.isLinked
+                  ? `${brain.status} · ${brain.notebookTitle ?? "Linked notebook"}`
                   : brain?.serviceMessage ||
-                    "Provision your Brain and seed it with context."}
+                    "Link your Brain and seed it with real context."}
               </p>
             </CardContent>
           </Card>
@@ -284,12 +282,12 @@ export default function HubHomePage() {
               <CardTitle>Next Actions</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3 md:grid-cols-2">
-              <Link href={welcomeHref}>
+              <Link href={profileHref}>
                 <Card className="h-full border-dashed transition-colors hover:border-primary/50">
                   <CardContent className="space-y-2 p-4">
                     <p className="font-medium">Profile and direction</p>
                     <p className="text-muted-foreground text-sm">
-                      Keep your role, target role, and first goal current.
+                      Keep your team role, work type, and first goal current.
                     </p>
                   </CardContent>
                 </Card>
@@ -300,8 +298,8 @@ export default function HubHomePage() {
                   <CardContent className="space-y-2 p-4">
                     <p className="font-medium">Feed your Brain</p>
                     <p className="text-muted-foreground text-sm">
-                      Add source material so the platform can reason over your
-                      work.
+                      Link your NotebookLM and add source material from your
+                      real work.
                     </p>
                   </CardContent>
                 </Card>
@@ -341,7 +339,7 @@ export default function HubHomePage() {
               {loading ? <Spinner className="size-4" /> : null}
               <p className="text-muted-foreground text-sm">
                 {brain?.summary ||
-                  "No summary yet. Provision the Brain and add your first sources."}
+                  "No summary yet. Link your Brain and add your first sources."}
               </p>
               <Button asChild className="w-full" variant="outline">
                 <Link href="/app/brain">Open Brain</Link>

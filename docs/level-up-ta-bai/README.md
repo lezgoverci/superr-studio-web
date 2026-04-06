@@ -14,7 +14,7 @@ For rough product ideas, planning drafts, and non-canonical working notes, use [
 | [Hub Architecture](./hub-architecture.md) | Component map, data flow, route table, shell context |
 | [Member Level Schema](./member-level-schema.md) | DB tables, level-up criteria in code terms, type definitions |
 | [Whop Integration](./whop-integration.md) | Affiliate API, `ensureAffiliate` flow, env vars |
-| [NotebookLM Integration](./notebooklm-integration.md) | Brain provisioning, notebook service, starter source seeding |
+| [NotebookLM Integration](./notebooklm-integration.md) | Brain linking, notebook service, starter source seeding |
 
 ## What Lives in the Product Repo
 

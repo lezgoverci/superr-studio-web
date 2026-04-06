@@ -63,18 +63,18 @@ Level-up is checked via `checkLevelUp()` in `lib/hub/content.ts`. The criteria m
 
 ### Level 1 to Level 2 (Explorer to Creator)
 
-- All `foundation` track tasks complete (onboarding, seed brain, define goal)
+- All `awakening` track tasks complete (onboarding, seed brain, define goal)
 - `onboardingCompletedAt` is set
 
 ### Level 2 to Level 3 (Creator to Shadow Operator)
 
-- All `creation` track tasks complete (share link, publish weekly)
-- Brain is provisioned (`notebooklmNotebookId` is set)
+- All `forge` track tasks complete (share link, publish weekly)
+- Brain is linked (`notebooklmNotebookId` is set)
 - Affiliate link is active (`whopAffiliateId` is set)
 
 ### Level 3 to Level 4 (Shadow Operator to Founder)
 
-- All `builder` track tasks complete (unlock builder, launch workflow)
+- All `command` track tasks complete (unlock builder, launch workflow)
 - At least one user-created workflow exists
 
 These criteria are the **code-level reflection** of the product-level criteria in `member-levels.md`. If the product criteria change, update both this document and `checkLevelUp()`.
