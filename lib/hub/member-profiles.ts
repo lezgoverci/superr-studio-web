@@ -11,12 +11,12 @@ import {
   isMissingRelationError,
 } from "./errors";
 import type {
-  MemberRole,
   HubMemberProfile,
   HubProgressItem,
   MemberAiFamiliarity,
   MemberCareerPressure,
   MemberLevel,
+  MemberRole,
   MemberSkillLevel,
 } from "./types";
 import { clampMemberLevel } from "./types";

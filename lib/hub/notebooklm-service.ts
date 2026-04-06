@@ -2,8 +2,8 @@ import { getStarterSources } from "./content";
 import type {
   HubBrainResponse,
   HubBrainSourceMutationResponse,
-  HubStarterSource,
   HubMemberProfile,
+  HubStarterSource,
 } from "./types";
 
 const STUB_NOTEBOOK_ID_PREFIX = "stub-notebook-";
@@ -93,12 +93,11 @@ function buildDisconnectedBrain(profile: HubMemberProfile): HubBrainResponse {
     configured: config.configured,
     serviceMode: config.configured ? "external" : "stub",
     isLinked: false,
-    serviceMessage:
-      config.configured
-        ? "Connect a NotebookLM notebook you already own. The Hub will sync to it after you paste a notebook URL or ID."
-        : process.env.NODE_ENV === "production"
-          ? "NotebookLM sync is not configured yet. Set NOTEBOOKLM_SERVICE_URL and NOTEBOOKLM_SERVICE_TOKEN to enable live notebooks."
-          : `NotebookLM service is not reachable. Start the local service at ${config.baseUrl || LOCAL_NOTEBOOKLM_SERVICE_URL} to enable live sync.`,
+    serviceMessage: config.configured
+      ? "Connect a NotebookLM notebook you already own. The Hub will sync to it after you paste a notebook URL or ID."
+      : process.env.NODE_ENV === "production"
+        ? "NotebookLM sync is not configured yet. Set NOTEBOOKLM_SERVICE_URL and NOTEBOOKLM_SERVICE_TOKEN to enable live notebooks."
+        : `NotebookLM service is not reachable. Start the local service at ${config.baseUrl || LOCAL_NOTEBOOKLM_SERVICE_URL} to enable live sync.`,
     notebookId: null,
     notebookTitle: null,
     status: "not_linked",
@@ -178,9 +177,7 @@ function mapNotebookToBrain(
     isLinked: true,
     serviceMessage: null,
     notebookId: notebook.id,
-    notebookTitle:
-      notebook.title ??
-      getBrainTitle(profile),
+    notebookTitle: notebook.title ?? getBrainTitle(profile),
     status: notebook.status ?? "linked",
     summary:
       notebook.summary ??

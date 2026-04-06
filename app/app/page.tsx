@@ -107,16 +107,16 @@ export default function HubHomePage() {
         (progress.completedTasks / Math.max(progress.totalTasks, 1)) * 100
       )
     : 0;
-  const activationHref = !memberProfile?.onboardingCompletedAt
-    ? "/app/welcome"
-    : !memberProfile.role
-      ? "/app/role"
-      : "/app/journey";
-  const activationLabel = !memberProfile?.onboardingCompletedAt
-    ? "Finish Onboarding"
-    : !memberProfile.role
-      ? "Choose Team Role"
-      : "Continue Journey";
+  const activationHref = memberProfile?.onboardingCompletedAt
+    ? memberProfile.role
+      ? "/app/journey"
+      : "/app/role"
+    : "/app/welcome";
+  const activationLabel = memberProfile?.onboardingCompletedAt
+    ? memberProfile.role
+      ? "Continue Journey"
+      : "Choose Team Role"
+    : "Finish Onboarding";
   const profileHref = memberProfile?.role ? "/app/me" : "/app/role";
 
   const handleLevelUp = async () => {

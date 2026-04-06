@@ -156,7 +156,8 @@ export default function WelcomePage() {
     }
 
     if (!firstGoal.trim()) {
-      nextErrors.firstGoal = "Write the first result you want this platform to help with.";
+      nextErrors.firstGoal =
+        "Write the first result you want this platform to help with.";
       firstInvalid ??= firstGoalRef.current;
     }
 
@@ -290,7 +291,10 @@ export default function WelcomePage() {
                   value={currentRole}
                 />
                 {errors.currentRole ? (
-                  <p className="text-destructive text-sm" id="current-role-error">
+                  <p
+                    className="text-destructive text-sm"
+                    id="current-role-error"
+                  >
                     {errors.currentRole}
                   </p>
                 ) : (
@@ -363,9 +367,13 @@ export default function WelcomePage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="firstGoal">What do you want this platform to help with first?</Label>
+                <Label htmlFor="firstGoal">
+                  What do you want this platform to help with first?
+                </Label>
                 <Textarea
-                  aria-describedby={errors.firstGoal ? "first-goal-error" : undefined}
+                  aria-describedby={
+                    errors.firstGoal ? "first-goal-error" : undefined
+                  }
                   aria-invalid={Boolean(errors.firstGoal)}
                   id="firstGoal"
                   name="firstGoal"
@@ -386,8 +394,8 @@ export default function WelcomePage() {
                   </p>
                 ) : (
                   <p className="text-muted-foreground text-sm">
-                    Keep it concrete. We will use this to shape your first quests
-                    and Brain starter context.
+                    Keep it concrete. We will use this to shape your first
+                    quests and Brain starter context.
                   </p>
                 )}
               </div>

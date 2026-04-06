@@ -116,8 +116,8 @@ export default function ProfilePage() {
             <div className="rounded-lg border bg-muted/30 p-4">
               <p className="text-muted-foreground text-sm">Team Role</p>
               <p className="mt-1 font-medium">
-                {MEMBER_ROLE_DETAILS.find((item) => item.value === role)?.label ||
-                  "Not set"}
+                {MEMBER_ROLE_DETAILS.find((item) => item.value === role)
+                  ?.label || "Not set"}
               </p>
             </div>
             <div className="rounded-lg border bg-muted/30 p-4">

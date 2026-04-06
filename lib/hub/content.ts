@@ -46,25 +46,29 @@ export const MEMBER_ROLE_DETAILS: Array<{
     value: "hero",
     label: "Hero",
     title: "Leader & Strategist",
-    description: "You like setting direction, organizing people, and keeping momentum clear.",
+    description:
+      "You like setting direction, organizing people, and keeping momentum clear.",
   },
   {
     value: "mage",
     label: "Mage",
     title: "Creator & Storyteller",
-    description: "You turn ideas into content, explanations, and shareable stories.",
+    description:
+      "You turn ideas into content, explanations, and shareable stories.",
   },
   {
     value: "warrior",
     label: "Warrior",
     title: "Builder & Operator",
-    description: "You enjoy systems, workflows, implementation, and making tools actually work.",
+    description:
+      "You enjoy systems, workflows, implementation, and making tools actually work.",
   },
   {
     value: "priest",
     label: "Priest",
     title: "Connector & Support",
-    description: "You help people move, connect opportunities, and keep the team supported.",
+    description:
+      "You help people move, connect opportunities, and keep the team supported.",
   },
 ];
 
@@ -114,7 +118,8 @@ export const JOURNEY_TRACKS: HubJourneyTrack[] = [
         trackId: "awakening",
         taskId: "seed-brain",
         title: "Seed your Brain",
-        description: "Link your NotebookLM and add context from your real work.",
+        description:
+          "Link your NotebookLM and add context from your real work.",
         href: "/app/brain",
         minimumLevel: 1,
       },
@@ -193,14 +198,14 @@ function createTemplateSource(
   };
 }
 
-function createRoleTemplateSources(profile: HubMemberProfile): HubStarterSource[] {
+function createRoleTemplateSources(
+  profile: HubMemberProfile
+): HubStarterSource[] {
   const roleText = `${profile.currentRole ?? ""} ${profile.targetRole ?? ""}`
     .toLowerCase()
     .trim();
 
-  if (
-    /bpo|support|customer|call center|csr|qa|service/.test(roleText)
-  ) {
+  if (/bpo|support|customer|call center|csr|qa|service/.test(roleText)) {
     return [
       createTemplateSource(
         "support-workflows",
@@ -375,19 +380,13 @@ type RoleRecommendationProfile = Pick<
 export function getRecommendedMemberRole(
   profile: RoleRecommendationProfile
 ): MemberRole {
-  const text = [
-    profile.currentRole,
-    profile.targetRole,
-    profile.firstGoal,
-  ]
+  const text = [profile.currentRole, profile.targetRole, profile.firstGoal]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
 
   if (
-    /creator|content|story|social|write|brand|marketing|video|design/.test(
-      text
-    )
+    /creator|content|story|social|write|brand|marketing|video|design/.test(text)
   ) {
     return "mage";
   }

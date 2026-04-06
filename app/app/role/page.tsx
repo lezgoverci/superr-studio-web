@@ -102,7 +102,9 @@ export default function RolePage() {
                   >
                     <div className="space-y-3">
                       <div className="space-y-1">
-                        <div className="font-semibold text-lg">{role.label}</div>
+                        <div className="font-semibold text-lg">
+                          {role.label}
+                        </div>
                         <div className="text-sm opacity-80">{role.title}</div>
                       </div>
                       <p className="max-w-sm text-sm opacity-90">
