@@ -2,7 +2,11 @@
 
 import type { ReactNode } from "react";
 import { createContext, useContext } from "react";
-import type { HubMemberProfile, MemberLevel } from "@/lib/hub/types";
+import type {
+  HubMemberProfile,
+  HubWhopAccess,
+  MemberLevel,
+} from "@/lib/hub/types";
 import type { ShellNavItem, ShellUser } from "./types";
 
 export type AppShellArea = "workspace" | "builder";
@@ -13,6 +17,8 @@ export type AppShellContextValue = {
   permissions: Set<string>;
   hasPermission: (permission: string) => boolean;
   memberProfile: HubMemberProfile | null;
+  whopAccess: HubWhopAccess | null;
+  hasWhopCommunityAccess: boolean;
   memberLevel: MemberLevel;
   isBuilderUnlocked: boolean;
   currentArea: AppShellArea;
@@ -21,7 +27,9 @@ export type AppShellContextValue = {
   builderNavItems: ShellNavItem[];
   navItems: ShellNavItem[];
   refreshMemberProfile: () => Promise<HubMemberProfile | null>;
+  refreshWhopAccess: () => Promise<HubWhopAccess | null>;
   setMemberProfile: (profile: HubMemberProfile | null) => void;
+  setWhopAccess: (access: HubWhopAccess | null) => void;
 };
 
 const AppShellContext = createContext<AppShellContextValue | null>(null);

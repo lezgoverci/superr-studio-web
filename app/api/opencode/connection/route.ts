@@ -13,6 +13,7 @@ import {
   normalizeOpencodeBaseUrl,
   parseOpencodeUrl,
 } from "@/lib/opencode-server-utils";
+import { getWhopAccessGuardResponse } from "@/lib/whop-access-guard";
 
 type UpsertConnectionRequest = {
   url?: string;
@@ -88,6 +89,11 @@ async function getAuthenticatedUserId(
 
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const whopAccessGuard = await getWhopAccessGuardResponse(session.user.id);
+  if (whopAccessGuard) {
+    return whopAccessGuard;
   }
 
   return session.user.id;

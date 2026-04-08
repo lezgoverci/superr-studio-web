@@ -12,14 +12,19 @@ import {
   MessageSquare,
   Wrench,
 } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api-client";
 import { isWorkflowEditorRoute, resolveShellArea } from "@/lib/app-route-utils";
 import { useSession } from "@/lib/auth-client";
-import type { HubMemberProfile } from "@/lib/hub/types";
+import {
+  buildNextPath,
+  resolvePostWhopAccessRedirect,
+} from "@/lib/auth-redirect";
+import type { HubMemberProfile, HubWhopAccess } from "@/lib/hub/types";
 import { cn } from "@/lib/utils";
+import { isWhopCommunityAccessActive } from "@/lib/whop-access";
 import { AppHeader } from "./app-header";
 import { AppNav } from "./app-nav";
 import { AppShellProvider } from "./shell-context";
@@ -128,6 +133,7 @@ const LOCKED_BUILDER_ITEM_IDS = new Set(["workflows", "sandboxes", "library"]);
 type AppShellProps = {
   children: ReactNode;
   initialMemberProfile: HubMemberProfile | null;
+  initialWhopAccess: HubWhopAccess | null;
 };
 
 function resolveOnboardingRedirectPath({
@@ -181,18 +187,65 @@ function resolveBuilderRedirectPath({
   return null;
 }
 
-function resolveRedirectPath({
+function resolveWhopAccessRedirectPath({
   hasUser,
-  isBuilderUnlocked,
-  memberProfile,
+  hasWhopCommunityAccess,
   pathname,
+  search,
+  joinNextPath,
 }: {
   hasUser: boolean;
+  hasWhopCommunityAccess: boolean;
+  pathname: string;
+  search: string;
+  joinNextPath: string | null;
+}): string | null {
+  if (!hasUser) {
+    return null;
+  }
+
+  if (!hasWhopCommunityAccess) {
+    if (pathname === "/app/join") {
+      return null;
+    }
+
+    const joinUrl = new URL("/app/join", "http://localhost");
+    joinUrl.searchParams.set("next", buildNextPath(pathname, search));
+    return `${joinUrl.pathname}${joinUrl.search}`;
+  }
+
+  if (pathname === "/app/join") {
+    return resolvePostWhopAccessRedirect(joinNextPath);
+  }
+
+  return null;
+}
+
+function resolveRedirectPath({
+  hasUser,
+  hasWhopCommunityAccess,
+  isBuilderUnlocked,
+  joinNextPath,
+  memberProfile,
+  pathname,
+  search,
+}: {
+  hasUser: boolean;
+  hasWhopCommunityAccess: boolean;
   isBuilderUnlocked: boolean;
+  joinNextPath: string | null;
   memberProfile: HubMemberProfile | null;
   pathname: string;
+  search: string;
 }): string | null {
   return (
+    resolveWhopAccessRedirectPath({
+      hasUser,
+      hasWhopCommunityAccess,
+      pathname,
+      search,
+      joinNextPath,
+    }) ??
     resolveOnboardingRedirectPath({
       hasUser,
       memberProfile,
@@ -205,12 +258,20 @@ function resolveRedirectPath({
   );
 }
 
-export function AppShell({ children, initialMemberProfile }: AppShellProps) {
+export function AppShell({
+  children,
+  initialMemberProfile,
+  initialWhopAccess,
+}: AppShellProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, isPending } = useSession();
   const [memberProfile, setMemberProfile] = useState<HubMemberProfile | null>(
     initialMemberProfile
+  );
+  const [whopAccess, setWhopAccess] = useState<HubWhopAccess | null>(
+    initialWhopAccess
   );
 
   const permissions = useMemo(
@@ -239,18 +300,44 @@ export function AppShell({ children, initialMemberProfile }: AppShellProps) {
     }
   }, [session?.user]);
 
+  const refreshWhopAccess = useCallback(async () => {
+    if (!session?.user) {
+      setWhopAccess(null);
+      return null;
+    }
+
+    try {
+      const access = await api.hub.access.get();
+      setWhopAccess(access);
+      return access;
+    } catch (error) {
+      console.error("[app-shell] Failed to refresh Whop access:", error);
+      return null;
+    }
+  }, [session?.user]);
+
   useEffect(() => {
     if (session?.user && !initialMemberProfile) {
       refreshMemberProfile().catch(() => undefined);
     }
   }, [initialMemberProfile, refreshMemberProfile, session?.user]);
 
+  useEffect(() => {
+    if (session?.user && !initialWhopAccess) {
+      refreshWhopAccess().catch(() => undefined);
+    }
+  }, [initialWhopAccess, refreshWhopAccess, session?.user]);
+
   const memberLevel = memberProfile?.level ?? 1;
   const isBuilderUnlocked = memberLevel >= 5;
+  const hasWhopCommunityAccess = isWhopCommunityAccessActive(whopAccess);
   const builderEntryHref = isBuilderUnlocked
     ? "/app/workflows/new"
     : "/app/studio";
   const currentArea = resolveShellArea(pathname);
+  const search = searchParams.toString();
+  const searchSuffix = search ? `?${search}` : "";
+  const joinNextPath = searchParams.get("next");
 
   const workspaceNavItems = useMemo(
     () =>
@@ -289,9 +376,12 @@ export function AppShell({ children, initialMemberProfile }: AppShellProps) {
     : null;
   const redirectPath = resolveRedirectPath({
     hasUser: Boolean(session?.user),
+    hasWhopCommunityAccess,
     isBuilderUnlocked,
+    joinNextPath,
     memberProfile,
     pathname,
+    search: searchSuffix,
   });
 
   useEffect(() => {
@@ -301,7 +391,7 @@ export function AppShell({ children, initialMemberProfile }: AppShellProps) {
   }, [redirectPath, router]);
 
   const isWorkflowCanvas = isWorkflowEditorRoute(pathname);
-  const showSideNav = !isWorkflowCanvas;
+  const showSideNav = hasWhopCommunityAccess && !isWorkflowCanvas;
 
   if (redirectPath) {
     return <div className="h-dvh w-full bg-background" />;
@@ -315,6 +405,8 @@ export function AppShell({ children, initialMemberProfile }: AppShellProps) {
         permissions,
         hasPermission,
         memberProfile,
+        whopAccess,
+        hasWhopCommunityAccess,
         memberLevel,
         isBuilderUnlocked,
         currentArea,
@@ -323,7 +415,9 @@ export function AppShell({ children, initialMemberProfile }: AppShellProps) {
         builderNavItems,
         navItems,
         refreshMemberProfile,
+        refreshWhopAccess,
         setMemberProfile,
+        setWhopAccess,
       }}
     >
       <div

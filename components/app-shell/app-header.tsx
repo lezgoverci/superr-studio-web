@@ -211,8 +211,13 @@ export function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { builderEntryHref, builderNavItems, currentArea, workspaceNavItems } =
-    useAppShellContext();
+  const {
+    builderEntryHref,
+    builderNavItems,
+    currentArea,
+    hasWhopCommunityAccess,
+    workspaceNavItems,
+  } = useAppShellContext();
   const isWorkflowSection = pathname.startsWith("/app/workflows");
   const isBuilderSection = currentArea === "builder";
   const mobileNavItems =
@@ -224,7 +229,7 @@ export function AppHeader() {
       <div className="flex h-full items-center justify-between gap-3 px-3 md:px-4">
         <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3">
           {/* Mobile Navigation */}
-          {!isWorkflowEditor && (
+          {hasWhopCommunityAccess && !isWorkflowEditor && (
             <div className="flex items-center lg:hidden">
               <Sheet onOpenChange={setIsMobileMenuOpen} open={isMobileMenuOpen}>
                 <SheetTrigger asChild>
@@ -310,38 +315,42 @@ export function AppHeader() {
             </span>
           </Link>
 
-          {isWorkflowSection ? <WorkflowSelector pathname={pathname} /> : null}
+          {hasWhopCommunityAccess && isWorkflowSection ? (
+            <WorkflowSelector pathname={pathname} />
+          ) : null}
         </div>
 
         <div className="hidden flex-1 items-center justify-center md:flex">
-          <div className="relative flex h-9 w-56 items-center rounded-full border bg-muted/70 p-1">
-            <div
-              className={cn(
-                "absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-full bg-background shadow-sm transition-transform duration-300",
-                isBuilderSection ? "translate-x-full" : "translate-x-0"
-              )}
-            />
-            <button
-              className={cn(
-                "relative z-10 flex-1 rounded-full font-medium text-xs transition-colors",
-                isBuilderSection ? "text-muted-foreground" : "text-foreground"
-              )}
-              onClick={() => router.push("/app")}
-              type="button"
-            >
-              Workspace
-            </button>
-            <button
-              className={cn(
-                "relative z-10 flex-1 rounded-full font-medium text-xs transition-colors",
-                isBuilderSection ? "text-foreground" : "text-muted-foreground"
-              )}
-              onClick={() => router.push(builderEntryHref)}
-              type="button"
-            >
-              Builder
-            </button>
-          </div>
+          {hasWhopCommunityAccess ? (
+            <div className="relative flex h-9 w-56 items-center rounded-full border bg-muted/70 p-1">
+              <div
+                className={cn(
+                  "absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-full bg-background shadow-sm transition-transform duration-300",
+                  isBuilderSection ? "translate-x-full" : "translate-x-0"
+                )}
+              />
+              <button
+                className={cn(
+                  "relative z-10 flex-1 rounded-full font-medium text-xs transition-colors",
+                  isBuilderSection ? "text-muted-foreground" : "text-foreground"
+                )}
+                onClick={() => router.push("/app")}
+                type="button"
+              >
+                Workspace
+              </button>
+              <button
+                className={cn(
+                  "relative z-10 flex-1 rounded-full font-medium text-xs transition-colors",
+                  isBuilderSection ? "text-foreground" : "text-muted-foreground"
+                )}
+                onClick={() => router.push(builderEntryHref)}
+                type="button"
+              >
+                Builder
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <div className="flex flex-1 items-center justify-end gap-2">

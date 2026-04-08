@@ -48,6 +48,16 @@ export type HubMemberProfile = {
   providerId: string | null;
 };
 
+export type HubWhopAccessStatus = "active" | "missing_access" | "unavailable";
+
+export type HubWhopAccess = {
+  status: HubWhopAccessStatus;
+  hasAccess: boolean;
+  accessLevel: string | null;
+  joinUrl: string | null;
+  message: string | null;
+};
+
 export type HubStarterSource = {
   id: string;
   title: string;

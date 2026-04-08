@@ -6,6 +6,7 @@ import {
   parseOpencodeUrl,
   parsePromptModel,
 } from "@/lib/opencode-server-utils";
+import { getWhopAccessGuardResponse } from "@/lib/whop-access-guard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -147,6 +148,11 @@ async function handleProxy(request: Request, context: RouteContext) {
 
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const whopAccessGuard = await getWhopAccessGuardResponse(session.user.id);
+  if (whopAccessGuard) {
+    return whopAccessGuard;
   }
 
   const connection = await getResolvedOpencodeConnectionForUser(

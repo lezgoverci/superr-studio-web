@@ -6,6 +6,7 @@ import { getIntegrations } from "@/lib/db/integrations";
 import { workflows } from "@/lib/db/schema";
 import type { IntegrationType } from "@/lib/types/integration";
 import { generateId } from "@/lib/utils/id";
+import { getWhopAccessGuardResponse } from "@/lib/whop-access-guard";
 import { buildExportPayload } from "@/lib/workflow-export-utils";
 import type { WorkflowEdge, WorkflowNode } from "@/lib/workflow-store";
 import { getIntegration } from "@/plugins";
@@ -261,6 +262,11 @@ export async function POST(
     const user = await getAuthenticatedUser(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const whopAccessGuard = await getWhopAccessGuardResponse(user.id);
+    if (whopAccessGuard) {
+      return whopAccessGuard;
     }
 
     // 1. Get workflow

@@ -7,6 +7,7 @@ import {
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { workflowExecutions, workflows } from "@/lib/db/schema";
+import { getWhopAccessGuardResponse } from "@/lib/whop-access-guard";
 
 export async function GET(
   request: Request,
@@ -20,6 +21,11 @@ export async function GET(
 
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const whopAccessGuard = await getWhopAccessGuardResponse(session.user.id);
+    if (whopAccessGuard) {
+      return whopAccessGuard;
     }
 
     // Verify workflow ownership
@@ -80,6 +86,11 @@ export async function DELETE(
 
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const whopAccessGuard = await getWhopAccessGuardResponse(session.user.id);
+    if (whopAccessGuard) {
+      return whopAccessGuard;
     }
 
     // Verify workflow ownership

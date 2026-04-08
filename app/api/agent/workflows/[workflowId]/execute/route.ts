@@ -5,6 +5,7 @@ import { AGENT_SCOPES, authenticateAgentRequest } from "@/lib/agent-auth";
 import { db } from "@/lib/db";
 import { validateWorkflowIntegrations } from "@/lib/db/integrations";
 import { workflowExecutions, workflows } from "@/lib/db/schema";
+import { getWhopAccessGuardResponse } from "@/lib/whop-access-guard";
 import { executeWorkflow } from "@/lib/workflow-executor.workflow";
 import type { WorkflowEdge, WorkflowNode } from "@/lib/workflow-store";
 
@@ -64,6 +65,11 @@ export async function POST(
         { error: agentAuth.error },
         { status: agentAuth.status }
       );
+    }
+
+    const whopAccessGuard = await getWhopAccessGuardResponse(agentAuth.userId);
+    if (whopAccessGuard) {
+      return whopAccessGuard;
     }
 
     const { workflowId } = await context.params;

@@ -1,5 +1,6 @@
 const DEFAULT_AUTH_REDIRECT = "/app";
 const AUTH_ROUTES = new Set(["/login", "/signup"]);
+const JOIN_ROUTE = "/app/join";
 const LOCAL_URL_BASE = "http://localhost";
 
 export function isAuthRoute(pathname: string): boolean {
@@ -37,4 +38,19 @@ export function resolvePostAuthRedirect(
   }
 
   return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+}
+
+export function resolvePostWhopAccessRedirect(
+  nextPath: string | null | undefined
+): string {
+  const resolved = resolvePostAuthRedirect(nextPath);
+  if (
+    resolved === JOIN_ROUTE ||
+    resolved.startsWith(`${JOIN_ROUTE}?`) ||
+    resolved.startsWith(`${JOIN_ROUTE}#`)
+  ) {
+    return DEFAULT_AUTH_REDIRECT;
+  }
+
+  return resolved;
 }

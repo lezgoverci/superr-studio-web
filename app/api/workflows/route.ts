@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { workflows } from "@/lib/db/schema";
+import { getWhopAccessGuardResponse } from "@/lib/whop-access-guard";
 
 export async function GET(request: Request) {
   try {
@@ -12,6 +13,11 @@ export async function GET(request: Request) {
 
     if (!session?.user) {
       return NextResponse.json([], { status: 200 });
+    }
+
+    const whopAccessGuard = await getWhopAccessGuardResponse(session.user.id);
+    if (whopAccessGuard) {
+      return whopAccessGuard;
     }
 
     const userWorkflows = await db

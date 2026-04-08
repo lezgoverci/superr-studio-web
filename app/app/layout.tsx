@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { AppShell } from "@/components/app-shell/app-shell";
 import { auth } from "@/lib/auth";
 import { getHubMemberProfile } from "@/lib/hub/member-profiles";
+import { getWhopCommunityAccess } from "@/lib/whop-access";
 
 type AppLayoutProps = {
   children: ReactNode;
@@ -13,14 +14,22 @@ export default async function AppLayout({ children }: AppLayoutProps) {
     headers: await headers(),
   });
 
-  const initialMemberProfile = session?.user?.id
-    ? await getHubMemberProfile(session.user.id, {
-        name: session.user.name ?? null,
-        image: session.user.image ?? null,
-      })
-    : null;
+  const [initialMemberProfile, initialWhopAccess] = session?.user?.id
+    ? await Promise.all([
+        getHubMemberProfile(session.user.id, {
+          name: session.user.name ?? null,
+          image: session.user.image ?? null,
+        }),
+        getWhopCommunityAccess(session.user.id),
+      ])
+    : [null, null];
 
   return (
-    <AppShell initialMemberProfile={initialMemberProfile}>{children}</AppShell>
+    <AppShell
+      initialMemberProfile={initialMemberProfile}
+      initialWhopAccess={initialWhopAccess}
+    >
+      {children}
+    </AppShell>
   );
 }

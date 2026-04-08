@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { validateWorkflowIntegrations } from "@/lib/db/integrations";
 import { workflows } from "@/lib/db/schema";
+import { getWhopAccessGuardResponse } from "@/lib/whop-access-guard";
 
 // Helper to strip sensitive data from nodes for public viewing
 function sanitizeNodesForPublicView(
@@ -56,6 +57,13 @@ export async function GET(
     }
 
     const isOwner = session?.user?.id === workflow.userId;
+
+    if (isOwner && session?.user?.id) {
+      const whopAccessGuard = await getWhopAccessGuardResponse(session.user.id);
+      if (whopAccessGuard) {
+        return whopAccessGuard;
+      }
+    }
 
     // If not owner, check if workflow is public
     if (!isOwner && workflow.visibility !== "public") {
@@ -148,6 +156,11 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const whopAccessGuard = await getWhopAccessGuardResponse(session.user.id);
+    if (whopAccessGuard) {
+      return whopAccessGuard;
+    }
+
     // Verify ownership
     const existingWorkflow = await db.query.workflows.findFirst({
       where: and(
@@ -236,6 +249,11 @@ export async function DELETE(
 
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const whopAccessGuard = await getWhopAccessGuardResponse(session.user.id);
+    if (whopAccessGuard) {
+      return whopAccessGuard;
     }
 
     // Verify ownership

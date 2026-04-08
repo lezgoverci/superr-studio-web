@@ -21,7 +21,6 @@ const VERCEL_PROVIDER_ID = "vercel";
 const WHOP_AUTHORIZATION_URL = "https://api.whop.com/oauth/authorize";
 const WHOP_TOKEN_URL = "https://api.whop.com/oauth/token";
 const WHOP_USER_INFO_URL = "https://api.whop.com/oauth/userinfo";
-const WHOP_API_BASE_URL = "https://api.whop.com";
 
 const VERCEL_AUTHORIZATION_URL = "https://vercel.com/oauth/authorize";
 const VERCEL_TOKEN_URL = "https://api.vercel.com/login/oauth/token";
@@ -49,15 +48,6 @@ type WhopProfile = {
   avatar?: string;
   avatar_url?: string;
   email_verified?: boolean;
-};
-
-type WhopAccessResponse = {
-  has_access?: boolean;
-  hasAccess?: boolean;
-  access?: boolean;
-  valid?: boolean;
-  active?: boolean;
-  data?: WhopAccessResponse;
 };
 
 // Construct schema object for drizzle adapter
@@ -128,14 +118,6 @@ function getTrustedOrigins(baseURL?: string) {
   );
 }
 
-function getWhopResourceId() {
-  const resourceId = process.env.WHOP_RESOURCE_ID?.trim();
-  if (!resourceId) {
-    throw new Error("WHOP_RESOURCE_ID is not configured.");
-  }
-  return resourceId;
-}
-
 function createOAuthNonce() {
   return crypto.randomUUID().replaceAll("-", "");
 }
@@ -164,17 +146,6 @@ function resolveWhopUserEmail(profile: WhopProfile, userId: string) {
   return `${userId}@users.whop.local`;
 }
 
-function hasWhopAccess(response: WhopAccessResponse) {
-  const payload = response.data ?? response;
-  return (
-    payload.has_access === true ||
-    payload.hasAccess === true ||
-    payload.access === true ||
-    payload.valid === true ||
-    payload.active === true
-  );
-}
-
 async function fetchWhopProfile(accessToken: string): Promise<WhopProfile> {
   const response = await fetch(WHOP_USER_INFO_URL, {
     headers: {
@@ -192,61 +163,10 @@ async function fetchWhopProfile(accessToken: string): Promise<WhopProfile> {
   return profile;
 }
 
-async function userHasRequiredWhopAccess(
-  accessToken: string,
-  whopUserId: string,
-  resourceId: string
-) {
-  const encodedUserId = encodeURIComponent(whopUserId);
-  const encodedResourceId = encodeURIComponent(resourceId);
-
-  // Whop docs show this as /users/{id}/access/{resource_id}. Keep a fallback path
-  // because API versions can vary across environments.
-  const candidates = [
-    `${WHOP_API_BASE_URL}/api/v1/users/${encodedUserId}/access/${encodedResourceId}`,
-    `${WHOP_API_BASE_URL}/api/v5/users/${encodedUserId}/access/${encodedResourceId}`,
-    `${WHOP_API_BASE_URL}/users/${encodedUserId}/access/${encodedResourceId}`,
-  ];
-
-  for (const url of candidates) {
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: "application/json",
-      },
-    });
-
-    if (response.status === 404) {
-      continue;
-    }
-
-    if (!response.ok) {
-      const message = await response.text();
-      throw new Error(`Failed to verify Whop access: ${message}`);
-    }
-
-    const payload = (await response.json()) as WhopAccessResponse;
-    return hasWhopAccess(payload);
-  }
-
-  throw new Error("Unable to verify Whop access with available endpoints.");
-}
-
 async function getWhopUserInfo(tokens: OAuthTokens) {
-  const resourceId = getWhopResourceId();
   const accessToken = getAccessToken(tokens);
   const profile = await fetchWhopProfile(accessToken);
   const userId = getWhopUserId(profile);
-
-  const hasAccess = await userHasRequiredWhopAccess(
-    accessToken,
-    userId,
-    resourceId
-  );
-
-  if (!hasAccess) {
-    throw new Error("Your Whop account does not have required access.");
-  }
 
   return {
     id: userId,

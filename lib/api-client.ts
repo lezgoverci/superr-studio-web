@@ -15,6 +15,7 @@ import type {
   HubLevelCheckResponse,
   HubMemberProfile,
   HubProgressResponse,
+  HubWhopAccess,
 } from "./hub/types";
 import type { IntegrationConfig, IntegrationType } from "./types/integration";
 import type { WorkflowEdge, WorkflowNode } from "./workflow-store";
@@ -755,6 +756,9 @@ export const userPreferencesApi = {
 };
 
 export const hubApi = {
+  access: {
+    get: () => apiCall<HubWhopAccess>("/api/hub/access"),
+  },
   profile: {
     get: () => apiCall<HubMemberProfile>("/api/hub/profile"),
     update: (data: {

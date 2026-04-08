@@ -16,5 +16,5 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const query = await searchParams;
   const nextPath = resolvePostAuthRedirect(firstValue(query.next));
 
-  return <AuthPage nextPath={nextPath} />;
+  return <AuthPage nextPath={nextPath} variant="login" />;
 }

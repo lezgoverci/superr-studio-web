@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { workflows } from "@/lib/db/schema";
 import { generateId } from "@/lib/utils/id";
+import { getWhopAccessGuardResponse } from "@/lib/whop-access-guard";
 
 // Node type for type-safe node manipulation
 type WorkflowNodeLike = {
@@ -78,6 +79,11 @@ export async function POST(
 
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const whopAccessGuard = await getWhopAccessGuardResponse(session.user.id);
+    if (whopAccessGuard) {
+      return whopAccessGuard;
     }
 
     // Find the workflow to duplicate

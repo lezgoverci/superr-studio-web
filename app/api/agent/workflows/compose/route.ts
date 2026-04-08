@@ -1,6 +1,7 @@
 import { streamText } from "ai";
 import { NextResponse } from "next/server";
 import { AGENT_SCOPES, authenticateAgentRequest } from "@/lib/agent-auth";
+import { getWhopAccessGuardResponse } from "@/lib/whop-access-guard";
 import {
   buildWorkflowSystemPrompt,
   buildWorkflowUserPrompt,
@@ -20,6 +21,11 @@ export async function POST(request: Request) {
         { error: agentAuth.error },
         { status: agentAuth.status }
       );
+    }
+
+    const whopAccessGuard = await getWhopAccessGuardResponse(agentAuth.userId);
+    if (whopAccessGuard) {
+      return whopAccessGuard;
     }
 
     const body = await request.json();

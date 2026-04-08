@@ -4,6 +4,7 @@ import { AGENT_SCOPES, authenticateAgentRequest } from "@/lib/agent-auth";
 import { db } from "@/lib/db";
 import { validateWorkflowIntegrations } from "@/lib/db/integrations";
 import { workflows } from "@/lib/db/schema";
+import { getWhopAccessGuardResponse } from "@/lib/whop-access-guard";
 import { diffWorkflow } from "@/lib/workflow-diff";
 import {
   normalizeWorkflowVisibility,
@@ -225,6 +226,11 @@ export async function GET(
       );
     }
 
+    const whopAccessGuard = await getWhopAccessGuardResponse(agentAuth.userId);
+    if (whopAccessGuard) {
+      return whopAccessGuard;
+    }
+
     const { workflowId } = await context.params;
 
     const workflow = await db.query.workflows.findFirst({
@@ -268,6 +274,11 @@ export async function PATCH(
         { error: agentAuth.error },
         { status: agentAuth.status }
       );
+    }
+
+    const whopAccessGuard = await getWhopAccessGuardResponse(agentAuth.userId);
+    if (whopAccessGuard) {
+      return whopAccessGuard;
     }
 
     const { workflowId } = await context.params;
