@@ -201,7 +201,81 @@ const QUICK_SUGGESTIONS = [
   "Explain what this workflow does",
   "Add an HTTP request step after the trigger",
 ] as const;
+const WORKFLOW_CREATION_QUICK_SUGGESTIONS = [
+  "Build a workflow that saves every webhook lead to Airtable and posts a Slack alert",
+  "Create a workflow that summarizes form submissions and emails the result",
+  "Design a workflow that turns an RSS feed into social posts",
+] as const;
+const WORKFLOW_EDITOR_QUICK_SUGGESTIONS = [
+  "Explain what this workflow does",
+  "Add an HTTP request step after the trigger",
+  "Help me debug why this node is failing",
+] as const;
 const SKILLS_UPDATED_EVENT = "superr:skills-updated";
+
+function getChatPlaceholder(
+  pageContext: AiAgentContextEnvelope | null,
+  isGenerating: boolean,
+): string {
+  if (isGenerating) {
+    return "Waiting for response…";
+  }
+
+  if (pageContext?.route === "/app/workflows/new") {
+    return "Describe the workflow you want to build…";
+  }
+
+  if (pageContext?.pageType === "workflow-editor") {
+    return "Ask the builder to add steps, debug nodes, or explain this workflow…";
+  }
+
+  if (pageContext?.pageType === "assistant") {
+    return "Ask the assistant anything…";
+  }
+
+  return "Ask anything… (Enter to send, Shift+Enter for new line)";
+}
+
+function getChatSuggestions(
+  pageContext: AiAgentContextEnvelope | null,
+): readonly string[] {
+  if (pageContext?.route === "/app/workflows/new") {
+    return WORKFLOW_CREATION_QUICK_SUGGESTIONS;
+  }
+
+  if (pageContext?.pageType === "workflow-editor") {
+    return WORKFLOW_EDITOR_QUICK_SUGGESTIONS;
+  }
+
+  return QUICK_SUGGESTIONS;
+}
+
+function getEmptyStateCopy(pageContext: AiAgentContextEnvelope | null): {
+  title: string;
+  description: string;
+} {
+  if (pageContext?.route === "/app/workflows/new") {
+    return {
+      title: "Workflow Builder",
+      description:
+        "Describe the workflow you want to build. The assistant can help shape triggers, steps, and logic.",
+    };
+  }
+
+  if (pageContext?.pageType === "workflow-editor") {
+    return {
+      title: "Workflow Helper",
+      description:
+        "Ask for node changes, debugging help, or an explanation of the current workflow.",
+    };
+  }
+
+  return {
+    title: "New Chat",
+    description:
+      "Ask anything — the AI agent can write code, run commands, search the web, edit files, and build workflows.",
+  };
+}
 
 function isToolPart(
   part: UIMessage["parts"][number],
@@ -558,6 +632,9 @@ function ChatSurface({
 
   const isMinimizedVariant = uiVariant === "minimized";
   const shouldShowConversation = !hideConversation;
+  const chatSuggestions = getChatSuggestions(pageContext);
+  const emptyStateCopy = getEmptyStateCopy(pageContext);
+  const promptPlaceholder = getChatPlaceholder(pageContext, isGenerating);
 
   return (
     <>
@@ -573,11 +650,11 @@ function ChatSurface({
               </div>
             ) : messages.length === 0 ? (
               <ConversationEmptyState
-                description="Ask anything — the AI agent can write code, run commands, search the web, edit files, and build workflows."
+                description={emptyStateCopy.description}
                 icon={
                   <MessageSquare className="size-8 text-muted-foreground" />
                 }
-                title="New Chat"
+                title={emptyStateCopy.title}
               />
             ) : (
               messages.map((message) => (
@@ -604,7 +681,7 @@ function ChatSurface({
         {shouldShowConversation && messages.length === 0 && (
           <div className="mb-2">
             <Suggestions>
-              {QUICK_SUGGESTIONS.map((suggestion) => (
+              {chatSuggestions.map((suggestion) => (
                 <Suggestion
                   key={suggestion}
                   onClick={(value) => setInput(value)}
@@ -627,11 +704,7 @@ function ChatSurface({
           <PromptInputBody>
             <PromptInputTextarea
               onChange={(event) => setInput(event.target.value)}
-              placeholder={
-                isGenerating
-                  ? "Waiting for response..."
-                  : "Ask anything... (Enter to send, Shift+Enter for new line)"
-              }
+              placeholder={promptPlaceholder}
               value={input}
             />
           </PromptInputBody>

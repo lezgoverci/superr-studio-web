@@ -1,6 +1,6 @@
 "use client";
 
-import { Sparkles } from "lucide-react";
+import { Check, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -9,6 +9,8 @@ import { useAppShellContext } from "@/components/app-shell/shell-context";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/lib/api-client";
 import {
@@ -16,6 +18,11 @@ import {
   MEMBER_ROLE_DETAILS,
 } from "@/lib/hub/content";
 import type { MemberRole } from "@/lib/hub/types";
+import { cn } from "@/lib/utils";
+
+function isMemberRole(value: string): value is MemberRole {
+  return MEMBER_ROLE_DETAILS.some((role) => role.value === value);
+}
 
 export default function RolePage() {
   const router = useRouter();
@@ -84,38 +91,75 @@ export default function RolePage() {
         </Alert>
 
         <div className="grid gap-4 md:grid-cols-2">
-          {MEMBER_ROLE_DETAILS.map((role) => {
-            const selected = selectedRole === role.value;
+          <RadioGroup
+            aria-label="Team role"
+            className="grid gap-4 md:col-span-2 md:grid-cols-2"
+            onValueChange={(value: string) => {
+              if (isMemberRole(value)) {
+                setSelectedRole(value);
+              }
+            }}
+            value={selectedRole}
+          >
+            {MEMBER_ROLE_DETAILS.map((role) => {
+              const selected = selectedRole === role.value;
+              const recommended = recommendedRole === role.value;
+              const inputId = `team-role-${role.value}`;
 
-            return (
-              <Card
-                className={selected ? "border-primary shadow-sm" : undefined}
-                key={role.value}
-              >
-                <CardContent className="p-0">
-                  <Button
-                    aria-pressed={selected}
-                    className="h-full min-h-44 w-full justify-start whitespace-normal rounded-xl px-5 py-5 text-left"
-                    onClick={() => setSelectedRole(role.value)}
-                    type="button"
-                    variant={selected ? "default" : "ghost"}
+              return (
+                <div className="h-full" key={role.value}>
+                  <RadioGroupItem
+                    className="peer sr-only"
+                    id={inputId}
+                    value={role.value}
+                  />
+                  <Label
+                    className={cn(
+                      "flex h-full min-h-44 cursor-pointer flex-col items-start justify-between gap-6 rounded-2xl border bg-card px-5 py-5 text-left font-normal leading-normal shadow-sm transition-all hover:-translate-y-0.5 hover:border-foreground/15 hover:shadow-md peer-focus-visible:border-ring peer-focus-visible:ring-[3px] peer-focus-visible:ring-ring/40",
+                      selected &&
+                        "border-primary bg-primary/[0.04] shadow-md ring-[3px] ring-primary/12"
+                    )}
+                    htmlFor={inputId}
                   >
-                    <div className="space-y-3">
-                      <div className="space-y-1">
-                        <div className="font-semibold text-lg">
-                          {role.label}
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {recommended ? (
+                            <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/8 px-2.5 py-1 font-medium text-[11px] text-primary uppercase tracking-[0.18em]">
+                              Recommended
+                            </span>
+                          ) : null}
                         </div>
-                        <div className="text-sm opacity-80">{role.title}</div>
+                        <div className="space-y-1">
+                          <div className="font-semibold text-xl">
+                            {role.label}
+                          </div>
+                          <div className="text-muted-foreground text-sm">
+                            {role.title}
+                          </div>
+                        </div>
                       </div>
-                      <p className="max-w-sm text-sm opacity-90">
-                        {role.description}
-                      </p>
+
+                      <span
+                        className={cn(
+                          "flex size-7 shrink-0 items-center justify-center rounded-full border transition-colors",
+                          selected
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-background text-transparent"
+                        )}
+                      >
+                        <Check className="size-4" />
+                      </span>
                     </div>
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
+
+                    <p className="max-w-sm text-base text-foreground/85 leading-7">
+                      {role.description}
+                    </p>
+                  </Label>
+                </div>
+              );
+            })}
+          </RadioGroup>
         </div>
 
         <Card>

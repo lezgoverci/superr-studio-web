@@ -10,6 +10,7 @@ import {
   setAiAgentSessionForContextAtom,
   setLastActiveSessionAtom,
 } from "@/lib/ai-agent/window-state";
+import { getAssistantReturnPath } from "@/lib/app-route-utils";
 
 function areContextsEquivalent(left: unknown, right: unknown): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
@@ -90,7 +91,7 @@ function AIAgentFullPageContent() {
       isOpen: true,
       minimizedView: "input-only",
     }));
-    router.replace(windowState.originPath || "/app");
+    router.replace(getAssistantReturnPath(windowState.originPath));
   }, [router, setWindowState, windowState.originPath]);
 
   const handleOpenFullpage = useCallback(() => {

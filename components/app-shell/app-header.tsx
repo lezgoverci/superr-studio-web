@@ -14,12 +14,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { api } from "@/lib/api-client";
+import { isWorkflowEditorRoute } from "@/lib/app-route-utils";
 import { cn } from "@/lib/utils";
 import { UserMenu } from "../workflows/user-menu";
 import { NavContent } from "./app-nav";
 import { useAppShellContext } from "./shell-context";
 
-const WORKFLOW_EDITOR_PATH = /^\/app\/workflows\/[^/]+$/;
 const WORKFLOW_DETAIL_PATH = /^\/app\/workflows\/([^/]+)$/;
 
 type WorkflowOption = {
@@ -217,8 +217,7 @@ export function AppHeader() {
   const isBuilderSection = currentArea === "builder";
   const mobileNavItems =
     currentArea === "builder" ? builderNavItems : workspaceNavItems;
-  const isWorkflowEditor =
-    pathname === "/app/workflows/new" || WORKFLOW_EDITOR_PATH.test(pathname);
+  const isWorkflowEditor = isWorkflowEditorRoute(pathname);
 
   return (
     <header className="pointer-events-auto h-14 border-b bg-background/95 backdrop-blur">

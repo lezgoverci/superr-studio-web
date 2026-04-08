@@ -3,13 +3,18 @@ import type {
   AiAgentContextRetriever,
   AiAgentPageContextSeed,
 } from "@/lib/ai-agent/page-context/types";
+import { isWorkflowEditorRoute } from "@/lib/app-route-utils";
 
-const WORKFLOW_EDITOR_ROUTE_REGEX = /^\/app\/workflows\/([^/]+)$/;
+const WORKFLOW_DETAIL_ROUTE_REGEX = /^\/app\/workflows\/([^/]+)$/;
 
 function createWorkflowEditorContext(
   input: AiAgentContextResolveInput
 ): AiAgentPageContextSeed | null {
-  const match = input.pathname.match(WORKFLOW_EDITOR_ROUTE_REGEX);
+  if (!isWorkflowEditorRoute(input.pathname)) {
+    return null;
+  }
+
+  const match = input.pathname.match(WORKFLOW_DETAIL_ROUTE_REGEX);
   const workflowId = match?.[1];
   if (!workflowId) {
     return null;
@@ -122,18 +127,18 @@ function createLibraryContext(
   };
 }
 
-function createAgentContext(
+function createAssistantContext(
   input: AiAgentContextResolveInput
 ): AiAgentPageContextSeed | null {
-  if (input.pathname !== "/app/agent") {
+  if (input.pathname !== "/app/assistant") {
     return null;
   }
 
   return {
-    pageType: "agent",
-    route: "/app/agent",
+    pageType: "assistant",
+    route: "/app/assistant",
     capabilities: ["full-agent-chat", "manage-sessions"],
-    summary: "Using AI Agent full-page chat.",
+    summary: "Using AI assistant full-page chat.",
   };
 }
 
@@ -159,6 +164,6 @@ export const AI_AGENT_CONTEXT_RETRIEVERS: AiAgentContextRetriever[] = [
   createDashboardContext,
   createSettingsContext,
   createLibraryContext,
-  createAgentContext,
+  createAssistantContext,
   createFallbackContext,
 ];

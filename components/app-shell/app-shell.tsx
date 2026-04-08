@@ -16,12 +16,13 @@ import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api-client";
+import { isWorkflowEditorRoute, resolveShellArea } from "@/lib/app-route-utils";
 import { useSession } from "@/lib/auth-client";
 import type { HubMemberProfile } from "@/lib/hub/types";
 import { cn } from "@/lib/utils";
 import { AppHeader } from "./app-header";
 import { AppNav } from "./app-nav";
-import { type AppShellArea, AppShellProvider } from "./shell-context";
+import { AppShellProvider } from "./shell-context";
 import type { ShellNavItem, ShellUser } from "./types";
 
 const DEFAULT_PERMISSIONS = [
@@ -124,32 +125,85 @@ const BUILDER_NAV_ITEMS: ShellNavItem[] = [
 ];
 
 const LOCKED_BUILDER_ITEM_IDS = new Set(["workflows", "sandboxes", "library"]);
-const WORKFLOW_EDITOR_PATH = /^\/app\/workflows\/[^/]+$/;
-
-function isWorkflowCanvasRoute(pathname: string): boolean {
-  return (
-    pathname === "/app/workflows/new" || WORKFLOW_EDITOR_PATH.test(pathname)
-  );
-}
-
-function resolveShellArea(pathname: string): AppShellArea {
-  if (
-    pathname === "/app/studio" ||
-    pathname === "/app/assistant" ||
-    pathname.startsWith("/app/workflows") ||
-    pathname.startsWith("/app/sandboxes") ||
-    pathname.startsWith("/app/library")
-  ) {
-    return "builder";
-  }
-
-  return "workspace";
-}
-
 type AppShellProps = {
   children: ReactNode;
   initialMemberProfile: HubMemberProfile | null;
 };
+
+function resolveOnboardingRedirectPath({
+  hasUser,
+  memberProfile,
+  pathname,
+}: {
+  hasUser: boolean;
+  memberProfile: HubMemberProfile | null;
+  pathname: string;
+}): string | null {
+  if (hasUser && memberProfile && !memberProfile.onboardingCompletedAt) {
+    return pathname === "/app/welcome" ? null : "/app/welcome";
+  }
+
+  if (hasUser && memberProfile?.onboardingCompletedAt && !memberProfile.role) {
+    return pathname === "/app/role" ? null : "/app/role";
+  }
+
+  if (
+    hasUser &&
+    pathname === "/app/welcome" &&
+    memberProfile?.onboardingCompletedAt
+  ) {
+    return memberProfile.role ? "/app" : "/app/role";
+  }
+
+  if (hasUser && pathname === "/app/role" && memberProfile?.role) {
+    return "/app";
+  }
+
+  return null;
+}
+
+function resolveBuilderRedirectPath({
+  isBuilderUnlocked,
+  pathname,
+}: {
+  isBuilderUnlocked: boolean;
+  pathname: string;
+}): string | null {
+  if (
+    !isBuilderUnlocked &&
+    (pathname.startsWith("/app/workflows") ||
+      pathname.startsWith("/app/sandboxes") ||
+      pathname.startsWith("/app/library"))
+  ) {
+    return "/app/studio";
+  }
+
+  return null;
+}
+
+function resolveRedirectPath({
+  hasUser,
+  isBuilderUnlocked,
+  memberProfile,
+  pathname,
+}: {
+  hasUser: boolean;
+  isBuilderUnlocked: boolean;
+  memberProfile: HubMemberProfile | null;
+  pathname: string;
+}): string | null {
+  return (
+    resolveOnboardingRedirectPath({
+      hasUser,
+      memberProfile,
+      pathname,
+    }) ??
+    resolveBuilderRedirectPath({
+      isBuilderUnlocked,
+      pathname,
+    })
+  );
+}
 
 export function AppShell({ children, initialMemberProfile }: AppShellProps) {
   const pathname = usePathname();
@@ -233,77 +287,23 @@ export function AppShell({ children, initialMemberProfile }: AppShellProps) {
         isAnonymous: false,
       }
     : null;
-
-  const shouldRedirectToWelcome = Boolean(
-    session?.user &&
-      memberProfile &&
-      !memberProfile.onboardingCompletedAt &&
-      pathname !== "/app/welcome"
-  );
-  const shouldRedirectToRole = Boolean(
-    session?.user &&
-      memberProfile?.onboardingCompletedAt &&
-      !memberProfile.role &&
-      pathname !== "/app/role"
-  );
-  const shouldRedirectFromWelcome = Boolean(
-    session?.user &&
-      pathname === "/app/welcome" &&
-      memberProfile?.onboardingCompletedAt
-  );
-  const shouldRedirectFromRole = Boolean(
-    session?.user && pathname === "/app/role" && memberProfile?.role
-  );
-  const shouldRedirectLockedBuilderRoute =
-    !isBuilderUnlocked &&
-    (pathname.startsWith("/app/workflows") ||
-      pathname.startsWith("/app/sandboxes") ||
-      pathname.startsWith("/app/library"));
+  const redirectPath = resolveRedirectPath({
+    hasUser: Boolean(session?.user),
+    isBuilderUnlocked,
+    memberProfile,
+    pathname,
+  });
 
   useEffect(() => {
-    if (shouldRedirectToWelcome) {
-      router.replace("/app/welcome");
-      return;
+    if (redirectPath) {
+      router.replace(redirectPath);
     }
+  }, [redirectPath, router]);
 
-    if (shouldRedirectToRole) {
-      router.replace("/app/role");
-      return;
-    }
-
-    if (shouldRedirectLockedBuilderRoute) {
-      router.replace("/app/studio");
-      return;
-    }
-
-    if (shouldRedirectFromWelcome) {
-      router.replace(memberProfile?.role ? "/app" : "/app/role");
-      return;
-    }
-
-    if (shouldRedirectFromRole) {
-      router.replace("/app");
-    }
-  }, [
-    memberProfile?.role,
-    router,
-    shouldRedirectFromWelcome,
-    shouldRedirectFromRole,
-    shouldRedirectLockedBuilderRoute,
-    shouldRedirectToRole,
-    shouldRedirectToWelcome,
-  ]);
-
-  const isWorkflowCanvas = isWorkflowCanvasRoute(pathname);
+  const isWorkflowCanvas = isWorkflowEditorRoute(pathname);
   const showSideNav = !isWorkflowCanvas;
 
-  if (
-    shouldRedirectToWelcome ||
-    shouldRedirectToRole ||
-    shouldRedirectFromWelcome ||
-    shouldRedirectFromRole ||
-    shouldRedirectLockedBuilderRoute
-  ) {
+  if (redirectPath) {
     return <div className="h-dvh w-full bg-background" />;
   }
 

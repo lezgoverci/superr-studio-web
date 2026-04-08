@@ -13,6 +13,11 @@ import {
   setAiAgentSessionForContextAtom,
   setLastActiveSessionAtom,
 } from "@/lib/ai-agent/window-state";
+import {
+  getAssistantReturnPath,
+  isAssistantRoute,
+  isWorkflowChatEligibleRoute,
+} from "@/lib/app-route-utils";
 import { cn } from "@/lib/utils";
 
 function areContextsEquivalent(left: unknown, right: unknown): boolean {
@@ -30,7 +35,8 @@ export function AIAgentWindowManager() {
   const [hydrated, setHydrated] = useState(false);
 
   const isAppRoute = pathname.startsWith("/app");
-  const isAgentRoute = pathname === "/app";
+  const isAssistantFullPageRoute = isAssistantRoute(pathname);
+  const shouldRenderMinimizedChat = isWorkflowChatEligibleRoute(pathname);
 
   useEffect(() => {
     hydrateWindowState(loadAiAgentWindowStateFromStorage());
@@ -45,7 +51,7 @@ export function AIAgentWindowManager() {
   }, [hydrated, windowState]);
 
   useEffect(() => {
-    if (!(hydrated && isAppRoute && !isAgentRoute)) {
+    if (!(hydrated && isAppRoute && !isAssistantFullPageRoute)) {
       return;
     }
 
@@ -53,7 +59,9 @@ export function AIAgentWindowManager() {
       const shouldUpdateContext =
         previous.activeContextKey !== pageContext.contextKey ||
         !areContextsEquivalent(previous.activeContext, pageContext);
-      const shouldUpdateOrigin = previous.originPath !== pathname;
+      const shouldUpdateOrigin =
+        isWorkflowChatEligibleRoute(pathname) &&
+        previous.originPath !== pathname;
 
       if (!(shouldUpdateContext || shouldUpdateOrigin)) {
         return previous;
@@ -61,14 +69,14 @@ export function AIAgentWindowManager() {
 
       return {
         ...previous,
-        originPath: pathname,
+        originPath: shouldUpdateOrigin ? pathname : previous.originPath,
         activeContextKey: pageContext.contextKey,
         activeContext: pageContext,
       };
     });
   }, [
     hydrated,
-    isAgentRoute,
+    isAssistantFullPageRoute,
     isAppRoute,
     pageContext,
     pathname,
@@ -82,7 +90,7 @@ export function AIAgentWindowManager() {
         isAppRoute &&
         windowState.isOpen &&
         windowState.mode === "fullpage" &&
-        !isAgentRoute
+        !isAssistantFullPageRoute
       )
     ) {
       return;
@@ -101,7 +109,7 @@ export function AIAgentWindowManager() {
     });
   }, [
     hydrated,
-    isAgentRoute,
+    isAssistantFullPageRoute,
     isAppRoute,
     setWindowState,
     windowState.isOpen,
@@ -109,7 +117,7 @@ export function AIAgentWindowManager() {
   ]);
 
   useEffect(() => {
-    if (!(hydrated && isAgentRoute)) {
+    if (!(hydrated && isAssistantFullPageRoute)) {
       return;
     }
 
@@ -123,14 +131,14 @@ export function AIAgentWindowManager() {
         isOpen: true,
       };
     });
-  }, [hydrated, isAgentRoute, setWindowState]);
+  }, [hydrated, isAssistantFullPageRoute, setWindowState]);
 
   const activeContext = useMemo(() => {
-    if (isAgentRoute) {
+    if (isAssistantFullPageRoute) {
       return windowState.activeContext ?? pageContext;
     }
     return pageContext;
-  }, [isAgentRoute, pageContext, windowState.activeContext]);
+  }, [isAssistantFullPageRoute, pageContext, windowState.activeContext]);
 
   const activeContextKey = activeContext?.contextKey ?? null;
   const activeSessionId =
@@ -166,27 +174,34 @@ export function AIAgentWindowManager() {
       minimizedView: "input-only",
     }));
 
-    if (isAgentRoute) {
-      router.replace(windowState.originPath || "/app");
+    if (isAssistantFullPageRoute) {
+      router.replace(getAssistantReturnPath(windowState.originPath));
     }
-  }, [isAgentRoute, router, setWindowState, windowState.originPath]);
+  }, [
+    isAssistantFullPageRoute,
+    router,
+    setWindowState,
+    windowState.originPath,
+  ]);
 
   const handleOpenFullpage = useCallback(() => {
     setWindowState((previous) => ({
       ...previous,
       mode: "fullpage",
       isOpen: true,
-      originPath: isAgentRoute ? previous.originPath : pathname,
-      activeContext: isAgentRoute ? previous.activeContext : pageContext,
-      activeContextKey: isAgentRoute
+      originPath: isAssistantFullPageRoute ? previous.originPath : pathname,
+      activeContext: isAssistantFullPageRoute
+        ? previous.activeContext
+        : pageContext,
+      activeContextKey: isAssistantFullPageRoute
         ? previous.activeContextKey
         : pageContext.contextKey,
     }));
 
-    if (!isAgentRoute) {
-      router.push("/app");
+    if (!isAssistantFullPageRoute) {
+      router.push("/app/assistant");
     }
-  }, [isAgentRoute, pageContext, pathname, router, setWindowState]);
+  }, [isAssistantFullPageRoute, pageContext, pathname, router, setWindowState]);
 
   const handleToggleMinimizedView = useCallback(() => {
     setWindowState((previous) => ({
@@ -202,7 +217,9 @@ export function AIAgentWindowManager() {
 
   return (
     <>
-      {windowState.mode === "minimized" && !isAgentRoute ? (
+      {windowState.mode === "minimized" &&
+      !isAssistantFullPageRoute &&
+      shouldRenderMinimizedChat ? (
         <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] md:bottom-4 md:px-4 md:pb-0">
           <div
             className={cn(
