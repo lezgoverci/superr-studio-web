@@ -26,6 +26,11 @@ const WHOP_API_BASE_URL = "https://api.whop.com";
 const VERCEL_AUTHORIZATION_URL = "https://vercel.com/oauth/authorize";
 const VERCEL_TOKEN_URL = "https://api.vercel.com/login/oauth/token";
 const VERCEL_USER_INFO_URL = "https://api.vercel.com/login/oauth/userinfo";
+const DEFAULT_LOCAL_AUTH_URL = "http://localhost:3000";
+const LOCAL_TRUSTED_ORIGINS = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+];
 
 type OAuthTokens = {
   accessToken?: string;
@@ -68,28 +73,59 @@ const schema = {
   integrations,
 };
 
-// Determine the base URL for authentication
-// This supports Vercel Preview deployments with dynamic URLs
-function getBaseURL() {
-  // Priority 1: Explicit BETTER_AUTH_URL (set manually for production/dev)
-  if (process.env.BETTER_AUTH_URL) {
-    return process.env.BETTER_AUTH_URL.trim();
+function normalizeBaseURL(value: string | null | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return;
   }
 
-  // Priority 2: NEXT_PUBLIC_APP_URL
-  if (process.env.NEXT_PUBLIC_APP_URL) {
-    return process.env.NEXT_PUBLIC_APP_URL.trim();
+  try {
+    return new URL(trimmed).origin;
+  } catch {
+    return;
+  }
+}
+
+function getConfiguredBaseURL() {
+  return (
+    normalizeBaseURL(process.env.BETTER_AUTH_URL) ||
+    normalizeBaseURL(process.env.NEXT_PUBLIC_APP_URL) ||
+    (process.env.VERCEL_URL
+      ? normalizeBaseURL(`https://${process.env.VERCEL_URL}`)
+      : undefined) ||
+    DEFAULT_LOCAL_AUTH_URL
+  );
+}
+
+export function resolveAuthBaseURL(request: Request) {
+  const forwardedHost = request.headers
+    .get("x-forwarded-host")
+    ?.split(",")[0]
+    ?.trim();
+  const forwardedProto = request.headers
+    .get("x-forwarded-proto")
+    ?.split(",")[0]
+    ?.trim();
+
+  if (forwardedHost && forwardedProto) {
+    return `${forwardedProto}://${forwardedHost}`;
   }
 
-  // Priority 3: Check if we're on Vercel (for preview deployments)
-  if (process.env.VERCEL_URL) {
-    // VERCEL_URL doesn't include protocol, so add it
-    // Use https for Vercel deployments (both production and preview)
-    return `https://${process.env.VERCEL_URL.trim()}`;
+  try {
+    return new URL(request.url).origin;
+  } catch {
+    return getConfiguredBaseURL();
   }
+}
 
-  // Fallback: Local development
-  return "http://localhost:3000";
+function getTrustedOrigins(baseURL?: string) {
+  return Array.from(
+    new Set(
+      [...LOCAL_TRUSTED_ORIGINS, getConfiguredBaseURL(), baseURL].filter(
+        (value): value is string => Boolean(value)
+      )
+    )
+  );
 }
 
 function getWhopResourceId() {
@@ -277,12 +313,16 @@ const plugins = [
   }),
 ];
 
-export const auth = betterAuth({
-  baseURL: getBaseURL(),
-  trustedOrigins: ["http://localhost:3000", "http://localhost:3001"],
-  database: drizzleAdapter(db, {
-    provider: "pg",
-    schema,
-  }),
-  plugins,
-});
+export function createAuth(baseURL = getConfiguredBaseURL()) {
+  return betterAuth({
+    baseURL,
+    trustedOrigins: getTrustedOrigins(baseURL),
+    database: drizzleAdapter(db, {
+      provider: "pg",
+      schema,
+    }),
+    plugins,
+  });
+}
+
+export const auth = createAuth();
