@@ -1,18 +1,33 @@
+import "server-only";
+
 import { getWhopAccountIdentity } from "@/lib/hub/member-profiles";
 import type { HubWhopAccess } from "@/lib/hub/types";
 
 const WHOP_API_BASE_URL = "https://api.whop.com";
 
-type WhopAccessResponse = {
+type WhopMemberRecord = {
   access_level?: string;
-  accessLevel?: string;
-  has_access?: boolean;
-  hasAccess?: boolean;
-  access?: boolean;
-  valid?: boolean;
-  active?: boolean;
-  data?: WhopAccessResponse;
+  most_recent_action?: string | null;
+  status?: string | null;
+  user?: {
+    id?: string;
+  } | null;
 };
+
+type WhopMembersResponse = {
+  data?: WhopMemberRecord[];
+};
+
+type WhopMembersLookupResult =
+  | {
+      ok: true;
+      payload: WhopMembersResponse;
+    }
+  | {
+      ok: false;
+      message: string;
+      status: number;
+    };
 
 function resolveWhopCommunityUrl(): string | null {
   const value = process.env.WHOP_COMMUNITY_URL?.trim();
@@ -32,31 +47,34 @@ function getWhopApiKey(): string | null {
   return value || null;
 }
 
-function getWhopResourceId(): string | null {
-  const value = process.env.WHOP_RESOURCE_ID?.trim();
+function getWhopCompanyId(): string | null {
+  const value = process.env.WHOP_COMPANY_ID?.trim();
   return value || null;
 }
 
-function unwrapAccessPayload(response: WhopAccessResponse): WhopAccessResponse {
-  return response.data ?? response;
-}
-
-function resolveAccessLevel(response: WhopAccessResponse): string | null {
-  const payload = unwrapAccessPayload(response);
-  const accessLevel = payload.access_level ?? payload.accessLevel;
+function resolveAccessLevel(member: WhopMemberRecord | null): string | null {
+  const accessLevel = member?.access_level;
   return typeof accessLevel === "string" && accessLevel.trim()
     ? accessLevel
     : null;
 }
 
-function hasWhopAccess(response: WhopAccessResponse): boolean {
-  const payload = unwrapAccessPayload(response);
+function hasJoinedWhopCommunity(member: WhopMemberRecord | null) {
+  return member?.status === "joined";
+}
+
+function findWhopMemberRecord(
+  response: WhopMembersResponse,
+  whopUserId: string
+): WhopMemberRecord | null {
+  if (!Array.isArray(response.data)) {
+    return null;
+  }
+
   return (
-    payload.has_access === true ||
-    payload.hasAccess === true ||
-    payload.access === true ||
-    payload.valid === true ||
-    payload.active === true
+    response.data.find((member) => member.user?.id === whopUserId) ??
+    response.data[0] ??
+    null
   );
 }
 
@@ -95,8 +113,46 @@ function buildMissingAccess(params: {
   };
 }
 
-export function isWhopCommunityAccessActive(access: HubWhopAccess | null) {
-  return access?.status === "active" && access.hasAccess;
+async function fetchWhopMembers(params: {
+  apiKey: string;
+  companyId?: string | null;
+  whopUserId: string;
+}): Promise<WhopMembersLookupResult> {
+  const membersUrl = new URL("/api/v1/members", WHOP_API_BASE_URL);
+  membersUrl.searchParams.set("user_id", params.whopUserId);
+
+  if (params.companyId) {
+    membersUrl.searchParams.set("company_id", params.companyId);
+  }
+
+  const response = await fetch(membersUrl, {
+    headers: {
+      Authorization: `Bearer ${params.apiKey}`,
+      Accept: "application/json",
+    },
+    cache: "no-store",
+  });
+
+  if (response.ok) {
+    return {
+      ok: true,
+      payload: (await response.json()) as WhopMembersResponse,
+    };
+  }
+
+  return {
+    ok: false,
+    status: response.status,
+    message: await response.text().catch(() => ""),
+  };
+}
+
+function shouldRetryWithoutCompanyId(result: WhopMembersLookupResult) {
+  if (result.ok) {
+    return false;
+  }
+
+  return result.status === 400 || result.status === 403;
 }
 
 export async function getWhopCommunityAccess(
@@ -104,7 +160,7 @@ export async function getWhopCommunityAccess(
 ): Promise<HubWhopAccess> {
   const joinUrl = resolveWhopCommunityUrl();
   const apiKey = getWhopApiKey();
-  const resourceId = getWhopResourceId();
+  const companyId = getWhopCompanyId();
 
   const identity = await getWhopAccountIdentity(userId);
 
@@ -116,14 +172,6 @@ export async function getWhopCommunityAccess(
     });
   }
 
-  if (!resourceId) {
-    return buildUnavailableAccess({
-      joinUrl,
-      message:
-        "Whop access verification is not configured because WHOP_RESOURCE_ID is missing.",
-    });
-  }
-
   if (!apiKey) {
     return buildUnavailableAccess({
       joinUrl,
@@ -132,26 +180,38 @@ export async function getWhopCommunityAccess(
     });
   }
 
-  const encodedUserId = encodeURIComponent(identity.accountId);
-  const encodedResourceId = encodeURIComponent(resourceId);
-
   try {
-    const response = await fetch(
-      `${WHOP_API_BASE_URL}/api/v1/users/${encodedUserId}/access/${encodedResourceId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          Accept: "application/json",
-        },
-        cache: "no-store",
-      }
-    );
+    let membersResult = await fetchWhopMembers({
+      apiKey,
+      companyId,
+      whopUserId: identity.accountId,
+    });
 
-    if (response.ok) {
-      const payload = (await response.json()) as WhopAccessResponse;
-      const accessLevel = resolveAccessLevel(payload);
+    if (
+      companyId &&
+      !membersResult.ok &&
+      shouldRetryWithoutCompanyId(membersResult)
+    ) {
+      console.warn(
+        "[whop-access] Retrying member lookup without company filter",
+        membersResult.status,
+        membersResult.message
+      );
 
-      if (hasWhopAccess(payload)) {
+      membersResult = await fetchWhopMembers({
+        apiKey,
+        whopUserId: identity.accountId,
+      });
+    }
+
+    if (membersResult.ok) {
+      const member = findWhopMemberRecord(
+        membersResult.payload,
+        identity.accountId
+      );
+      const accessLevel = resolveAccessLevel(member);
+
+      if (hasJoinedWhopCommunity(member)) {
         return {
           status: "active",
           hasAccess: true,
@@ -164,15 +224,11 @@ export async function getWhopCommunityAccess(
       return buildMissingAccess({ joinUrl, accessLevel });
     }
 
-    if (response.status === 403 || response.status === 404) {
-      return buildMissingAccess({ joinUrl });
-    }
-
-    const message = await response.text().catch(() => "");
+    const failedLookup = membersResult;
     console.error(
-      "[whop-access] Failed to verify Whop access",
-      response.status,
-      message
+      "[whop-access] Failed to verify Whop community membership",
+      failedLookup.status,
+      failedLookup.message
     );
 
     return buildUnavailableAccess({

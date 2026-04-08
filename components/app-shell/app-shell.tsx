@@ -22,9 +22,12 @@ import {
   buildNextPath,
   resolvePostWhopAccessRedirect,
 } from "@/lib/auth-redirect";
-import type { HubMemberProfile, HubWhopAccess } from "@/lib/hub/types";
+import {
+  type HubMemberProfile,
+  type HubWhopAccess,
+  isWhopCommunityAccessActive,
+} from "@/lib/hub/types";
 import { cn } from "@/lib/utils";
-import { isWhopCommunityAccessActive } from "@/lib/whop-access";
 import { AppHeader } from "./app-header";
 import { AppNav } from "./app-nav";
 import { AppShellProvider } from "./shell-context";
@@ -238,14 +241,23 @@ function resolveRedirectPath({
   pathname: string;
   search: string;
 }): string | null {
+  const whopAccessRedirectPath = resolveWhopAccessRedirectPath({
+    hasUser,
+    hasWhopCommunityAccess,
+    pathname,
+    search,
+    joinNextPath,
+  });
+
+  if (whopAccessRedirectPath) {
+    return whopAccessRedirectPath;
+  }
+
+  if (hasUser && !hasWhopCommunityAccess) {
+    return null;
+  }
+
   return (
-    resolveWhopAccessRedirectPath({
-      hasUser,
-      hasWhopCommunityAccess,
-      pathname,
-      search,
-      joinNextPath,
-    }) ??
     resolveOnboardingRedirectPath({
       hasUser,
       memberProfile,

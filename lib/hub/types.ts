@@ -58,6 +58,12 @@ export type HubWhopAccess = {
   message: string | null;
 };
 
+export function isWhopCommunityAccessActive(
+  access: HubWhopAccess | null | undefined
+) {
+  return access?.status === "active" && access.hasAccess;
+}
+
 export type HubStarterSource = {
   id: string;
   title: string;
