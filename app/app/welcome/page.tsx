@@ -5,11 +5,17 @@ import { useRouter } from "next/navigation";
 import type { FormEvent, RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { PageContainer } from "@/components/app-shell/page-container";
 import { useAppShellContext } from "@/components/app-shell/shell-context";
+import { OnboardingShell } from "@/components/hub/onboarding-shell";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
@@ -28,15 +34,23 @@ import type {
 } from "@/lib/hub/types";
 import { cn } from "@/lib/utils";
 
+type PresetRole = (typeof ROLE_OPTIONS)[number];
+type CurrentRoleSelectionState = {
+  customCurrentRole: string;
+  isCustomRole: boolean;
+  selectedPresetRole: string;
+};
+
 type OnboardingErrors = {
-  currentRole?: string;
-  skillLevel?: string;
   aiFamiliarity?: string;
   careerPressure?: string;
+  currentRole?: string;
   firstGoal?: string;
+  skillLevel?: string;
 };
 
 type OptionCardGroupProps = {
+  description: string;
   error?: string;
   id: string;
   label: string;
@@ -46,7 +60,49 @@ type OptionCardGroupProps = {
   triggerRef?: RefObject<HTMLButtonElement | null>;
 };
 
+type CurrentRoleFeedbackProps = {
+  currentRoleRef: RefObject<HTMLInputElement | null>;
+  customCurrentRole: string;
+  error?: string;
+  isCustomRole: boolean;
+  onChange: (value: string) => void;
+};
+
+function getPillClassName(selected: boolean) {
+  return cn(
+    "h-auto rounded-full border px-4 py-2.5 text-sm shadow-none transition-colors",
+    selected
+      ? "border-primary text-primary ring-1 ring-primary"
+      : "border-border/70 bg-background hover:bg-accent/40"
+  );
+}
+
+function isPresetRole(value: string): value is PresetRole {
+  return ROLE_OPTIONS.includes(value as PresetRole);
+}
+
+function resolveCurrentRoleSelection(
+  currentRole: string | null | undefined
+): CurrentRoleSelectionState {
+  const incomingCurrentRole = currentRole || "";
+
+  if (isPresetRole(incomingCurrentRole)) {
+    return {
+      customCurrentRole: "",
+      isCustomRole: false,
+      selectedPresetRole: incomingCurrentRole,
+    };
+  }
+
+  return {
+    customCurrentRole: incomingCurrentRole,
+    isCustomRole: Boolean(incomingCurrentRole),
+    selectedPresetRole: "",
+  };
+}
+
 function OptionCardGroup({
+  description,
   error,
   id,
   label,
@@ -57,8 +113,12 @@ function OptionCardGroup({
 }: OptionCardGroupProps) {
   return (
     <div className="space-y-3">
-      <Label>{label}</Label>
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="space-y-1.5">
+        <Label>{label}</Label>
+        <p className="text-muted-foreground text-sm">{description}</p>
+      </div>
+
+      <div className="flex flex-wrap gap-3 sm:gap-4">
         {options.map((option, index) => {
           const selected = selectedValue === option.value;
 
@@ -67,21 +127,19 @@ function OptionCardGroup({
               aria-describedby={error ? `${id}-error` : undefined}
               aria-invalid={Boolean(error)}
               aria-pressed={selected}
-              className={cn(
-                "h-auto min-h-20 justify-start whitespace-normal px-4 py-3 text-left",
-                selected ? "border-primary shadow-sm" : "border-border"
-              )}
+              className={getPillClassName(selected)}
               key={option.value}
               onClick={() => onChange(option.value)}
               ref={index === 0 ? triggerRef : undefined}
               type="button"
-              variant={selected ? "default" : "outline"}
+              variant="outline"
             >
-              <span>{option.label}</span>
+              {option.label}
             </Button>
           );
         })}
       </div>
+
       {error ? (
         <p className="text-destructive text-sm" id={`${id}-error`}>
           {error}
@@ -89,6 +147,52 @@ function OptionCardGroup({
       ) : null}
     </div>
   );
+}
+
+function CurrentRoleFeedback({
+  currentRoleRef,
+  customCurrentRole,
+  error,
+  isCustomRole,
+  onChange,
+}: CurrentRoleFeedbackProps) {
+  if (isCustomRole) {
+    return (
+      <div className="space-y-2.5 rounded-2xl border border-border/80 border-dashed bg-muted/20 p-4">
+        <Label htmlFor="currentRole">Custom Work Type</Label>
+        <Input
+          aria-describedby={error ? "current-role-error" : undefined}
+          aria-invalid={Boolean(error)}
+          autoComplete="off"
+          id="currentRole"
+          name="currentRole"
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="Type your work type in your own words..."
+          ref={currentRoleRef}
+          value={customCurrentRole}
+        />
+        {error ? (
+          <p className="text-destructive text-sm" id="current-role-error">
+            {error}
+          </p>
+        ) : (
+          <p className="text-muted-foreground text-sm">
+            Use this only if the quick picks do not describe your work.
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <p className="text-destructive text-sm" id="current-role-error">
+        {error}
+      </p>
+    );
+  }
+
+  return null;
 }
 
 export default function WelcomePage() {
@@ -100,9 +204,9 @@ export default function WelcomePage() {
   const [displayName, setDisplayName] = useState(
     memberProfile?.displayName || ""
   );
-  const [currentRole, setCurrentRole] = useState(
-    memberProfile?.currentRole || ""
-  );
+  const [selectedPresetRole, setSelectedPresetRole] = useState("");
+  const [customCurrentRole, setCustomCurrentRole] = useState("");
+  const [isCustomRole, setIsCustomRole] = useState(false);
   const [skillLevel, setSkillLevel] = useState(memberProfile?.skillLevel || "");
   const [aiFamiliarity, setAiFamiliarity] = useState(
     memberProfile?.aiFamiliarity || ""
@@ -113,18 +217,31 @@ export default function WelcomePage() {
   const [firstGoal, setFirstGoal] = useState(memberProfile?.firstGoal || "");
 
   const currentRoleRef = useRef<HTMLInputElement>(null);
+  const currentRoleOptionRef = useRef<HTMLButtonElement>(null);
   const skillLevelRef = useRef<HTMLButtonElement>(null);
   const aiFamiliarityRef = useRef<HTMLButtonElement>(null);
   const careerPressureRef = useRef<HTMLButtonElement>(null);
   const firstGoalRef = useRef<HTMLTextAreaElement>(null);
 
+  const isEditingAnswers = Boolean(
+    memberProfile?.onboardingCompletedAt && !memberProfile?.role
+  );
+  const resolvedCurrentRole = isCustomRole
+    ? customCurrentRole.trim()
+    : selectedPresetRole;
+
   useEffect(() => {
     if (!memberProfile) {
       return;
     }
+    const nextCurrentRoleSelection = resolveCurrentRoleSelection(
+      memberProfile.currentRole
+    );
 
     setDisplayName(memberProfile.displayName || memberProfile.userName || "");
-    setCurrentRole(memberProfile.currentRole || "");
+    setSelectedPresetRole(nextCurrentRoleSelection.selectedPresetRole);
+    setCustomCurrentRole(nextCurrentRoleSelection.customCurrentRole);
+    setIsCustomRole(nextCurrentRoleSelection.isCustomRole);
     setSkillLevel(memberProfile.skillLevel || "");
     setAiFamiliarity(memberProfile.aiFamiliarity || "");
     setCareerPressure(memberProfile.careerPressure || "");
@@ -135,9 +252,11 @@ export default function WelcomePage() {
     const nextErrors: OnboardingErrors = {};
     let firstInvalid: HTMLElement | null = null;
 
-    if (!currentRole.trim()) {
+    if (!resolvedCurrentRole) {
       nextErrors.currentRole = "Choose or type your current work type.";
-      firstInvalid = currentRoleRef.current;
+      firstInvalid = isCustomRole
+        ? currentRoleRef.current
+        : currentRoleOptionRef.current;
     }
 
     if (!skillLevel) {
@@ -181,42 +300,29 @@ export default function WelcomePage() {
       setSaving(true);
       const updated = await api.hub.profile.update({
         displayName,
-        currentRole,
+        currentRole: resolvedCurrentRole,
         skillLevel: skillLevel as MemberSkillLevel,
         aiFamiliarity: aiFamiliarity as MemberAiFamiliarity,
         careerPressure: careerPressure as MemberCareerPressure,
         firstGoal,
         completeOnboarding: true,
       });
+
       setMemberProfile(updated);
-      toast.success("Onboarding complete");
+      toast.success(isEditingAnswers ? "Answers updated" : "Answers saved");
       router.replace("/app/role");
     } catch (error) {
       console.error("[welcome] Failed to finish onboarding:", error);
-      toast.error("Failed to finish onboarding");
+      toast.error("Failed to save onboarding answers");
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <PageContainer contentClassName="max-w-4xl">
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <div className="text-muted-foreground text-xs uppercase tracking-[0.24em]">
-            Welcome
-          </div>
-          <h1 className="font-semibold text-3xl tracking-tight">
-            Start Where You Are
-          </h1>
-          <p className="max-w-2xl text-muted-foreground text-sm md:text-base">
-            This is a short triage, not a long setup. Tell the Hub what kind of
-            work you do, how urgent your situation feels, and what first result
-            you want so the platform can shape your next steps.
-          </p>
-        </div>
-
-        <Alert>
+    <OnboardingShell
+      alert={
+        <Alert className="border-border/70 bg-card/70">
           <AlertCircle />
           <AlertTitle>What happens next</AlertTitle>
           <AlertDescription>
@@ -224,195 +330,225 @@ export default function WelcomePage() {
             your own NotebookLM Brain as a separate quest.
           </AlertDescription>
         </Alert>
+      }
+      description="This is a short triage, not a long setup. Tell the Hub what kind of work you do, how urgent your situation feels, and what first result you want so the platform can shape your next steps."
+      stepLabel="Step 1 of 2"
+      title="Start Where You Are"
+    >
+      <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
+        <Card className="rounded-2xl border-border/70 shadow-sm">
+          <CardHeader className="space-y-2">
+            <CardTitle>About You</CardTitle>
+            <CardDescription>
+              Add the name you want shown and tell us the kind of work you do
+              today.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2.5">
+              <Label htmlFor="displayName">Display Name</Label>
+              <Input
+                autoComplete="nickname"
+                id="displayName"
+                name="displayName"
+                onChange={(event) => setDisplayName(event.target.value)}
+                placeholder="How you want your profile to appear..."
+                value={displayName}
+              />
+              <p className="text-muted-foreground text-sm">
+                Optional. We prefill this from your account when possible.
+              </p>
+            </div>
 
-        <form className="space-y-6" onSubmit={handleSubmit}>
-          <Card>
-            <CardHeader>
-              <CardTitle>About You</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="displayName">Display Name</Label>
-                <Input
-                  autoComplete="nickname"
-                  id="displayName"
-                  name="displayName"
-                  onChange={(event) => setDisplayName(event.target.value)}
-                  placeholder="How you want your profile to appear…"
-                  value={displayName}
-                />
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="currentRole">Current Work Type</Label>
                 <p className="text-muted-foreground text-sm">
-                  Optional. We prefill this from your account when possible.
+                  Pick the closest fit first. Only open custom input if none of
+                  these match.
                 </p>
               </div>
 
-              <div className="space-y-3">
-                <Label htmlFor="currentRole">Current Work Type</Label>
-                <div className="flex flex-wrap gap-2">
-                  {ROLE_OPTIONS.map((option) => {
-                    const selected = currentRole === option;
+              <div className="flex flex-wrap gap-3 sm:gap-4">
+                {ROLE_OPTIONS.map((option, index) => {
+                  const selected =
+                    !isCustomRole && selectedPresetRole === option;
 
-                    return (
-                      <Button
-                        aria-pressed={selected}
-                        key={option}
-                        onClick={() => {
-                          setCurrentRole(option);
-                          setErrors((current) => ({
-                            ...current,
-                            currentRole: undefined,
-                          }));
-                        }}
-                        type="button"
-                        variant={selected ? "default" : "outline"}
-                      >
-                        {option}
-                      </Button>
-                    );
-                  })}
-                </div>
-                <Input
-                  aria-describedby={
-                    errors.currentRole ? "current-role-error" : undefined
-                  }
-                  aria-invalid={Boolean(errors.currentRole)}
-                  autoComplete="off"
-                  id="currentRole"
-                  name="currentRole"
-                  onChange={(event) => {
-                    setCurrentRole(event.target.value);
+                  return (
+                    <Button
+                      aria-pressed={selected}
+                      className={getPillClassName(selected)}
+                      key={option}
+                      onClick={() => {
+                        setSelectedPresetRole(option);
+                        setIsCustomRole(false);
+                        setErrors((current) => ({
+                          ...current,
+                          currentRole: undefined,
+                        }));
+                      }}
+                      ref={index === 0 ? currentRoleOptionRef : undefined}
+                      type="button"
+                      variant="outline"
+                    >
+                      {option}
+                    </Button>
+                  );
+                })}
+
+                <Button
+                  aria-pressed={isCustomRole}
+                  className={getPillClassName(isCustomRole)}
+                  onClick={() => {
+                    setIsCustomRole(true);
+                    setSelectedPresetRole("");
                     setErrors((current) => ({
                       ...current,
                       currentRole: undefined,
                     }));
+                    requestAnimationFrame(() => {
+                      currentRoleRef.current?.focus();
+                    });
                   }}
-                  placeholder="Or type your work type in your own words…"
-                  ref={currentRoleRef}
-                  value={currentRole}
-                />
-                {errors.currentRole ? (
-                  <p
-                    className="text-destructive text-sm"
-                    id="current-role-error"
-                  >
-                    {errors.currentRole}
-                  </p>
-                ) : (
-                  <p className="text-muted-foreground text-sm">
-                    Pick the closest fit or type your own answer.
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Readiness Snapshot</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <OptionCardGroup
-                error={errors.skillLevel}
-                id="skill-level"
-                label="Skill Level"
-                onChange={(value) => {
-                  setSkillLevel(value);
-                  setErrors((current) => ({
-                    ...current,
-                    skillLevel: undefined,
-                  }));
-                }}
-                options={SKILL_LEVEL_OPTIONS}
-                selectedValue={skillLevel}
-                triggerRef={skillLevelRef}
-              />
-
-              <OptionCardGroup
-                error={errors.aiFamiliarity}
-                id="ai-familiarity"
-                label="AI Familiarity"
-                onChange={(value) => {
-                  setAiFamiliarity(value);
-                  setErrors((current) => ({
-                    ...current,
-                    aiFamiliarity: undefined,
-                  }));
-                }}
-                options={AI_FAMILIARITY_OPTIONS}
-                selectedValue={aiFamiliarity}
-                triggerRef={aiFamiliarityRef}
-              />
-
-              <OptionCardGroup
-                error={errors.careerPressure}
-                id="career-pressure"
-                label="Career Pressure"
-                onChange={(value) => {
-                  setCareerPressure(value);
-                  setErrors((current) => ({
-                    ...current,
-                    careerPressure: undefined,
-                  }));
-                }}
-                options={CAREER_PRESSURE_OPTIONS}
-                selectedValue={careerPressure}
-                triggerRef={careerPressureRef}
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Your First Goal</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstGoal">
-                  What do you want this platform to help with first?
-                </Label>
-                <Textarea
-                  aria-describedby={
-                    errors.firstGoal ? "first-goal-error" : undefined
-                  }
-                  aria-invalid={Boolean(errors.firstGoal)}
-                  id="firstGoal"
-                  name="firstGoal"
-                  onChange={(event) => {
-                    setFirstGoal(event.target.value);
-                    setErrors((current) => ({
-                      ...current,
-                      firstGoal: undefined,
-                    }));
-                  }}
-                  placeholder="Example: I want to become confident using AI for my client work and publish my first proof-of-work this month…"
-                  ref={firstGoalRef}
-                  value={firstGoal}
-                />
-                {errors.firstGoal ? (
-                  <p className="text-destructive text-sm" id="first-goal-error">
-                    {errors.firstGoal}
-                  </p>
-                ) : (
-                  <p className="text-muted-foreground text-sm">
-                    Keep it concrete. We will use this to shape your first
-                    quests and Brain starter context.
-                  </p>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-muted-foreground text-sm">
-                  This should take about a minute.
-                </p>
-                <Button disabled={saving} type="submit">
-                  {saving ? <Spinner className="mr-2 size-4" /> : null}
-                  Continue to Team Role
+                  type="button"
+                  variant="outline"
+                >
+                  Type a custom work type
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        </form>
-      </div>
-    </PageContainer>
+
+              <CurrentRoleFeedback
+                currentRoleRef={currentRoleRef}
+                customCurrentRole={customCurrentRole}
+                error={errors.currentRole}
+                isCustomRole={isCustomRole}
+                onChange={(value) => {
+                  setCustomCurrentRole(value);
+                  setErrors((current) => ({
+                    ...current,
+                    currentRole: undefined,
+                  }));
+                }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl border-border/70 shadow-sm">
+          <CardHeader className="space-y-2">
+            <CardTitle>Readiness Snapshot</CardTitle>
+            <CardDescription>
+              This helps shape the first pace and guidance you see in the Hub.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <OptionCardGroup
+              description="Choose the level that best matches your current pace."
+              error={errors.skillLevel}
+              id="skill-level"
+              label="Skill Level"
+              onChange={(value) => {
+                setSkillLevel(value);
+                setErrors((current) => ({
+                  ...current,
+                  skillLevel: undefined,
+                }));
+              }}
+              options={SKILL_LEVEL_OPTIONS}
+              selectedValue={skillLevel}
+              triggerRef={skillLevelRef}
+            />
+
+            <OptionCardGroup
+              description="Tell us how often you already use AI tools in real work."
+              error={errors.aiFamiliarity}
+              id="ai-familiarity"
+              label="AI Familiarity"
+              onChange={(value) => {
+                setAiFamiliarity(value);
+                setErrors((current) => ({
+                  ...current,
+                  aiFamiliarity: undefined,
+                }));
+              }}
+              options={AI_FAMILIARITY_OPTIONS}
+              selectedValue={aiFamiliarity}
+              triggerRef={aiFamiliarityRef}
+            />
+
+            <OptionCardGroup
+              description="This sets the urgency level for your first recommendations."
+              error={errors.careerPressure}
+              id="career-pressure"
+              label="Career Pressure"
+              onChange={(value) => {
+                setCareerPressure(value);
+                setErrors((current) => ({
+                  ...current,
+                  careerPressure: undefined,
+                }));
+              }}
+              options={CAREER_PRESSURE_OPTIONS}
+              selectedValue={careerPressure}
+              triggerRef={careerPressureRef}
+            />
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl border-border/70 shadow-sm">
+          <CardHeader className="space-y-2">
+            <CardTitle>Your First Goal</CardTitle>
+            <CardDescription>
+              Give the platform one concrete outcome to optimize for first.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2.5">
+              <Label htmlFor="firstGoal">
+                What do you want this platform to help with first?
+              </Label>
+              <Textarea
+                aria-describedby={
+                  errors.firstGoal ? "first-goal-error" : undefined
+                }
+                aria-invalid={Boolean(errors.firstGoal)}
+                className="min-h-32"
+                id="firstGoal"
+                name="firstGoal"
+                onChange={(event) => {
+                  setFirstGoal(event.target.value);
+                  setErrors((current) => ({
+                    ...current,
+                    firstGoal: undefined,
+                  }));
+                }}
+                placeholder="Example: I want to become confident using AI for my client work and publish my first proof-of-work this month..."
+                ref={firstGoalRef}
+                value={firstGoal}
+              />
+              {errors.firstGoal ? (
+                <p className="text-destructive text-sm" id="first-goal-error">
+                  {errors.firstGoal}
+                </p>
+              ) : (
+                <p className="text-muted-foreground text-sm">
+                  Keep it concrete. We will use this to shape your first quests
+                  and Brain starter context.
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-end border-t pt-6">
+              <Button className="sm:min-w-52" disabled={saving} type="submit">
+                {saving ? <Spinner className="mr-2 size-4" /> : null}
+                {isEditingAnswers
+                  ? "Save and return to Team Role"
+                  : "Continue to Team Role"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </form>
+    </OnboardingShell>
   );
 }

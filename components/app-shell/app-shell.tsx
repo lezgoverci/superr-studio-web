@@ -153,15 +153,18 @@ function resolveOnboardingRedirectPath({
   }
 
   if (hasUser && memberProfile?.onboardingCompletedAt && !memberProfile.role) {
-    return pathname === "/app/role" ? null : "/app/role";
+    return pathname === "/app/welcome" || pathname === "/app/role"
+      ? null
+      : "/app/role";
   }
 
   if (
     hasUser &&
     pathname === "/app/welcome" &&
-    memberProfile?.onboardingCompletedAt
+    memberProfile?.onboardingCompletedAt &&
+    memberProfile.role
   ) {
-    return memberProfile.role ? "/app" : "/app/role";
+    return "/app";
   }
 
   if (hasUser && pathname === "/app/role" && memberProfile?.role) {
