@@ -1,2 +1,3 @@
 patchedDependencies:
   ai-sdk-provider-opencode-sdk@2.1.1: patches/ai-sdk-provider-opencode-sdk@2.1.1.patch
+  drizzle-kit@0.31.9: patches/drizzle-kit@0.31.9.patch

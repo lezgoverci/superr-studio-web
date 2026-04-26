@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { validateWorkflowIntegrations } from "@/lib/db/integrations";
 import { workflows } from "@/lib/db/schema";
 import { generateId } from "@/lib/utils/id";
+import { getWhopAccessGuardResponse } from "@/lib/whop-access-guard";
 import {
   createDefaultTriggerNode,
   normalizeWorkflowVisibility,
@@ -105,6 +106,11 @@ export async function POST(request: Request) {
         { error: agentAuth.error },
         { status: agentAuth.status }
       );
+    }
+
+    const whopAccessGuard = await getWhopAccessGuardResponse(agentAuth.userId);
+    if (whopAccessGuard) {
+      return whopAccessGuard;
     }
 
     const body = await request.json().catch(() => null);

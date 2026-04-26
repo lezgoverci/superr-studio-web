@@ -21,11 +21,15 @@ const VERCEL_PROVIDER_ID = "vercel";
 const WHOP_AUTHORIZATION_URL = "https://api.whop.com/oauth/authorize";
 const WHOP_TOKEN_URL = "https://api.whop.com/oauth/token";
 const WHOP_USER_INFO_URL = "https://api.whop.com/oauth/userinfo";
-const WHOP_API_BASE_URL = "https://api.whop.com";
 
 const VERCEL_AUTHORIZATION_URL = "https://vercel.com/oauth/authorize";
 const VERCEL_TOKEN_URL = "https://api.vercel.com/login/oauth/token";
 const VERCEL_USER_INFO_URL = "https://api.vercel.com/login/oauth/userinfo";
+const DEFAULT_LOCAL_AUTH_URL = "http://localhost:3000";
+const LOCAL_TRUSTED_ORIGINS = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+];
 
 type OAuthTokens = {
   accessToken?: string;
@@ -46,15 +50,6 @@ type WhopProfile = {
   email_verified?: boolean;
 };
 
-type WhopAccessResponse = {
-  has_access?: boolean;
-  hasAccess?: boolean;
-  access?: boolean;
-  valid?: boolean;
-  active?: boolean;
-  data?: WhopAccessResponse;
-};
-
 // Construct schema object for drizzle adapter
 const schema = {
   user: users,
@@ -68,36 +63,59 @@ const schema = {
   integrations,
 };
 
-// Determine the base URL for authentication
-// This supports Vercel Preview deployments with dynamic URLs
-function getBaseURL() {
-  // Priority 1: Explicit BETTER_AUTH_URL (set manually for production/dev)
-  if (process.env.BETTER_AUTH_URL) {
-    return process.env.BETTER_AUTH_URL.trim();
+function normalizeBaseURL(value: string | null | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return;
   }
 
-  // Priority 2: NEXT_PUBLIC_APP_URL
-  if (process.env.NEXT_PUBLIC_APP_URL) {
-    return process.env.NEXT_PUBLIC_APP_URL.trim();
+  try {
+    return new URL(trimmed).origin;
+  } catch {
+    return;
   }
-
-  // Priority 3: Check if we're on Vercel (for preview deployments)
-  if (process.env.VERCEL_URL) {
-    // VERCEL_URL doesn't include protocol, so add it
-    // Use https for Vercel deployments (both production and preview)
-    return `https://${process.env.VERCEL_URL.trim()}`;
-  }
-
-  // Fallback: Local development
-  return "http://localhost:3000";
 }
 
-function getWhopResourceId() {
-  const resourceId = process.env.WHOP_RESOURCE_ID?.trim();
-  if (!resourceId) {
-    throw new Error("WHOP_RESOURCE_ID is not configured.");
+function getConfiguredBaseURL() {
+  return (
+    normalizeBaseURL(process.env.BETTER_AUTH_URL) ||
+    normalizeBaseURL(process.env.NEXT_PUBLIC_APP_URL) ||
+    (process.env.VERCEL_URL
+      ? normalizeBaseURL(`https://${process.env.VERCEL_URL}`)
+      : undefined) ||
+    DEFAULT_LOCAL_AUTH_URL
+  );
+}
+
+export function resolveAuthBaseURL(request: Request) {
+  const forwardedHost = request.headers
+    .get("x-forwarded-host")
+    ?.split(",")[0]
+    ?.trim();
+  const forwardedProto = request.headers
+    .get("x-forwarded-proto")
+    ?.split(",")[0]
+    ?.trim();
+
+  if (forwardedHost && forwardedProto) {
+    return `${forwardedProto}://${forwardedHost}`;
   }
-  return resourceId;
+
+  try {
+    return new URL(request.url).origin;
+  } catch {
+    return getConfiguredBaseURL();
+  }
+}
+
+function getTrustedOrigins(baseURL?: string) {
+  return Array.from(
+    new Set(
+      [...LOCAL_TRUSTED_ORIGINS, getConfiguredBaseURL(), baseURL].filter(
+        (value): value is string => Boolean(value)
+      )
+    )
+  );
 }
 
 function createOAuthNonce() {
@@ -128,17 +146,6 @@ function resolveWhopUserEmail(profile: WhopProfile, userId: string) {
   return `${userId}@users.whop.local`;
 }
 
-function hasWhopAccess(response: WhopAccessResponse) {
-  const payload = response.data ?? response;
-  return (
-    payload.has_access === true ||
-    payload.hasAccess === true ||
-    payload.access === true ||
-    payload.valid === true ||
-    payload.active === true
-  );
-}
-
 async function fetchWhopProfile(accessToken: string): Promise<WhopProfile> {
   const response = await fetch(WHOP_USER_INFO_URL, {
     headers: {
@@ -156,61 +163,10 @@ async function fetchWhopProfile(accessToken: string): Promise<WhopProfile> {
   return profile;
 }
 
-async function userHasRequiredWhopAccess(
-  accessToken: string,
-  whopUserId: string,
-  resourceId: string
-) {
-  const encodedUserId = encodeURIComponent(whopUserId);
-  const encodedResourceId = encodeURIComponent(resourceId);
-
-  // Whop docs show this as /users/{id}/access/{resource_id}. Keep a fallback path
-  // because API versions can vary across environments.
-  const candidates = [
-    `${WHOP_API_BASE_URL}/api/v1/users/${encodedUserId}/access/${encodedResourceId}`,
-    `${WHOP_API_BASE_URL}/api/v5/users/${encodedUserId}/access/${encodedResourceId}`,
-    `${WHOP_API_BASE_URL}/users/${encodedUserId}/access/${encodedResourceId}`,
-  ];
-
-  for (const url of candidates) {
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: "application/json",
-      },
-    });
-
-    if (response.status === 404) {
-      continue;
-    }
-
-    if (!response.ok) {
-      const message = await response.text();
-      throw new Error(`Failed to verify Whop access: ${message}`);
-    }
-
-    const payload = (await response.json()) as WhopAccessResponse;
-    return hasWhopAccess(payload);
-  }
-
-  throw new Error("Unable to verify Whop access with available endpoints.");
-}
-
 async function getWhopUserInfo(tokens: OAuthTokens) {
-  const resourceId = getWhopResourceId();
   const accessToken = getAccessToken(tokens);
   const profile = await fetchWhopProfile(accessToken);
   const userId = getWhopUserId(profile);
-
-  const hasAccess = await userHasRequiredWhopAccess(
-    accessToken,
-    userId,
-    resourceId
-  );
-
-  if (!hasAccess) {
-    throw new Error("Your Whop account does not have required access.");
-  }
 
   return {
     id: userId,
@@ -277,12 +233,16 @@ const plugins = [
   }),
 ];
 
-export const auth = betterAuth({
-  baseURL: getBaseURL(),
-  trustedOrigins: ["http://localhost:3000"],
-  database: drizzleAdapter(db, {
-    provider: "pg",
-    schema,
-  }),
-  plugins,
-});
+export function createAuth(baseURL = getConfiguredBaseURL()) {
+  return betterAuth({
+    baseURL,
+    trustedOrigins: getTrustedOrigins(baseURL),
+    database: drizzleAdapter(db, {
+      provider: "pg",
+      schema,
+    }),
+    plugins,
+  });
+}
+
+export const auth = createAuth();

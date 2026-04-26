@@ -51,7 +51,7 @@ function writeStore(store: MappingStore): void {
 }
 
 export function getOpenCodeSessionConnectionKey(
-  connection: Pick<OpenCodeConnectionConfig, "url" | "username">
+  connection: Pick<OpenCodeConnectionConfig, "url" | "username" | "directory">
 ): string {
   const normalizedUrl = connection.url
     .trim()
@@ -59,7 +59,9 @@ export function getOpenCodeSessionConnectionKey(
     .toLowerCase();
   const normalizedUsername =
     connection.username?.trim().toLowerCase() || DEFAULT_USERNAME;
-  return `${normalizedUrl}|${normalizedUsername}`;
+  const normalizedDirectory =
+    connection.directory?.trim().replace(TRAILING_SLASH_REGEX, "") || "/";
+  return `${normalizedUrl}|${normalizedUsername}|${normalizedDirectory}`;
 }
 
 export function listSessionWorkflowMappings(

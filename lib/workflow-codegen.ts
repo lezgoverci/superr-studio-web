@@ -1179,7 +1179,11 @@ export function generateWorkflowCode(
   }
 
   // Keys to exclude from generated code (internal app fields)
-  const EXCLUDED_CONFIG_KEYS = new Set(["actionType", "integrationId"]);
+  const EXCLUDED_CONFIG_KEYS = new Set([
+    "actionType",
+    "integrationId",
+    "vercelIntegrationId",
+  ]);
 
   /**
    * Build config parameters using fallback logic

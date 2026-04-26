@@ -1,0 +1,38 @@
+{
+  "skill_name": "app-to-cli-generator",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Generate a CLI from the local fixture store at http://127.0.0.1:4010. I only have the live site. I need a home title command, a collections list command, and a products get command.",
+      "expected_output": "The skill runs the web orchestrator, captures the site, infers a small read-only command tree, writes a manifest, renders a standalone CLI, and reports the generated commands and validation status.",
+      "expectations": [
+        "Creates captures, manifest, and cli workspace directories",
+        "Uses the generate-web-cli orchestrator as the primary flow",
+        "Creates commands with explicit path arrays",
+        "Includes at least one ui command",
+        "Includes an auto command only when both requestRecipeId and flowId are present"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Generate a CLI from https://www.cullenwayne.com. Use runtime observation only. I want a working read-only CLI with a home title command and a product detail command.",
+      "expected_output": "The skill captures the live storefront, detects a product detail route, generates a manifest and CLI, and produces a product command that can prefer API mode when the runtime evidence supports it.",
+      "expectations": [
+        "Captures a public live web target rather than a local repository",
+        "Produces a home title ui command",
+        "Produces a product detail command",
+        "Uses auto mode only when a stable request recipe is inferred"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I need a CLI wrapper for a Chromium-based Electron app on port 9222. Use the existing helper flow and tell me what remains manual in this version.",
+      "expected_output": "The skill keeps the Electron path documented, uses the Electron helper workflow, and clearly reports that the automated end-to-end generator is web-first in this version.",
+      "expectations": [
+        "Does not claim Electron is fully automated in this version",
+        "References CDP-based capture",
+        "Reports remaining manual steps accurately"
+      ]
+    }
+  ]
+}

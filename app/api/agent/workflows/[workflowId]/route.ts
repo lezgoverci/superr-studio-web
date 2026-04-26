@@ -4,6 +4,7 @@ import { AGENT_SCOPES, authenticateAgentRequest } from "@/lib/agent-auth";
 import { db } from "@/lib/db";
 import { validateWorkflowIntegrations } from "@/lib/db/integrations";
 import { workflows } from "@/lib/db/schema";
+import { getWhopAccessGuardResponse } from "@/lib/whop-access-guard";
 import { diffWorkflow } from "@/lib/workflow-diff";
 import {
   normalizeWorkflowVisibility,
@@ -24,7 +25,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isWorkflowOperation(value: unknown): value is WorkflowOperation {
-  if (!isRecord(value)) return false;
+  if (!isRecord(value)) {
+    return false;
+  }
   const op = value.op;
   return (
     op === "addNode" ||
@@ -141,6 +144,72 @@ function errorResponse({ error, status }: ApiError): NextResponse {
   return NextResponse.json({ error }, { status });
 }
 
+function normalizeEdgeType(
+  edge: Record<string, unknown>
+): Record<string, unknown> {
+  const edgeType = edge.type;
+  if (typeof edgeType !== "string" || edgeType === "default") {
+    return { ...edge, type: "animated" };
+  }
+  return edge;
+}
+
+function normalizeOperationBatch(
+  operations: WorkflowOperation[]
+): WorkflowOperation[] {
+  return operations.map((operation) => {
+    if (
+      operation.op === "addEdge" &&
+      operation.edge &&
+      typeof operation.edge === "object"
+    ) {
+      return {
+        ...operation,
+        edge: normalizeEdgeType(operation.edge as Record<string, unknown>),
+      };
+    }
+
+    if (operation.op === "replaceAll" && Array.isArray(operation.edges)) {
+      return {
+        ...operation,
+        edges: operation.edges.map((edge) => {
+          if (isRecord(edge)) {
+            return normalizeEdgeType(edge);
+          }
+          return edge;
+        }),
+      };
+    }
+
+    return operation;
+  });
+}
+
+function maybeBroadcastWorkflowDiff(params: {
+  workflowId: string;
+  existingNodes: unknown[];
+  existingEdges: unknown[];
+  nextNodes: unknown;
+  nextEdges: unknown;
+}): void {
+  const { workflowId, existingNodes, existingEdges, nextNodes, nextEdges } =
+    params;
+
+  if (!(Array.isArray(nextNodes) && Array.isArray(nextEdges))) {
+    return;
+  }
+
+  const operations = diffWorkflow(
+    existingNodes,
+    existingEdges,
+    nextNodes,
+    nextEdges
+  );
+  if (operations.length > 0) {
+    broadcastBatch(workflowId, operations);
+  }
+}
+
 export async function GET(
   request: Request,
   context: { params: Promise<{ workflowId: string }> }
@@ -155,6 +224,11 @@ export async function GET(
         { error: agentAuth.error },
         { status: agentAuth.status }
       );
+    }
+
+    const whopAccessGuard = await getWhopAccessGuardResponse(agentAuth.userId);
+    if (whopAccessGuard) {
+      return whopAccessGuard;
     }
 
     const { workflowId } = await context.params;
@@ -202,6 +276,11 @@ export async function PATCH(
       );
     }
 
+    const whopAccessGuard = await getWhopAccessGuardResponse(agentAuth.userId);
+    if (whopAccessGuard) {
+      return whopAccessGuard;
+    }
+
     const { workflowId } = await context.params;
 
     const existingWorkflow = await db.query.workflows.findFirst({
@@ -229,29 +308,15 @@ export async function PATCH(
 
     // Handle operations (broadcast only, no DB write)
     if (isWorkflowOperationArray(body.operations)) {
-      body.operations.forEach((op) => {
-        if (op.op === "addEdge" && op.edge && typeof op.edge === "object") {
-          const edge = op.edge as Record<string, any>;
-          if (!edge.type || edge.type === "default") {
-            edge.type = "animated";
-          }
-        } else if (op.op === "replaceAll" && Array.isArray(op.edges)) {
-          op.edges = op.edges.map((edge) => {
-            if (isRecord(edge) && (!edge.type || edge.type === "default")) {
-              return { ...edge, type: "animated" };
-            }
-            return edge;
-          });
-        }
-      });
+      const normalizedOperations = normalizeOperationBatch(body.operations);
 
       // Broadcast operations to subscribers
-      broadcastBatch(workflowId, body.operations);
+      broadcastBatch(workflowId, normalizedOperations);
 
       return NextResponse.json({
         success: true,
         message: "Operations broadcasted",
-        operations: body.operations,
+        operations: normalizedOperations,
       });
     }
 
@@ -279,17 +344,13 @@ export async function PATCH(
     // Compute fine-grained operations by diffing old vs new workflow.
     // This lets the canvas animate individual add/remove/update operations
     // even when the agent sends the complete nodes/edges.
-    if (Array.isArray(body.nodes) && Array.isArray(body.edges)) {
-      const ops = diffWorkflow(
-        existingWorkflow.nodes as unknown[],
-        existingWorkflow.edges as unknown[],
-        body.nodes as unknown[],
-        body.edges as unknown[]
-      );
-      if (ops.length > 0) {
-        broadcastBatch(workflowId, ops);
-      }
-    }
+    maybeBroadcastWorkflowDiff({
+      workflowId,
+      existingNodes: existingWorkflow.nodes as unknown[],
+      existingEdges: existingWorkflow.edges as unknown[],
+      nextNodes: body.nodes,
+      nextEdges: body.edges,
+    });
 
     return NextResponse.json(serializeWorkflowDates(updatedWorkflow));
   } catch (error) {

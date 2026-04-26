@@ -3,6 +3,7 @@ import { AGENT_SCOPES, authenticateAgentRequest } from "@/lib/agent-auth";
 import { db } from "@/lib/db";
 import { workflows } from "@/lib/db/schema";
 import { generateId } from "@/lib/utils/id";
+import { getWhopAccessGuardResponse } from "@/lib/whop-access-guard";
 import { serializeWorkflowDates } from "@/lib/workflow-route-utils";
 import { AgentComposeWorkflowSchema } from "@/lib/workflow-schema";
 
@@ -18,6 +19,11 @@ export async function POST(request: Request) {
         { error: agentAuth.error },
         { status: agentAuth.status }
       );
+    }
+
+    const whopAccessGuard = await getWhopAccessGuardResponse(agentAuth.userId);
+    if (whopAccessGuard) {
+      return whopAccessGuard;
     }
 
     const rawBody = await request.json().catch(() => null);

@@ -169,5 +169,5 @@ If `pnpm fix` fails in restricted/offline environments, use `pnpm exec ultracite
    - Use an OIDC token, or provide both team/project ids explicitly.
 3. `db:migrate` tries to create existing tables:
    - Your DB migration history table is out of sync. Baseline `drizzle.__drizzle_migrations` before rerunning.
-4. `db:push` crashes in drizzle introspection with `checkValue.replace`:
-   - Use migration SQL/manual apply path until drizzle-kit is upgraded.
+4. `db:push` hangs on Supabase-hosted databases:
+   - `db:push` is disabled. Use `pnpm db:generate && pnpm db:migrate` instead.

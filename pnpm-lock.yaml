@@ -8,6 +8,9 @@ patchedDependencies:
   ai-sdk-provider-opencode-sdk@2.1.1:
     hash: 9f28dc465cc08e9c0c703b472ad6f48734521dacdb273f0d7e7922fce16b7f58
     path: patches/ai-sdk-provider-opencode-sdk@2.1.1.patch
+  drizzle-kit@0.31.9:
+    hash: 73c43ea3994b4a6ba5897c12e88270b7ebabd1efdbcd3995d2a5b66f3b63f4c7
+    path: patches/drizzle-kit@0.31.9.patch
 
 importers:
 
@@ -16,6 +19,9 @@ importers:
       '@ai-sdk/react':
         specifier: ^3.0.99
         version: 3.0.99(react@19.2.1)(zod@4.1.12)
+      '@better-auth/drizzle-adapter':
+        specifier: ^1.5.3
+        version: 1.5.3(@better-auth/core@1.3.34(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.18)(better-call@1.0.19)(jose@6.1.3)(kysely@0.28.8)(nanostores@1.0.1))(@better-auth/utils@0.3.0)(drizzle-orm@0.44.7(@opentelemetry/api@1.9.0)(kysely@0.28.8)(postgres@3.4.7)(sql.js@1.14.0))
       '@json-render/core':
         specifier: ^0.6.1
         version: 0.6.1(zod@4.1.12)
@@ -46,6 +52,9 @@ importers:
       '@radix-ui/react-dialog':
         specifier: ^1.1.15
         version: 1.1.15(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@radix-ui/react-radio-group':
+        specifier: ^1.3.8
+        version: 1.3.8(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@radix-ui/react-tooltip':
         specifier: ^1.2.8
         version: 1.2.8(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
@@ -112,6 +121,9 @@ importers:
       drizzle-orm:
         specifier: ^0.44.7
         version: 0.44.7(@opentelemetry/api@1.9.0)(kysely@0.28.8)(postgres@3.4.7)(sql.js@1.14.0)
+      gray-matter:
+        specifier: ^4.0.3
+        version: 4.0.3
       jose:
         specifier: ^6.1.3
         version: 6.1.3
@@ -169,6 +181,12 @@ importers:
       shiki:
         specifier: ^3.22.0
         version: 3.22.0
+      simple-git:
+        specifier: ^3.32.3
+        version: 3.32.3
+      skills:
+        specifier: ^1.4.3
+        version: 1.4.4
       sonner:
         specifier: ^2.0.7
         version: 2.0.7(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
@@ -216,8 +234,8 @@ importers:
         specifier: ^19
         version: 19.2.2(@types/react@19.2.2)
       drizzle-kit:
-        specifier: ^0.31.6
-        version: 0.31.6
+        specifier: ^0.31.9
+        version: 0.31.9(patch_hash=73c43ea3994b4a6ba5897c12e88270b7ebabd1efdbcd3995d2a5b66f3b63f4c7)
       knip:
         specifier: ^5.70.1
         version: 5.70.1(@types/node@24.10.0)(typescript@5.9.3)
@@ -474,6 +492,13 @@ packages:
       jose: ^6.1.0
       kysely: ^0.28.5
       nanostores: ^1.0.1
+
+  '@better-auth/drizzle-adapter@1.5.3':
+    resolution: {integrity: sha512-dib9V1vpwDu+TKLC+L+8Q5bLNS0uE3JCT4pGotw52pnpiQF8msoMK4eEfri19f8DtNltpb2F2yzyIsTugBBYNQ==}
+    peerDependencies:
+      '@better-auth/core': 1.5.3
+      '@better-auth/utils': ^0.3.0
+      drizzle-orm: '>=0.41.0'
 
   '@better-auth/telemetry@1.3.34':
     resolution: {integrity: sha512-aQZ3wN90YMqV49diWxAMe1k7s2qb55KCsedCZne5PlgCjU4s3YtnqyjC5FEpzw2KY8l8rvR7DMAsDl13NjObKA==}
@@ -1216,6 +1241,12 @@ packages:
     resolution: {integrity: sha512-Lwkb4ijTnKGD+dNPNzAIfCyV0HKqUe98kaUVrEVSja8hKElRl/jkQdCK9/GZMaziaNRNgxuLAhk48s/CTXs8tA==}
     peerDependencies:
       react: ^19.2.3
+
+  '@kwsites/file-exists@1.1.1':
+    resolution: {integrity: sha512-m9/5YGR18lIwxSFDwfE3oA7bWuq9kdau6ugN4H2rJeyhFQZcG9AgSHkQtSD15a8WvTgfz9aikZMrKPHvbpqFiw==}
+
+  '@kwsites/promise-deferred@1.1.1':
+    resolution: {integrity: sha512-GaHYm+c0O9MjZRu0ongGBRbinu8gVAMd2UZjji6jVmqKtZluZnptXGWhz1E8j8D2HJ3f/yMxKAUC0b+57wncIw==}
 
   '@levischuck/tiny-cbor@0.2.11':
     resolution: {integrity: sha512-llBRm4dT4Z89aRsm6u2oEZ8tfwL/2l6BwpZ7JcyieouniDECM5AqNgr/y08zalEIvW3RSK4upYyybDcmjXqAow==}
@@ -3651,8 +3682,8 @@ packages:
     resolution: {integrity: sha512-JVUnt+DUIzu87TABbhPmNfVdBDt18BLOWjMUFJMSi/Qqg7NTYtabbvSNJGOJ7afbRuv9D/lngizHtP7QyLQ+9w==}
     engines: {node: '>=12'}
 
-  drizzle-kit@0.31.6:
-    resolution: {integrity: sha512-/B4e/4pwnx25QwD5xXgdpo1S+077a2VZdosXbItE/oNmUgQwZydGDz9qJYmnQl/b+5IX0rLfwRhrPnroGtrg8Q==}
+  drizzle-kit@0.31.9:
+    resolution: {integrity: sha512-GViD3IgsXn7trFyBUUHyTFBpH/FsHTxYJ66qdbVggxef4UBPHRYxQaRzYLTuekYnk9i5FIEL9pbBIwMqX/Uwrg==}
     hasBin: true
 
   drizzle-orm@0.44.7:
@@ -5421,8 +5452,16 @@ packages:
   simple-get@4.0.1:
     resolution: {integrity: sha512-brv7p5WgH0jmQJr1ZDDfKDOSeWWg+OVypG99A/5vYGPqJ6pxiaHLy8nxtFjBA7oMa01ebA9gfh1uMCFqOuXxvA==}
 
+  simple-git@3.32.3:
+    resolution: {integrity: sha512-56a5oxFdWlsGygOXHWrG+xjj5w9ZIt2uQbzqiIGdR/6i5iococ7WQ/bNPzWxCJdEUGUCmyMH0t9zMpRJTaKxmw==}
+
   sisteransi@1.0.5:
     resolution: {integrity: sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg==}
+
+  skills@1.4.4:
+    resolution: {integrity: sha512-Ihu9Nfp2Ff95254Wq73grr6hcwCQG1G0K7Ty+0/N7xiT6LG01+XY1FCdTBiGPVoIsCpG4WudJj6/LvHUZWxmCQ==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   slash@3.0.0:
     resolution: {integrity: sha512-g9Q1haeby36OSStwb4ntCGGGaKsaVSjQ68fBxoQcutl5fS1vuY18H3wSt3jFyFtrkx+Kz0V1G85A4MyAdDMi2Q==}
@@ -6566,6 +6605,12 @@ snapshots:
       nanostores: 1.0.1
       zod: 4.1.12
 
+  '@better-auth/drizzle-adapter@1.5.3(@better-auth/core@1.3.34(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.18)(better-call@1.0.19)(jose@6.1.3)(kysely@0.28.8)(nanostores@1.0.1))(@better-auth/utils@0.3.0)(drizzle-orm@0.44.7(@opentelemetry/api@1.9.0)(kysely@0.28.8)(postgres@3.4.7)(sql.js@1.14.0))':
+    dependencies:
+      '@better-auth/core': 1.3.34(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.18)(better-call@1.0.19)(jose@6.1.3)(kysely@0.28.8)(nanostores@1.0.1)
+      '@better-auth/utils': 0.3.0
+      drizzle-orm: 0.44.7(@opentelemetry/api@1.9.0)(kysely@0.28.8)(postgres@3.4.7)(sql.js@1.14.0)
+
   '@better-auth/telemetry@1.3.34(better-call@1.0.19)(jose@6.1.3)(kysely@0.28.8)(nanostores@1.0.1)':
     dependencies:
       '@better-auth/core': 1.3.34(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.18)(better-call@1.0.19)(jose@6.1.3)(kysely@0.28.8)(nanostores@1.0.1)
@@ -7103,6 +7148,14 @@ snapshots:
       react: 19.2.1
     transitivePeerDependencies:
       - zod
+
+  '@kwsites/file-exists@1.1.1':
+    dependencies:
+      debug: 4.4.3(supports-color@8.1.1)
+    transitivePeerDependencies:
+      - supports-color
+
+  '@kwsites/promise-deferred@1.1.1': {}
 
   '@levischuck/tiny-cbor@0.2.11': {}
 
@@ -9803,7 +9856,7 @@ snapshots:
 
   dotenv@17.2.3: {}
 
-  drizzle-kit@0.31.6:
+  drizzle-kit@0.31.9(patch_hash=73c43ea3994b4a6ba5897c12e88270b7ebabd1efdbcd3995d2a5b66f3b63f4c7):
     dependencies:
       '@drizzle-team/brocli': 0.10.2
       '@esbuild-kit/esm-loader': 2.6.5
@@ -11930,7 +11983,17 @@ snapshots:
       simple-concat: 1.0.1
     optional: true
 
+  simple-git@3.32.3:
+    dependencies:
+      '@kwsites/file-exists': 1.1.1
+      '@kwsites/promise-deferred': 1.1.1
+      debug: 4.4.3(supports-color@8.1.1)
+    transitivePeerDependencies:
+      - supports-color
+
   sisteransi@1.0.5: {}
+
+  skills@1.4.4: {}
 
   slash@3.0.0: {}
 

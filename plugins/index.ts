@@ -19,6 +19,7 @@ import "./ai-gateway";
 import "./bash";
 import "./blob";
 import "./clerk";
+import "./code";
 import "./fal";
 import "./firecrawl";
 import "./github";
@@ -29,6 +30,7 @@ import "./slack";
 import "./stripe";
 import "./superagent";
 import "./v0";
+import "./vercel";
 import "./webflow";
 
 export type {
@@ -42,6 +44,7 @@ export type {
 
 // Export the registry utilities
 export {
+  actionRequiresIntegration,
   computeActionId,
   findActionById,
   flattenConfigFields,

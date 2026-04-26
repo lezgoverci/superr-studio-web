@@ -25,8 +25,11 @@ import { CodeEditor } from "@/components/ui/code-editor";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api-client";
+import {
+  clearUnusedConnectionFields,
+  getConnectionRequirements,
+} from "@/lib/connection-requirements";
 import { integrationsAtom } from "@/lib/integrations-store";
-import type { IntegrationType } from "@/lib/types/integration";
 import { generateWorkflowCode } from "@/lib/workflow-codegen";
 import {
   clearNodeStatusesAtom,
@@ -45,7 +48,6 @@ import {
   selectedNodeAtom,
   updateNodeDataAtom,
 } from "@/lib/workflow-store";
-import { findActionById } from "@/plugins";
 import { ActionConfig } from "../workflow/config/action-config";
 import { ActionGrid } from "../workflow/config/action-grid";
 import { TriggerConfig } from "../workflow/config/trigger-config";
@@ -53,14 +55,15 @@ import { generateNodeCode } from "../workflow/utils/code-generators";
 import { WorkflowRuns } from "../workflow/workflow-runs";
 import type { OverlayComponentProps } from "./types";
 
-// System actions that need integrations (not in plugin registry)
-const SYSTEM_ACTION_INTEGRATIONS: Record<string, IntegrationType> = {
-  "Database Query": "database",
-};
-
 // Regex constants
 const NON_ALPHANUMERIC_REGEX = /[^a-zA-Z0-9\s]/g;
 const WORD_SPLIT_REGEX = /\s+/;
+const CONNECTION_FIELD_KEYS = ["integrationId", "vercelIntegrationId"] as const;
+
+type IntegrationRecord = {
+  id: string;
+  type: string;
+};
 
 // Helper to generate code filename based on node type
 function getCodeFilename(node: {
@@ -79,6 +82,52 @@ function getCodeFilename(node: {
     .toLowerCase()
     .replace(/\s+/g, "-")
     .replace(/[^a-z0-9-]/g, "")}-step.ts`;
+}
+
+function connectionFieldsChanged(
+  currentConfig: Record<string, unknown>,
+  nextConfig: Record<string, unknown>
+): boolean {
+  return CONNECTION_FIELD_KEYS.some(
+    (fieldKey) => nextConfig[fieldKey] !== currentConfig[fieldKey]
+  );
+}
+
+function reconcileInvalidConnections(params: {
+  actionType: string;
+  currentConfig: Record<string, unknown>;
+  integrations: IntegrationRecord[];
+}): Record<string, unknown> | null {
+  const requirements = getConnectionRequirements({
+    actionType: params.actionType,
+    config: params.currentConfig,
+  });
+  const nextConfig = clearUnusedConnectionFields(
+    params.currentConfig,
+    requirements
+  );
+  let didChange = connectionFieldsChanged(params.currentConfig, nextConfig);
+
+  for (const requirement of requirements) {
+    const currentConnectionId = nextConfig[requirement.fieldKey];
+    if (typeof currentConnectionId !== "string" || currentConnectionId === "") {
+      continue;
+    }
+
+    const validIntegrations = params.integrations.filter(
+      (integration) => integration.type === requirement.integrationType
+    );
+    const isValid = validIntegrations.some(
+      (integration) => integration.id === currentConnectionId
+    );
+
+    if (!isValid && validIntegrations.length > 0) {
+      nextConfig[requirement.fieldKey] = validIntegrations[0].id;
+      didChange = true;
+    }
+  }
+
+  return didChange ? nextConfig : null;
 }
 
 type ConfigurationOverlayProps = OverlayComponentProps;
@@ -121,38 +170,23 @@ export function ConfigurationOverlay({ overlayId }: ConfigurationOverlayProps) {
     const actionType = selectedNode.data.config?.actionType as
       | string
       | undefined;
-    const currentIntegrationId = selectedNode.data.config?.integrationId as
-      | string
-      | undefined;
-
-    if (!(actionType && currentIntegrationId)) {
+    if (!actionType) {
       return;
     }
 
-    const action = findActionById(actionType);
-    const integrationType: IntegrationType | undefined =
-      (action?.integration as IntegrationType | undefined) ||
-      SYSTEM_ACTION_INTEGRATIONS[actionType];
-
-    if (!integrationType) {
-      return;
-    }
-
-    const validIntegrations = globalIntegrations.filter(
-      (i) => i.type === integrationType
-    );
-    const isValid = validIntegrations.some(
-      (i) => i.id === currentIntegrationId
-    );
-
-    if (!isValid && validIntegrations.length > 0) {
+    const nextConfig = reconcileInvalidConnections({
+      actionType,
+      currentConfig: (selectedNode.data.config || {}) as Record<
+        string,
+        unknown
+      >,
+      integrations: globalIntegrations,
+    });
+    if (nextConfig) {
       updateNodeData({
         id: selectedNode.id,
         data: {
-          config: {
-            ...selectedNode.data.config,
-            integrationId: validIntegrations[0].id,
-          },
+          config: nextConfig,
         },
       });
     }
@@ -163,10 +197,26 @@ export function ConfigurationOverlay({ overlayId }: ConfigurationOverlayProps) {
       if (!selectedNode) {
         return;
       }
+      const nextConfig = clearUnusedConnectionFields(
+        {
+          ...(selectedNode.data.config || {}),
+          [key]: value,
+        },
+        getConnectionRequirements({
+          actionType:
+            (key === "actionType"
+              ? value
+              : (selectedNode.data.config?.actionType as string)) || "",
+          config: {
+            ...(selectedNode.data.config || {}),
+            [key]: value,
+          },
+        })
+      );
       updateNodeData({
         id: selectedNode.id,
         data: {
-          config: { ...selectedNode.data.config, [key]: value },
+          config: nextConfig,
         },
       });
     },

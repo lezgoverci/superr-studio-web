@@ -19,8 +19,12 @@ import { fetchCredentials } from "@/lib/credential-fetcher";
 import { db } from "@/lib/db";
 import { getIntegrationById } from "@/lib/db/integrations";
 import { workflows } from "@/lib/db/schema";
+import { resolveManagedSandbox } from "@/lib/sandbox/managed";
+import { getSandboxType, resolveVercelSandboxDestination } from "@/lib/sandbox/resolve";
+import type { SandboxType } from "@/lib/sandbox/types";
 import { type StepInput, withStepLogging } from "@/lib/steps/step-handler";
 import { getErrorMessageAsync } from "@/lib/utils";
+import { resolveVercelSandboxCredentials } from "@/lib/vercel-sandbox-credentials";
 import {
   buildWorkflowSummary,
   composeWorkflowUiSpec,
@@ -28,7 +32,7 @@ import {
 } from "@/lib/workflow-ui-spec/compose";
 import type { AiAgentCredentials } from "../credentials";
 
-type SandboxType = "vercel" | "just-bash";
+// SandboxType imported from @/lib/sandbox
 
 type RunAgentResult =
   | {
@@ -66,9 +70,8 @@ type RunAgentResult =
 export type RunAgentCoreInput = {
   aiModel?: string;
   sandboxType?: string;
-  vercelSandboxToken?: string;
-  vercelSandboxTeamId?: string;
-  vercelSandboxProjectId?: string;
+  vercelIntegrationId?: string;
+  sandboxId?: string;
   agentPrompt?: string;
   agentInstructions?: string;
   maxSteps?: string;
@@ -464,12 +467,6 @@ function extractSkillsUsed(steps: Array<{ toolCalls?: unknown }>): string[] {
   return [...names];
 }
 
-type VercelSandboxCredentials = {
-  token: string;
-  teamId: string;
-  projectId: string;
-};
-
 type SandboxTools = Awaited<ReturnType<typeof createBashTool>>["tools"];
 type BashSandbox = Awaited<ReturnType<typeof createBashTool>>["sandbox"];
 type SkillTool = Awaited<
@@ -489,138 +486,7 @@ type PreparedSkillToolkit = {
   cleanup: () => Promise<void>;
 };
 
-function getSandboxType(sandboxType: string | undefined): SandboxType {
-  if (sandboxType === "just-bash") {
-    return "just-bash";
-  }
-
-  return "vercel";
-}
-
-function decodeBase64Url(base64Url: string): string {
-  const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-  const paddingLength = (4 - (base64.length % 4)) % 4;
-  const padded = `${base64}${"=".repeat(paddingLength)}`;
-  return Buffer.from(padded, "base64").toString("utf-8");
-}
-
-function parseOidcTokenCredentials(
-  token: string
-): VercelSandboxCredentials | null {
-  const parts = token.split(".");
-  if (parts.length < 2) {
-    return null;
-  }
-
-  try {
-    const payload = JSON.parse(decodeBase64Url(parts[1])) as {
-      owner_id?: unknown;
-      project_id?: unknown;
-    };
-    if (
-      typeof payload.owner_id !== "string" ||
-      typeof payload.project_id !== "string" ||
-      payload.owner_id.trim() === "" ||
-      payload.project_id.trim() === ""
-    ) {
-      return null;
-    }
-
-    return {
-      token,
-      teamId: payload.owner_id,
-      projectId: payload.project_id,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function resolveVercelSandboxCredentials(
-  token: string,
-  options?: {
-    explicitTeamId?: string;
-    explicitProjectId?: string;
-  }
-): VercelSandboxCredentials {
-  const parsed = parseOidcTokenCredentials(token);
-  if (parsed) {
-    return parsed;
-  }
-
-  const explicitTeamId = options?.explicitTeamId?.trim();
-  const explicitProjectId = options?.explicitProjectId?.trim();
-
-  if (explicitTeamId && explicitProjectId) {
-    return {
-      token,
-      teamId: explicitTeamId,
-      projectId: explicitProjectId,
-    };
-  }
-
-  if (explicitTeamId || explicitProjectId) {
-    throw new Error(
-      "Provide both Vercel Sandbox Team ID and Project ID together when using a non-OIDC token."
-    );
-  }
-
-  const teamId = process.env.VERCEL_TEAM_ID?.trim();
-  const projectId = process.env.VERCEL_PROJECT_ID?.trim();
-
-  if (teamId && projectId) {
-    return {
-      token,
-      teamId,
-      projectId,
-    };
-  }
-
-  if (teamId || projectId) {
-    throw new Error(
-      "Both VERCEL_TEAM_ID and VERCEL_PROJECT_ID must be set together when using a non-OIDC Vercel token."
-    );
-  }
-
-  throw new Error(
-    "Invalid Vercel Sandbox token configuration. Provide an OIDC token, set Vercel Sandbox Team ID and Project ID in this node, or configure VERCEL_TEAM_ID and VERCEL_PROJECT_ID in server environment variables."
-  );
-}
-
-async function resolveVercelSandboxDestination(
-  sandbox: VercelSandbox
-): Promise<string> {
-  const probeCommand = [
-    "if [ -d /vercel/sandbox/workspace ]; then",
-    "  printf '/vercel/sandbox/workspace'",
-    "elif mkdir -p /vercel/sandbox/workspace >/dev/null 2>&1; then",
-    "  printf '/vercel/sandbox/workspace'",
-    "elif [ -d /workspace ]; then",
-    "  printf '/workspace'",
-    "elif [ -d /vercel/sandbox ]; then",
-    "  printf '/vercel/sandbox'",
-    "else",
-    "  printf '/'",
-    "fi",
-  ].join("\n");
-
-  const probeResult = await sandbox.runCommand("bash", ["-lc", probeCommand]);
-  if (probeResult.exitCode !== 0) {
-    const stderr = (await probeResult.stderr()).trim();
-    throw new Error(
-      `Failed to determine Vercel sandbox working directory${stderr ? `: ${stderr}` : "."}`
-    );
-  }
-
-  const destination = (await probeResult.stdout()).trim();
-  if (!destination) {
-    throw new Error(
-      "Failed to determine Vercel sandbox working directory: no destination returned."
-    );
-  }
-
-  return destination;
-}
+// getSandboxType and resolveVercelSandboxDestination imported from @/lib/sandbox
 
 function buildSkillSourceConfig(input: RunAgentCoreInput): SkillSourceConfig {
   const source = input.skillsSource === "git" ? "git" : "preloaded";
@@ -706,7 +572,7 @@ async function createSandboxTools(
   sandboxType: SandboxType;
   cleanup: () => Promise<void>;
 }> {
-  const requestedSandboxType = getSandboxType(input.sandboxType);
+  const requestedSandboxType = getSandboxType(input.sandboxType, "vercel");
 
   if (skillToolkit?.hasExecutableSkills && requestedSandboxType !== "vercel") {
     throw new Error(
@@ -739,18 +605,29 @@ async function createSandboxTools(
     };
   }
 
-  const token = input.vercelSandboxToken?.trim();
-  if (!token) {
-    throw new Error(
-      "Vercel Sandbox token is required when Sandbox is set to Vercel Sandbox."
+  // ── Vercel path: managed or ephemeral ─────────────────────────
+  let sandbox: VercelSandbox;
+  let isManaged = false;
+
+  if (input.sandboxId) {
+    // Reconnect to a managed sandbox
+    const managed = await resolveManagedSandbox(input.sandboxId);
+    const credentials = await resolveVercelSandboxCredentials(
+      managed.integrationId || input.vercelIntegrationId,
     );
+    sandbox = await VercelSandbox.get({
+      sandboxId: managed.vercelSandboxId,
+      ...credentials,
+    });
+    isManaged = true;
+  } else {
+    // Ephemeral sandbox
+    const credentials = await resolveVercelSandboxCredentials(
+      input.vercelIntegrationId
+    );
+    sandbox = await VercelSandbox.create(credentials);
   }
 
-  const credentials = resolveVercelSandboxCredentials(token, {
-    explicitTeamId: input.vercelSandboxTeamId,
-    explicitProjectId: input.vercelSandboxProjectId,
-  });
-  const sandbox = await VercelSandbox.create(credentials);
   const destination = await resolveVercelSandboxDestination(sandbox);
 
   const { tools, sandbox: wrappedSandbox } = await createBashTool({
@@ -767,9 +644,9 @@ async function createSandboxTools(
     sandbox: wrappedSandbox,
     workingDirectory: destination,
     sandboxType: requestedSandboxType,
-    cleanup: async () => {
-      await sandbox.stop();
-    },
+    cleanup: isManaged
+      ? async () => {}
+      : async () => { await sandbox.stop(); },
   };
 }
 

@@ -162,19 +162,30 @@ async function logStepComplete(options: {
 /**
  * Internal fields to strip from logged input
  */
-const INTERNAL_FIELDS = ["_context", "actionType", "integrationId"] as const;
+const INTERNAL_FIELDS = [
+  "_context",
+  "actionType",
+  "integrationId",
+  "vercelIntegrationId",
+] as const;
 
 /**
  * Strip internal fields from input for logging (we don't want to log internal metadata)
  */
 function stripInternalFields<T extends StepInput>(
   input: T
-): Omit<T, "_context" | "actionType" | "integrationId"> {
+): Omit<
+  T,
+  "_context" | "actionType" | "integrationId" | "vercelIntegrationId"
+> {
   const result = { ...input };
   for (const field of INTERNAL_FIELDS) {
     delete (result as Record<string, unknown>)[field];
   }
-  return result as Omit<T, "_context" | "actionType" | "integrationId">;
+  return result as Omit<
+    T,
+    "_context" | "actionType" | "integrationId" | "vercelIntegrationId"
+  >;
 }
 
 /**

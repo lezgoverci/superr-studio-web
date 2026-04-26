@@ -109,7 +109,9 @@ export function useWorkflowStream(workflowId: string | null) {
           const { nodeId, updates } = operation;
           setNodes((nodes) =>
             nodes.map((n) => {
-              if (n.id !== nodeId) return n;
+              if (n.id !== nodeId) {
+                return n;
+              }
               return {
                 ...n,
                 ...(updates.position ? { position: updates.position } : {}),
@@ -126,7 +128,9 @@ export function useWorkflowStream(workflowId: string | null) {
           const { edgeId, updates } = operation;
           setEdges((edges) =>
             edges.map((e) => {
-              if (e.id !== edgeId) return e;
+              if (e.id !== edgeId) {
+                return e;
+              }
               return { ...e, ...updates };
             })
           );
@@ -139,6 +143,9 @@ export function useWorkflowStream(workflowId: string | null) {
           setHasUnsavedChanges(true);
           break;
         }
+        default: {
+          break;
+        }
       }
     },
     [setEdges, setNodes, setSelectedNode, setHasUnsavedChanges]
@@ -146,8 +153,12 @@ export function useWorkflowStream(workflowId: string | null) {
 
   // Process the operation queue one item at a time with delay
   const processQueue = useCallback(() => {
-    if (processingRef.current) return;
-    if (operationQueueRef.current.length === 0) return;
+    if (processingRef.current) {
+      return;
+    }
+    if (operationQueueRef.current.length === 0) {
+      return;
+    }
 
     processingRef.current = true;
 
@@ -235,7 +246,9 @@ export function useWorkflowStream(workflowId: string | null) {
 
   useEffect(() => {
     console.log("[Workflow Stream] useEffect running, workflowId:", workflowId);
-    if (!workflowId) return;
+    if (!workflowId) {
+      return;
+    }
 
     const MAX_RECONNECT_DELAY = 30_000;
     const BASE_RECONNECT_DELAY = 1000;

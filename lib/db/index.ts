@@ -8,9 +8,13 @@ import {
   artifactPublications,
   artifacts,
   integrations,
+  memberProfiles,
+  memberProgress,
   opencodeConnections,
+  sandboxes,
   sessions,
   userPreferences,
+  userSkills,
   users,
   verifications,
   workflowExecutionLogs,
@@ -33,8 +37,12 @@ const schema = {
   artifactPublications,
   apiKeys,
   integrations,
+  memberProfiles,
+  memberProgress,
   opencodeConnections,
+  sandboxes,
   userPreferences,
+  userSkills,
 };
 
 const connectionString = resolveDatabaseUrlWithFallback();

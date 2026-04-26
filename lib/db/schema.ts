@@ -113,6 +113,41 @@ export const integrations = pgTable("integrations", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// Managed sandboxes — user-created Vercel Sandbox VMs that persist across workflow runs
+export type SandboxStatus = "pending" | "running" | "stopped" | "failed";
+
+export const sandboxes = pgTable(
+  "sandboxes",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    /** The Vercel-side sandbox ID (from Sandbox.create()). */
+    vercelSandboxId: text("vercel_sandbox_id"),
+    /** Which Vercel integration credentials to use. */
+    integrationId: text("integration_id").references(() => integrations.id, {
+      onDelete: "set null",
+    }),
+    /** Cached status from Vercel API. */
+    status: text("status").notNull().default("stopped").$type<SandboxStatus>(),
+    /** Sandbox VM runtime (e.g. node24, python3.13). */
+    runtime: text("runtime").default("node24"),
+    /** Timeout in milliseconds before auto-terminate. */
+    timeout: integer("timeout"),
+    // biome-ignore lint/suspicious/noExplicitAny: JSONB type - extra metadata
+    metadata: jsonb("metadata").$type<Record<string, any> | null>(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index("sandboxes_user_id_idx").on(table.userId),
+  })
+);
+
 export type OpencodeConnectionMode =
   | "self_hosted"
   | "managed_shared"
@@ -133,6 +168,7 @@ export const opencodeConnections = pgTable(
       .default("self_hosted")
       .$type<OpencodeConnectionMode>(),
     baseUrl: text("base_url").notNull(),
+    directory: text("directory"),
     username: text("username").notNull(),
     passwordEncrypted: text("password_encrypted").notNull(),
     isActive: boolean("is_active").notNull().default(false),
@@ -163,6 +199,107 @@ export const userPreferences = pgTable(
   (table) => ({
     userIdUnique: uniqueIndex("user_preferences_user_id_unique").on(
       table.userId
+    ),
+  })
+);
+
+export type MemberLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type MemberRole = "hero" | "mage" | "warrior" | "priest";
+export type MemberSkillLevel = "starting" | "developing" | "advanced";
+export type MemberAiFamiliarity = "new" | "comfortable" | "power-user";
+export type MemberCareerPressure = "low" | "medium" | "high";
+
+export const memberProfiles = pgTable(
+  "member_profiles",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    level: integer("level").notNull().default(1).$type<MemberLevel>(),
+    role: text("role").$type<MemberRole>(),
+    displayName: text("display_name"),
+    bio: text("bio"),
+    location: text("location"),
+    avatarUrl: text("avatar_url"),
+    isPublic: boolean("is_public").notNull().default(false),
+    currentRole: text("current_role"),
+    targetRole: text("target_role"),
+    skillLevel: text("skill_level").$type<MemberSkillLevel>(),
+    aiFamiliarity: text("ai_familiarity").$type<MemberAiFamiliarity>(),
+    careerPressure: text("career_pressure").$type<MemberCareerPressure>(),
+    firstGoal: text("first_goal"),
+    whopAffiliateId: text("whop_affiliate_id"),
+    notebooklmNotebookId: text("notebooklm_notebook_id"),
+    onboardingCompletedAt: timestamp("onboarding_completed_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdUnique: uniqueIndex("member_profiles_user_id_unique").on(
+      table.userId
+    ),
+    levelIdx: index("member_profiles_level_idx").on(table.level),
+  })
+);
+
+export const memberProgress = pgTable(
+  "member_progress",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    trackId: text("track_id").notNull(),
+    taskId: text("task_id").notNull(),
+    completedAt: timestamp("completed_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index("member_progress_user_id_idx").on(table.userId),
+    taskUnique: uniqueIndex("member_progress_user_task_unique").on(
+      table.userId,
+      table.trackId,
+      table.taskId
+    ),
+  })
+);
+
+// User skills table to track installed AI agent skills per user
+export type SkillStatus = "installed" | "installing" | "failed";
+
+export const userSkills = pgTable(
+  "user_skills",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    skillName: text("skill_name").notNull(),
+    description: text("description"),
+    source: text("source").notNull(),
+    sourceType: text("source_type")
+      .notNull()
+      .$type<"github" | "local" | "well-known">(),
+    version: text("version"),
+    status: text("status").notNull().$type<SkillStatus>().default("installed"),
+    // biome-ignore lint/suspicious/noExplicitAny: JSONB type - skill metadata from frontmatter
+    metadata: jsonb("metadata").$type<Record<string, any> | null>(),
+    installedAt: timestamp("installed_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index("user_skills_user_id_idx").on(table.userId),
+    userSkillUnique: uniqueIndex("user_skills_user_skill_unique").on(
+      table.userId,
+      table.skillName
     ),
   })
 );
@@ -398,6 +535,7 @@ export type Workflow = typeof workflows.$inferSelect;
 export type NewWorkflow = typeof workflows.$inferInsert;
 export type Integration = typeof integrations.$inferSelect;
 export type NewIntegration = typeof integrations.$inferInsert;
+
 export type OpencodeConnection = typeof opencodeConnections.$inferSelect;
 export type NewOpencodeConnection = typeof opencodeConnections.$inferInsert;
 export type WorkflowExecution = typeof workflowExecutions.$inferSelect;
@@ -412,3 +550,11 @@ export type ArtifactPublication = typeof artifactPublications.$inferSelect;
 export type NewArtifactPublication = typeof artifactPublications.$inferInsert;
 export type UserPreference = typeof userPreferences.$inferSelect;
 export type NewUserPreference = typeof userPreferences.$inferInsert;
+export type MemberProfile = typeof memberProfiles.$inferSelect;
+export type NewMemberProfile = typeof memberProfiles.$inferInsert;
+export type MemberProgress = typeof memberProgress.$inferSelect;
+export type NewMemberProgress = typeof memberProgress.$inferInsert;
+export type UserSkill = typeof userSkills.$inferSelect;
+export type NewUserSkill = typeof userSkills.$inferInsert;
+export type SandboxRecord = typeof sandboxes.$inferSelect;
+export type NewSandboxRecord = typeof sandboxes.$inferInsert;

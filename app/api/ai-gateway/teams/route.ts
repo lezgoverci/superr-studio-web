@@ -3,6 +3,7 @@ import { isAiGatewayManagedKeysEnabled } from "@/lib/ai-gateway/config";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { accounts } from "@/lib/db/schema";
+import { getWhopAccessGuardResponse } from "@/lib/whop-access-guard";
 
 export type VercelTeam = {
   id: string;
@@ -84,6 +85,11 @@ export async function GET(request: Request) {
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session?.user?.id) {
     return Response.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const whopAccessGuard = await getWhopAccessGuardResponse(session.user.id);
+  if (whopAccessGuard) {
+    return whopAccessGuard;
   }
 
   const account = await db.query.accounts.findFirst({

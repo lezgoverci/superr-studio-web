@@ -37,7 +37,10 @@ const SYSTEM_INTEGRATION_DESCRIPTIONS: Record<string, string> = {
 
 // Get all integration types (plugins + system)
 const getIntegrationTypes = (): IntegrationType[] => [
-  ...getSortedIntegrationTypes(),
+  ...getSortedIntegrationTypes().filter((type) => {
+    const plugin = getIntegration(type);
+    return Boolean(plugin && plugin.formFields.length > 0);
+  }),
   ...SYSTEM_INTEGRATION_TYPES,
 ];
 

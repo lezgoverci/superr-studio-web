@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { workflows } from "@/lib/db/schema";
+import { getWhopAccessGuardResponse } from "@/lib/whop-access-guard";
 import { generateWorkflowSDKCode } from "@/lib/workflow-codegen-sdk";
 
 export async function GET(
@@ -17,6 +18,11 @@ export async function GET(
 
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const whopAccessGuard = await getWhopAccessGuardResponse(session.user.id);
+    if (whopAccessGuard) {
+      return whopAccessGuard;
     }
 
     const workflow = await db.query.workflows.findFirst({

@@ -5,14 +5,14 @@ import { useCallback, useRef } from "react";
  * version of the callback. Useful for avoiding stale closure issues without
  * adding the callback to useEffect / useCallback dependency arrays.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function useStableCallback<T extends (...args: any[]) => any>(
+export function useStableCallback<T extends (...args: never[]) => unknown>(
   callback: T
 ): T {
   const callbackRef = useRef(callback);
   callbackRef.current = callback;
   return useCallback(
-    (...args: Parameters<T>): ReturnType<T> => callbackRef.current(...args),
+    (...args: Parameters<T>): ReturnType<T> =>
+      callbackRef.current(...args) as ReturnType<T>,
     []
   ) as T;
 }

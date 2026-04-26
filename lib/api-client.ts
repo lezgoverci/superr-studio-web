@@ -8,6 +8,15 @@ import type {
   ArtifactRecord,
   ArtifactWithPublicationRecord,
 } from "./artifacts/types";
+import type {
+  HubBrainResponse,
+  HubBrainSourceMutationResponse,
+  HubEarnResponse,
+  HubLevelCheckResponse,
+  HubMemberProfile,
+  HubProgressResponse,
+  HubWhopAccess,
+} from "./hub/types";
 import type { IntegrationConfig, IntegrationType } from "./types/integration";
 import type { WorkflowEdge, WorkflowNode } from "./workflow-store";
 
@@ -122,6 +131,7 @@ export type OpencodeConnection = {
   name: string | null;
   mode: OpencodeConnectionMode;
   url: string;
+  directory: string | null;
   username: string;
   isActive: boolean;
   createdAt?: Date;
@@ -145,6 +155,14 @@ export type ActivateConnectionResponse = {
   success: boolean;
   activeConnectionId: string;
   connections: OpencodeConnection[];
+};
+
+export type OpencodePathInfo = {
+  home: string;
+  state: string;
+  config: string;
+  worktree: string;
+  directory: string;
 };
 
 // Integration API
@@ -692,6 +710,7 @@ export const opencodeApi = {
     username: string;
     password?: string;
     name?: string;
+    directory?: string;
   }) =>
     apiCall<OpencodeConnectionResponse>("/api/opencode/connection", {
       method: "PUT",
@@ -713,6 +732,16 @@ export const opencodeApi = {
         method: "PUT",
       }
     ),
+
+  getPath: () => apiCall<OpencodePathInfo>("/api/opencode/path"),
+
+  disposeInstance: (options?: { directory?: string }) =>
+    apiCall<boolean>(
+      `/api/opencode/instance/dispose${options?.directory ? `?directory=${encodeURIComponent(options.directory)}` : ""}`,
+      {
+        method: "POST",
+      }
+    ),
 };
 
 export const userPreferencesApi = {
@@ -726,13 +755,139 @@ export const userPreferencesApi = {
     }),
 };
 
+export const hubApi = {
+  access: {
+    get: () => apiCall<HubWhopAccess>("/api/hub/access"),
+  },
+  profile: {
+    get: () => apiCall<HubMemberProfile>("/api/hub/profile"),
+    update: (data: {
+      role?: HubMemberProfile["role"];
+      displayName?: string | null;
+      bio?: string | null;
+      location?: string | null;
+      avatarUrl?: string | null;
+      isPublic?: boolean;
+      currentRole?: string | null;
+      targetRole?: string | null;
+      skillLevel?: HubMemberProfile["skillLevel"];
+      aiFamiliarity?: HubMemberProfile["aiFamiliarity"];
+      careerPressure?: HubMemberProfile["careerPressure"];
+      firstGoal?: string | null;
+      completeOnboarding?: boolean;
+    }) =>
+      apiCall<HubMemberProfile>("/api/hub/profile", {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
+  },
+  progress: {
+    get: () => apiCall<HubProgressResponse>("/api/hub/progress"),
+    update: (data: { trackId: string; taskId: string; completed?: boolean }) =>
+      apiCall<HubProgressResponse>("/api/hub/progress", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+  },
+  brain: {
+    get: () => apiCall<HubBrainResponse>("/api/hub/brain"),
+    link: (data: { notebookIdOrUrl: string }) =>
+      apiCall<HubBrainResponse>("/api/hub/brain/link", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    provision: (data?: { force?: boolean }) =>
+      apiCall<HubBrainResponse>("/api/hub/brain/provision", {
+        method: "POST",
+        body: JSON.stringify(data ?? {}),
+      }),
+    addUrlSource: (data: { url: string }) =>
+      apiCall<HubBrainSourceMutationResponse>("/api/hub/brain/sources/url", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    addTextSource: (data: { title: string; content: string }) =>
+      apiCall<HubBrainSourceMutationResponse>("/api/hub/brain/sources/text", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+  },
+  earn: {
+    get: () => apiCall<HubEarnResponse>("/api/hub/earn"),
+  },
+  level: {
+    check: () => apiCall<HubLevelCheckResponse>("/api/hub/level"),
+    up: () =>
+      apiCall<HubLevelCheckResponse>("/api/hub/level", {
+        method: "POST",
+      }),
+  },
+};
+
+// Skills types
+export type SkillStatus = "installed" | "installing" | "failed";
+
+export type UserSkillRecord = {
+  id: string;
+  userId: string;
+  skillName: string;
+  description: string | null;
+  source: string;
+  sourceType: "github" | "local" | "well-known";
+  version: string | null;
+  status: SkillStatus;
+  metadata: Record<string, unknown> | null;
+  installedAt: string;
+  updatedAt: string;
+};
+
+export type MarketplaceSearchResult = {
+  name: string;
+  slug: string;
+  source: string;
+  installs: number;
+};
+
+export type InstallSkillResult = {
+  success: true;
+  skillId: string;
+  skillName: string;
+  description: string | null;
+  source: string;
+  sourceType: "github" | "local" | "well-known";
+};
+
+export const skillsApi = {
+  list: () => apiCall<UserSkillRecord[]>("/api/skills"),
+
+  install: (data: { source: string; skillName?: string; agentCwd?: string }) =>
+    apiCall<InstallSkillResult>("/api/skills", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  uninstall: (id: string, data?: { agentCwd?: string }) =>
+    apiCall<{ success: boolean }>(`/api/skills/${id}`, {
+      method: "DELETE",
+      ...(data ? { body: JSON.stringify(data) } : {}),
+    }),
+
+  search: (query: string) =>
+    apiCall<{ skills: MarketplaceSearchResult[] }>(
+      `/api/skills/search?q=${encodeURIComponent(query)}`
+    ),
+};
+
 // Export all APIs as a single object
 export const api = {
   artifact: artifactApi,
   aiGateway: aiGatewayApi,
   agentWorkflow: agentWorkflowApi,
+  hub: hubApi,
+
   integration: integrationApi,
   opencode: opencodeApi,
+  skills: skillsApi,
   user: userApi,
   userPreferences: userPreferencesApi,
   workflow: workflowApi,

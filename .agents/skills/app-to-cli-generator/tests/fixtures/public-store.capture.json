@@ -1,0 +1,168 @@
+{
+  "appName": "Public Store",
+  "targetUrl": "https://fixture.example",
+  "capturedAt": "2026-03-10T00:00:00.000Z",
+  "sessionName": "public-store-capture",
+  "pages": [
+    {
+      "id": "00-home",
+      "label": "home",
+      "title": "Public Store",
+      "url": "https://fixture.example/",
+      "pathname": "/",
+      "kind": "home",
+      "primaryPrefix": "home",
+      "pathSegments": [],
+      "headings": [
+        {
+          "level": "h1",
+          "text": "Public Store"
+        }
+      ],
+      "navLinks": [
+        {
+          "text": "Collections",
+          "href": "https://fixture.example/collections/widgets",
+          "pathname": "/collections/widgets",
+          "inNav": true
+        },
+        {
+          "text": "Widget One",
+          "href": "https://fixture.example/products/widget-one",
+          "pathname": "/products/widget-one",
+          "inNav": true
+        }
+      ],
+      "internalLinks": [
+        {
+          "text": "Collections",
+          "href": "https://fixture.example/collections/widgets",
+          "pathname": "/collections/widgets",
+          "search": "",
+          "inNav": true
+        },
+        {
+          "text": "Widget One",
+          "href": "https://fixture.example/products/widget-one",
+          "pathname": "/products/widget-one",
+          "search": "",
+          "inNav": false
+        },
+        {
+          "text": "Widget Two",
+          "href": "https://fixture.example/products/widget-two",
+          "pathname": "/products/widget-two",
+          "search": "",
+          "inNav": false
+        }
+      ],
+      "platformHints": {
+        "shopify": true,
+        "generator": "Shopify",
+        "hasWindowShopify": true,
+        "scriptSrcs": ["https://cdn.shopify.com/shopify.js"]
+      },
+      "networkRequests": [],
+      "artifacts": {}
+    },
+    {
+      "id": "01-collections-widgets",
+      "label": "Collections",
+      "title": "Widgets Collection",
+      "url": "https://fixture.example/collections/widgets",
+      "pathname": "/collections/widgets",
+      "kind": "list",
+      "primaryPrefix": "collections",
+      "pathSegments": ["collections", "widgets"],
+      "headings": [
+        {
+          "level": "h1",
+          "text": "Widgets"
+        }
+      ],
+      "navLinks": [],
+      "internalLinks": [
+        {
+          "text": "Widget One",
+          "href": "https://fixture.example/products/widget-one",
+          "pathname": "/products/widget-one",
+          "search": "",
+          "inNav": false
+        },
+        {
+          "text": "Widget Two",
+          "href": "https://fixture.example/products/widget-two",
+          "pathname": "/products/widget-two",
+          "search": "",
+          "inNav": false
+        }
+      ],
+      "platformHints": {
+        "shopify": true,
+        "generator": "Shopify",
+        "hasWindowShopify": true,
+        "scriptSrcs": ["https://cdn.shopify.com/shopify.js"]
+      },
+      "networkRequests": [],
+      "artifacts": {}
+    },
+    {
+      "id": "02-products-widget-one",
+      "label": "Widget One",
+      "title": "Widget One",
+      "url": "https://fixture.example/products/widget-one",
+      "pathname": "/products/widget-one",
+      "kind": "detail",
+      "primaryPrefix": "products",
+      "pathSegments": ["products", "widget-one"],
+      "headings": [
+        {
+          "level": "h1",
+          "text": "Widget One"
+        }
+      ],
+      "navLinks": [],
+      "internalLinks": [],
+      "platformHints": {
+        "shopify": true,
+        "generator": "Shopify",
+        "hasWindowShopify": true,
+        "scriptSrcs": ["https://cdn.shopify.com/shopify.js"]
+      },
+      "networkRequests": [],
+      "artifacts": {}
+    },
+    {
+      "id": "03-products-widget-two",
+      "label": "Widget Two",
+      "title": "Widget Two",
+      "url": "https://fixture.example/products/widget-two",
+      "pathname": "/products/widget-two",
+      "kind": "detail",
+      "primaryPrefix": "products",
+      "pathSegments": ["products", "widget-two"],
+      "headings": [
+        {
+          "level": "h1",
+          "text": "Widget Two"
+        }
+      ],
+      "navLinks": [],
+      "internalLinks": [],
+      "platformHints": {
+        "shopify": true,
+        "generator": "Shopify",
+        "hasWindowShopify": true,
+        "scriptSrcs": ["https://cdn.shopify.com/shopify.js"]
+      },
+      "networkRequests": [],
+      "artifacts": {}
+    }
+  ],
+  "stats": {
+    "totalPages": 4,
+    "listPages": 1,
+    "detailPages": 2,
+    "shopifyDetected": true
+  }
+}

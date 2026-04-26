@@ -1,0 +1,329 @@
+{
+  "origin": "https://shop.bench.com.ph/products/boo0151-bench-x-harry-potter-mens-short-sleeve-relaxed-fit-t-shirt",
+  "refs": {
+    "e1": {
+      "name": "Privacy and Cookie Policy",
+      "role": "link"
+    },
+    "e10": {
+      "name": "WOMEN",
+      "role": "link"
+    },
+    "e11": {
+      "name": "BODY & BATH",
+      "role": "link"
+    },
+    "e12": {
+      "name": "SALE",
+      "role": "link"
+    },
+    "e13": {
+      "name": "COLLECTIONS",
+      "role": "link"
+    },
+    "e14": {
+      "name": "BRANDS",
+      "role": "link"
+    },
+    "e15": {
+      "name": "Open search bar",
+      "role": "button"
+    },
+    "e16": {
+      "name": "Go to wishlist page",
+      "role": "link"
+    },
+    "e17": {
+      "name": "My Account",
+      "role": "link"
+    },
+    "e18": {
+      "name": "Open cart",
+      "role": "link"
+    },
+    "e19": {
+      "name": "Home",
+      "role": "link"
+    },
+    "e2": {
+      "name": "Manage preferences",
+      "role": "button"
+    },
+    "e20": {
+      "name": "Open image lightbox",
+      "role": "link"
+    },
+    "e21": {
+      "name": "Open image lightbox",
+      "role": "link"
+    },
+    "e22": {
+      "name": "Open image lightbox",
+      "role": "link"
+    },
+    "e23": {
+      "name": "Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt",
+      "role": "link"
+    },
+    "e24": {
+      "name": "Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt",
+      "role": "link"
+    },
+    "e25": {
+      "name": "Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt",
+      "role": "link"
+    },
+    "e26": {
+      "name": "White",
+      "role": "radio"
+    },
+    "e27": {
+      "name": "Size guide",
+      "role": "button"
+    },
+    "e28": {
+      "name": "S",
+      "role": "radio"
+    },
+    "e29": {
+      "name": "M",
+      "role": "radio"
+    },
+    "e3": {
+      "name": "Accept",
+      "role": "button"
+    },
+    "e30": {
+      "name": "L",
+      "role": "radio"
+    },
+    "e31": {
+      "name": "XL",
+      "role": "radio"
+    },
+    "e32": {
+      "name": "Quantity",
+      "role": "button"
+    },
+    "e33": {
+      "name": "Add to Cart•₱539.00",
+      "role": "button"
+    },
+    "e34": {
+      "name": "DETAILS",
+      "role": "button"
+    },
+    "e35": {
+      "name": "SHIPPING & RETURNS",
+      "role": "button"
+    },
+    "e36": {
+      "name": "Bench x Harry Potter Men's Graphic T-Shirt",
+      "role": "link"
+    },
+    "e37": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e38": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e39": {
+      "name": "Bench x Harry Potter Men's Graphic T-Shirt",
+      "role": "link"
+    },
+    "e4": {
+      "name": "Decline",
+      "role": "button"
+    },
+    "e40": {
+      "name": "₱549.00",
+      "role": "link"
+    },
+    "e41": {
+      "name": "Men's Round Neck T-Shirt",
+      "role": "link"
+    },
+    "e42": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e43": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e44": {
+      "name": "Men's Round Neck T-Shirt",
+      "role": "link"
+    },
+    "e45": {
+      "name": "₱299.75",
+      "role": "link"
+    },
+    "e46": {
+      "name": "+ 3 more",
+      "role": "button"
+    },
+    "e47": {
+      "name": "Men's Round Neck Classic T-Shirt",
+      "role": "link"
+    },
+    "e48": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e49": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e5": {
+      "name": "Skip to content",
+      "role": "link"
+    },
+    "e50": {
+      "name": "Men's Round Neck Classic T-Shirt",
+      "role": "link"
+    },
+    "e51": {
+      "name": "₱399.00",
+      "role": "link"
+    },
+    "e52": {
+      "name": "Bench x Solomon Men's Striped Polo Shirt",
+      "role": "link"
+    },
+    "e53": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e54": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e55": {
+      "name": "Bench x Solomon Men's Striped Polo Shirt",
+      "role": "link"
+    },
+    "e56": {
+      "name": "₱659.00",
+      "role": "link"
+    },
+    "e57": {
+      "name": "Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt",
+      "role": "link"
+    },
+    "e58": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e59": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e6": {
+      "name": "Apparel and Underwear",
+      "role": "link"
+    },
+    "e60": {
+      "name": "Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt",
+      "role": "link"
+    },
+    "e61": {
+      "name": "₱539.00",
+      "role": "link"
+    },
+    "e62": {
+      "role": "link"
+    },
+    "e63": {
+      "name": "Explore",
+      "role": "button"
+    },
+    "e64": {
+      "name": "Our Story",
+      "role": "link"
+    },
+    "e65": {
+      "name": "Careers",
+      "role": "link"
+    },
+    "e66": {
+      "name": "Lifestyle Rewards",
+      "role": "link"
+    },
+    "e67": {
+      "name": "Terms of Use",
+      "role": "link"
+    },
+    "e68": {
+      "name": "Privacy Policy",
+      "role": "link"
+    },
+    "e69": {
+      "name": "Customer Care",
+      "role": "button"
+    },
+    "e7": {
+      "name": "Bench Online",
+      "role": "link"
+    },
+    "e70": {
+      "name": "Contact Us",
+      "role": "link"
+    },
+    "e71": {
+      "name": "Track Order",
+      "role": "link"
+    },
+    "e72": {
+      "name": "FAQ",
+      "role": "link"
+    },
+    "e73": {
+      "name": "Your email",
+      "role": "textbox"
+    },
+    "e74": {
+      "name": "Sign up",
+      "role": "button"
+    },
+    "e75": {
+      "name": "App Store",
+      "role": "link"
+    },
+    "e76": {
+      "name": "Google Play",
+      "role": "link"
+    },
+    "e77": {
+      "name": "Social 1",
+      "role": "link"
+    },
+    "e78": {
+      "name": "Social 2",
+      "role": "link"
+    },
+    "e79": {
+      "name": "Social 3",
+      "role": "link"
+    },
+    "e8": {
+      "name": "Bench Online",
+      "role": "link"
+    },
+    "e80": {
+      "name": "Social 4",
+      "role": "link"
+    },
+    "e81": {
+      "name": "Social 5",
+      "role": "link"
+    },
+    "e9": {
+      "name": "MEN",
+      "role": "link"
+    }
+  },
+  "snapshot": "- link \"Privacy and Cookie Policy\" [ref=e1]\n- button \"Manage preferences\" [ref=e2]\n- button \"Accept\" [ref=e3]\n- button \"Decline\" [ref=e4]\n- link \"Skip to content\" [ref=e5]\n- link \"Apparel and Underwear\" [ref=e6]\n- link \"Bench Online\" [ref=e7]\n- link \"Bench Online\" [ref=e8] [nth=1]\n- link \"MEN\" [ref=e9]\n- link \"WOMEN\" [ref=e10]\n- link \"BODY & BATH\" [ref=e11]\n- link \"SALE\" [ref=e12]\n- link \"COLLECTIONS\" [ref=e13]\n- link \"BRANDS\" [ref=e14]\n- button \"Open search bar\" [ref=e15]\n- link \"Go to wishlist page\" [ref=e16]\n- link \"My Account\" [ref=e17]\n- link \"Open cart\" [ref=e18]\n- link \"Home\" [ref=e19]\n- link \"Open image lightbox\" [ref=e20]\n- link \"Open image lightbox\" [ref=e21] [nth=1]\n- link \"Open image lightbox\" [ref=e22] [nth=2]\n- link \"Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt\" [ref=e23]\n- link \"Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt\" [ref=e24] [nth=1]\n- link \"Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt\" [ref=e25] [nth=2]\n- radio \"White\" [ref=e26] [checked]\n- button \"Size guide\" [ref=e27]\n- radio \"S\" [ref=e28]\n- radio \"M\" [ref=e29]\n- radio \"L\" [ref=e30] [checked]\n- radio \"XL\" [ref=e31]\n- button \"Quantity\" [ref=e32]\n- button \"Add to Cart•₱539.00\" [ref=e33]\n- button \"DETAILS\" [ref=e34] [expanded]\n- button \"SHIPPING & RETURNS\" [ref=e35]\n- link \"Bench x Harry Potter Men's Graphic T-Shirt\" [ref=e36]\n- button \"Add to wishlist\" [ref=e37]\n- link \"Quick Buy\" [ref=e38]\n- link \"Bench x Harry Potter Men's Graphic T-Shirt\" [ref=e39] [nth=1]\n- link \"₱549.00\" [ref=e40]\n- link \"Men's Round Neck T-Shirt\" [ref=e41]\n- button \"Add to wishlist\" [ref=e42] [nth=1]\n- link \"Quick Buy\" [ref=e43] [nth=1]\n- link \"Men's Round Neck T-Shirt\" [ref=e44] [nth=1]\n- link \"₱299.75\" [ref=e45]\n- button \"+ 3 more\" [ref=e46]\n- link \"Men's Round Neck Classic T-Shirt\" [ref=e47]\n- button \"Add to wishlist\" [ref=e48] [nth=2]\n- link \"Quick Buy\" [ref=e49] [nth=2]\n- link \"Men's Round Neck Classic T-Shirt\" [ref=e50] [nth=1]\n- link \"₱399.00\" [ref=e51]\n- link \"Bench x Solomon Men's Striped Polo Shirt\" [ref=e52]\n- button \"Add to wishlist\" [ref=e53] [nth=3]\n- link \"Quick Buy\" [ref=e54] [nth=3]\n- link \"Bench x Solomon Men's Striped Polo Shirt\" [ref=e55] [nth=1]\n- link \"₱659.00\" [ref=e56]\n- link \"Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt\" [ref=e57] [nth=3]\n- button \"Add to wishlist\" [ref=e58] [nth=4]\n- link \"Quick Buy\" [ref=e59] [nth=4]\n- link \"Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt\" [ref=e60] [nth=4]\n- link \"₱539.00\" [ref=e61]\n- link [ref=e62]\n- button \"Explore\" [ref=e63]\n- link \"Our Story\" [ref=e64]\n- link \"Careers\" [ref=e65]\n- link \"Lifestyle Rewards\" [ref=e66]\n- link \"Terms of Use\" [ref=e67]\n- link \"Privacy Policy\" [ref=e68]\n- button \"Customer Care\" [ref=e69]\n- link \"Contact Us\" [ref=e70]\n- link \"Track Order\" [ref=e71]\n- link \"FAQ\" [ref=e72]\n- textbox \"Your email\" [ref=e73]\n- button \"Sign up\" [ref=e74]\n- link \"App Store\" [ref=e75]\n- link \"Google Play\" [ref=e76]\n- link \"Social 1\" [ref=e77]\n- link \"Social 2\" [ref=e78]\n- link \"Social 3\" [ref=e79]\n- link \"Social 4\" [ref=e80]\n- link \"Social 5\" [ref=e81]"
+}

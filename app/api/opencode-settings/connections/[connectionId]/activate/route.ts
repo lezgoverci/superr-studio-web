@@ -4,6 +4,7 @@ import {
   getAllOpencodeConnectionsForUser,
   setActiveOpencodeConnection,
 } from "@/lib/db/opencode-connections";
+import { getWhopAccessGuardResponse } from "@/lib/whop-access-guard";
 
 function isAuthError(error: unknown): boolean {
   return (
@@ -21,6 +22,11 @@ async function getAuthenticatedUserId(
 
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const whopAccessGuard = await getWhopAccessGuardResponse(session.user.id);
+  if (whopAccessGuard) {
+    return whopAccessGuard;
   }
 
   return session.user.id;
@@ -61,6 +67,7 @@ export async function PUT(
         name: c.name,
         mode: c.mode,
         url: c.url,
+        directory: c.directory,
         username: c.username,
         isActive: c.isActive,
         createdAt: c.createdAt,

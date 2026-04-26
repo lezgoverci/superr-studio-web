@@ -1,0 +1,400 @@
+{
+  "origin": "https://shop.bench.com.ph/collections/men",
+  "refs": {
+    "e1": {
+      "name": "Privacy and Cookie Policy",
+      "role": "link"
+    },
+    "e10": {
+      "name": "WOMEN",
+      "role": "link"
+    },
+    "e11": {
+      "name": "BODY & BATH",
+      "role": "link"
+    },
+    "e12": {
+      "name": "SALE",
+      "role": "link"
+    },
+    "e13": {
+      "name": "COLLECTIONS",
+      "role": "link"
+    },
+    "e14": {
+      "name": "BRANDS",
+      "role": "link"
+    },
+    "e15": {
+      "name": "Open search bar",
+      "role": "button"
+    },
+    "e16": {
+      "name": "Go to wishlist page",
+      "role": "link"
+    },
+    "e17": {
+      "name": "My Account",
+      "role": "link"
+    },
+    "e18": {
+      "name": "Open cart",
+      "role": "link"
+    },
+    "e19": {
+      "role": "link"
+    },
+    "e2": {
+      "name": "Manage preferences",
+      "role": "button"
+    },
+    "e20": {
+      "name": "ALL",
+      "role": "link"
+    },
+    "e21": {
+      "name": "Accessories",
+      "role": "link"
+    },
+    "e22": {
+      "name": "Hats",
+      "role": "link"
+    },
+    "e23": {
+      "name": "Outerwear",
+      "role": "link"
+    },
+    "e24": {
+      "name": "Tops",
+      "role": "link"
+    },
+    "e25": {
+      "name": "Underwear",
+      "role": "link"
+    },
+    "e26": {
+      "name": "Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt",
+      "role": "link"
+    },
+    "e27": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e28": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e29": {
+      "name": "Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt",
+      "role": "link"
+    },
+    "e3": {
+      "name": "Accept",
+      "role": "button"
+    },
+    "e30": {
+      "name": "₱539.00",
+      "role": "link"
+    },
+    "e31": {
+      "name": "Men's Classic Polo Shirt",
+      "role": "link"
+    },
+    "e32": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e33": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e34": {
+      "name": "Men's Classic Polo Shirt",
+      "role": "link"
+    },
+    "e35": {
+      "name": "₱639.00",
+      "role": "link"
+    },
+    "e36": {
+      "name": "Men's Quarter Socks",
+      "role": "link"
+    },
+    "e37": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e38": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e39": {
+      "name": "Men's Quarter Socks",
+      "role": "link"
+    },
+    "e4": {
+      "name": "Decline",
+      "role": "button"
+    },
+    "e40": {
+      "name": "₱119.00",
+      "role": "link"
+    },
+    "e41": {
+      "name": "Men's Casual Shoes",
+      "role": "link"
+    },
+    "e42": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e43": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e44": {
+      "name": "Men's Casual Shoes",
+      "role": "link"
+    },
+    "e45": {
+      "name": "₱1,799.00",
+      "role": "link"
+    },
+    "e46": {
+      "name": "See More",
+      "role": "link"
+    },
+    "e47": {
+      "name": "SHOP NOW",
+      "role": "link"
+    },
+    "e48": {
+      "name": "SHOP NOW",
+      "role": "link"
+    },
+    "e49": {
+      "name": "SHOP NOW",
+      "role": "link"
+    },
+    "e5": {
+      "name": "Skip to content",
+      "role": "link"
+    },
+    "e50": {
+      "name": "SHOP NOW",
+      "role": "link"
+    },
+    "e51": {
+      "name": "RAINY SEASON ESSENTIALS",
+      "role": "link"
+    },
+    "e52": {
+      "name": "Men's Baseball Cap",
+      "role": "link"
+    },
+    "e53": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e54": {
+      "name": "Men's Baseball Cap",
+      "role": "link"
+    },
+    "e55": {
+      "name": "₱259.00",
+      "role": "link"
+    },
+    "e56": {
+      "name": "Bench x SB19 Men's Oversized Jacket",
+      "role": "link"
+    },
+    "e57": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e58": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e59": {
+      "name": "Bench x SB19 Men's Oversized Jacket",
+      "role": "link"
+    },
+    "e6": {
+      "name": "Apparel and Underwear",
+      "role": "link"
+    },
+    "e60": {
+      "name": "₱1,799.00",
+      "role": "link"
+    },
+    "e61": {
+      "name": "Men's Hooded Jacket",
+      "role": "link"
+    },
+    "e62": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e63": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e64": {
+      "name": "Men's Hooded Jacket",
+      "role": "link"
+    },
+    "e65": {
+      "name": "₱799.75",
+      "role": "link"
+    },
+    "e66": {
+      "name": "Men's Oversized Jacket",
+      "role": "link"
+    },
+    "e67": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e68": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e69": {
+      "name": "Men's Oversized Jacket",
+      "role": "link"
+    },
+    "e7": {
+      "name": "Bench Online",
+      "role": "link"
+    },
+    "e70": {
+      "name": "₱1,299.00",
+      "role": "link"
+    },
+    "e71": {
+      "name": "See More",
+      "role": "link"
+    },
+    "e72": {
+      "name": "Men's Varsity Jacket",
+      "role": "link"
+    },
+    "e73": {
+      "name": "Add to wishlist",
+      "role": "button"
+    },
+    "e74": {
+      "name": "Quick Buy",
+      "role": "link"
+    },
+    "e75": {
+      "name": "Men's Varsity Jacket",
+      "role": "link"
+    },
+    "e76": {
+      "name": "₱1,699.00",
+      "role": "link"
+    },
+    "e77": {
+      "name": "Product-1",
+      "role": "button"
+    },
+    "e78": {
+      "name": "Product-2",
+      "role": "button"
+    },
+    "e79": {
+      "name": "Product-3",
+      "role": "button"
+    },
+    "e8": {
+      "name": "Bench Online",
+      "role": "link"
+    },
+    "e80": {
+      "role": "link"
+    },
+    "e81": {
+      "name": "Explore",
+      "role": "button"
+    },
+    "e82": {
+      "name": "Our Story",
+      "role": "link"
+    },
+    "e83": {
+      "name": "Careers",
+      "role": "link"
+    },
+    "e84": {
+      "name": "Lifestyle Rewards",
+      "role": "link"
+    },
+    "e85": {
+      "name": "Terms of Use",
+      "role": "link"
+    },
+    "e86": {
+      "name": "Privacy Policy",
+      "role": "link"
+    },
+    "e87": {
+      "name": "Customer Care",
+      "role": "button"
+    },
+    "e88": {
+      "name": "Contact Us",
+      "role": "link"
+    },
+    "e89": {
+      "name": "Track Order",
+      "role": "link"
+    },
+    "e9": {
+      "name": "MEN",
+      "role": "link"
+    },
+    "e90": {
+      "name": "FAQ",
+      "role": "link"
+    },
+    "e91": {
+      "name": "Your email",
+      "role": "textbox"
+    },
+    "e92": {
+      "name": "Sign up",
+      "role": "button"
+    },
+    "e93": {
+      "name": "App Store",
+      "role": "link"
+    },
+    "e94": {
+      "name": "Google Play",
+      "role": "link"
+    },
+    "e95": {
+      "name": "Social 1",
+      "role": "link"
+    },
+    "e96": {
+      "name": "Social 2",
+      "role": "link"
+    },
+    "e97": {
+      "name": "Social 3",
+      "role": "link"
+    },
+    "e98": {
+      "name": "Social 4",
+      "role": "link"
+    },
+    "e99": {
+      "name": "Social 5",
+      "role": "link"
+    }
+  },
+  "snapshot": "- link \"Privacy and Cookie Policy\" [ref=e1]\n- button \"Manage preferences\" [ref=e2]\n- button \"Accept\" [ref=e3]\n- button \"Decline\" [ref=e4]\n- link \"Skip to content\" [ref=e5]\n- link \"Apparel and Underwear\" [ref=e6]\n- link \"Bench Online\" [ref=e7]\n- link \"Bench Online\" [ref=e8] [nth=1]\n- link \"MEN\" [ref=e9]\n- link \"WOMEN\" [ref=e10]\n- link \"BODY & BATH\" [ref=e11]\n- link \"SALE\" [ref=e12]\n- link \"COLLECTIONS\" [ref=e13]\n- link \"BRANDS\" [ref=e14]\n- button \"Open search bar\" [ref=e15]\n- link \"Go to wishlist page\" [ref=e16]\n- link \"My Account\" [ref=e17]\n- link \"Open cart\" [ref=e18]\n- link [ref=e19]\n- link \"ALL\" [ref=e20]\n- link \"Accessories\" [ref=e21]\n- link \"Hats\" [ref=e22]\n- link \"Outerwear\" [ref=e23]\n- link \"Tops\" [ref=e24]\n- link \"Underwear\" [ref=e25]\n- link \"Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt\" [ref=e26]\n- button \"Add to wishlist\" [ref=e27]\n- link \"Quick Buy\" [ref=e28]\n- link \"Bench x Harry Potter Men's Short Sleeve Relaxed Fit T-Shirt\" [ref=e29] [nth=1]\n- link \"₱539.00\" [ref=e30]\n- link \"Men's Classic Polo Shirt\" [ref=e31]\n- button \"Add to wishlist\" [ref=e32] [nth=1]\n- link \"Quick Buy\" [ref=e33] [nth=1]\n- link \"Men's Classic Polo Shirt\" [ref=e34] [nth=1]\n- link \"₱639.00\" [ref=e35]\n- link \"Men's Quarter Socks\" [ref=e36]\n- button \"Add to wishlist\" [ref=e37] [nth=2]\n- link \"Quick Buy\" [ref=e38] [nth=2]\n- link \"Men's Quarter Socks\" [ref=e39] [nth=1]\n- link \"₱119.00\" [ref=e40]\n- link \"Men's Casual Shoes\" [ref=e41]\n- button \"Add to wishlist\" [ref=e42] [nth=3]\n- link \"Quick Buy\" [ref=e43] [nth=3]\n- link \"Men's Casual Shoes\" [ref=e44] [nth=1]\n- link \"₱1,799.00\" [ref=e45]\n- link \"See More\" [ref=e46]\n- link \"SHOP NOW\" [ref=e47]\n- link \"SHOP NOW\" [ref=e48] [nth=1]\n- link \"SHOP NOW\" [ref=e49] [nth=2]\n- link \"SHOP NOW\" [ref=e50] [nth=3]\n- link \"RAINY SEASON ESSENTIALS\" [ref=e51]\n- link \"Men's Baseball Cap\" [ref=e52]\n- button \"Add to wishlist\" [ref=e53] [nth=4]\n- link \"Men's Baseball Cap\" [ref=e54] [nth=1]\n- link \"₱259.00\" [ref=e55]\n- link \"Bench x SB19 Men's Oversized Jacket\" [ref=e56]\n- button \"Add to wishlist\" [ref=e57] [nth=5]\n- link \"Quick Buy\" [ref=e58] [nth=4]\n- link \"Bench x SB19 Men's Oversized Jacket\" [ref=e59] [nth=1]\n- link \"₱1,799.00\" [ref=e60] [nth=1]\n- link \"Men's Hooded Jacket\" [ref=e61]\n- button \"Add to wishlist\" [ref=e62] [nth=6]\n- link \"Quick Buy\" [ref=e63] [nth=5]\n- link \"Men's Hooded Jacket\" [ref=e64] [nth=1]\n- link \"₱799.75\" [ref=e65]\n- link \"Men's Oversized Jacket\" [ref=e66]\n- button \"Add to wishlist\" [ref=e67] [nth=7]\n- link \"Quick Buy\" [ref=e68] [nth=6]\n- link \"Men's Oversized Jacket\" [ref=e69] [nth=1]\n- link \"₱1,299.00\" [ref=e70]\n- link \"See More\" [ref=e71] [nth=1]\n- link \"Men's Varsity Jacket\" [ref=e72]\n- button \"Add to wishlist\" [ref=e73] [nth=8]\n- link \"Quick Buy\" [ref=e74] [nth=7]\n- link \"Men's Varsity Jacket\" [ref=e75] [nth=1]\n- link \"₱1,699.00\" [ref=e76]\n- button \"Product-1\" [ref=e77]\n- button \"Product-2\" [ref=e78]\n- button \"Product-3\" [ref=e79]\n- link [ref=e80] [nth=1]\n- button \"Explore\" [ref=e81]\n- link \"Our Story\" [ref=e82]\n- link \"Careers\" [ref=e83]\n- link \"Lifestyle Rewards\" [ref=e84]\n- link \"Terms of Use\" [ref=e85]\n- link \"Privacy Policy\" [ref=e86]\n- button \"Customer Care\" [ref=e87]\n- link \"Contact Us\" [ref=e88]\n- link \"Track Order\" [ref=e89]\n- link \"FAQ\" [ref=e90]\n- textbox \"Your email\" [ref=e91]\n- button \"Sign up\" [ref=e92]\n- link \"App Store\" [ref=e93]\n- link \"Google Play\" [ref=e94]\n- link \"Social 1\" [ref=e95]\n- link \"Social 2\" [ref=e96]\n- link \"Social 3\" [ref=e97]\n- link \"Social 4\" [ref=e98]\n- link \"Social 5\" [ref=e99]"
+}

@@ -4,6 +4,7 @@ import { getRun } from "workflow/api";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { workflowExecutions } from "@/lib/db/schema";
+import { getWhopAccessGuardResponse } from "@/lib/whop-access-guard";
 import {
   EXECUTION_STATUS_STREAM_NAMESPACE,
   isWorkflowStatusStreamEvent,
@@ -87,6 +88,11 @@ export async function GET(
 
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const whopAccessGuard = await getWhopAccessGuardResponse(session.user.id);
+    if (whopAccessGuard) {
+      return whopAccessGuard;
     }
 
     const execution = await db.query.workflowExecutions.findFirst({

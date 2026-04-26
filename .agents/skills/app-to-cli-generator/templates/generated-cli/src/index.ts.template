@@ -1,0 +1,425 @@
+#!/usr/bin/env node
+
+import fs from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import type {
+  AppCliManifest,
+  ManifestCommand,
+  ManifestCommandInput,
+} from "./manifest-types.js";
+import { validateManifestShape } from "./manifest-types.js";
+import {
+  assertAuthEnvironment,
+  buildInspectReport,
+  deleteStateFile,
+  executeRawAgentBrowser,
+  readManifestFromProject,
+  runManifestCommand,
+  getStateFilePath,
+  writeManifestToProject,
+} from "./runtime.js";
+import type { GlobalOptions } from "./runtime.js";
+
+type ParsedGlobalFlags = {
+  globals: GlobalOptions & { help?: boolean };
+  rest: string[];
+};
+
+type ParsedCommandInputs = {
+  help: boolean;
+  values: Record<string, string | number | boolean | undefined>;
+};
+
+const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+function parseGlobalFlags(argv: string[]): ParsedGlobalFlags {
+  const globals: ParsedGlobalFlags["globals"] = {};
+  const rest: string[] = [];
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const token = argv[index];
+    if (!token) {
+      continue;
+    }
+
+    switch (token) {
+      case "--json":
+        globals.json = true;
+        break;
+      case "--headed":
+        globals.headed = true;
+        break;
+      case "--mode":
+        if (!argv[index + 1]) {
+          throw new Error('Missing value for "--mode".');
+        }
+        globals.mode = argv[index + 1] as GlobalOptions["mode"];
+        index += 1;
+        break;
+      case "--session":
+        if (!argv[index + 1]) {
+          throw new Error('Missing value for "--session".');
+        }
+        globals.sessionName = argv[index + 1];
+        index += 1;
+        break;
+      default:
+        rest.push(token);
+        break;
+    }
+  }
+
+  return { globals, rest };
+}
+
+function findCommand(
+  manifest: AppCliManifest,
+  tokens: string[],
+): ManifestCommand | undefined {
+  return [...manifest.commands]
+    .sort((left, right) => right.path.length - left.path.length)
+    .find((command) =>
+      command.path.every((segment, index) => tokens[index] === segment),
+    );
+}
+
+function parseBooleanValue(value: string): boolean {
+  if (value === "true") {
+    return true;
+  }
+  if (value === "false") {
+    return false;
+  }
+
+  throw new Error(`Invalid boolean value "${value}". Use true or false.`);
+}
+
+function parseCommandInputs(
+  tokens: string[],
+  inputs: ManifestCommandInput[],
+): ParsedCommandInputs {
+  const values: ParsedCommandInputs["values"] = {};
+  const lookup = new Map<string, ManifestCommandInput>();
+
+  for (const input of inputs) {
+    lookup.set(input.flag, input);
+    if (input.alias) {
+      lookup.set(input.alias, input);
+    }
+  }
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (!token) {
+      continue;
+    }
+    if (token === "--help" || token === "-h") {
+      return { help: true, values };
+    }
+
+    if (!token.startsWith("-")) {
+      throw new Error(`Unexpected positional argument "${token}".`);
+    }
+
+    const [flag, inlineValue] = token.includes("=")
+      ? token.split(/=(.+)/, 2)
+      : [token, undefined];
+    const input = lookup.get(flag);
+
+    if (!input) {
+      throw new Error(`Unknown option "${flag}".`);
+    }
+
+    if (input.type === "boolean") {
+      values[input.name] =
+        inlineValue === undefined ? true : parseBooleanValue(inlineValue);
+      continue;
+    }
+
+    const nextValue = inlineValue ?? tokens[index + 1];
+    if (nextValue === undefined || nextValue.startsWith("-")) {
+      throw new Error(`Missing value for option "${flag}".`);
+    }
+
+    values[input.name] =
+      input.type === "number" ? Number(nextValue) : nextValue;
+    if (input.type === "number" && Number.isNaN(values[input.name])) {
+      throw new Error(`Option "${flag}" must be a valid number.`);
+    }
+
+    if (inlineValue === undefined) {
+      index += 1;
+    }
+  }
+
+  for (const input of inputs) {
+    if (input.required && values[input.name] === undefined) {
+      throw new Error(`Missing required option "${input.flag}".`);
+    }
+  }
+
+  return { help: false, values };
+}
+
+function renderHelp(manifest: AppCliManifest): string {
+  const commandLines = manifest.commands
+    .map((command) => {
+      const padded = command.path.join(" ").padEnd(24, " ");
+      return `  ${padded} ${command.description}`;
+    })
+    .join("\n");
+
+  return `{{APP_NAME}} CLI
+
+Usage:
+  ${manifest.app.bin} [global flags] <command> [command flags]
+
+Global flags:
+  --mode <auto|api|ui>   Override the command execution mode
+  --session <name>       Override the agent-browser session name
+  --json                 Print structured JSON output when possible
+  --headed               Open a visible browser window for UI flows
+  --help                 Show help
+
+Built-in commands:
+  auth login             Run the configured login flow and save auth state
+  auth status            Show saved auth state details
+  auth logout            Remove saved auth state
+  inspect                Print manifest-derived command and target details
+  regen                  Validate the current manifest
+  regen --from <path>    Replace manifest.json with a validated manifest file
+  raw <args...>          Pass arguments directly to agent-browser
+
+Generated commands:
+${commandLines || "  (none yet)"}
+`;
+}
+
+function renderCommandHelp(
+  manifest: AppCliManifest,
+  command: ManifestCommand,
+): string {
+  const inputLines = command.inputs
+    .map((input) => {
+      const alias = input.alias ? `${input.alias}, ` : "";
+      const required = input.required ? "required" : "optional";
+      return `  ${alias}${input.flag} (${input.type}, ${required}) ${input.description}`;
+    })
+    .join("\n");
+
+  return `Usage:
+  ${manifest.app.bin} ${command.path.join(" ")} [options]
+
+${command.description}
+
+Options:
+${inputLines || "  No command-specific options."}
+`;
+}
+
+function printResult(value: unknown, jsonPreferred: boolean): void {
+  if (value instanceof Uint8Array) {
+    if (jsonPreferred) {
+      process.stdout.write(`${JSON.stringify({ bytes: Buffer.from(value).toString("base64") }, null, 2)}\n`);
+      return;
+    }
+
+    process.stdout.write(Buffer.from(value));
+    return;
+  }
+
+  if (jsonPreferred || typeof value === "object") {
+    process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
+    return;
+  }
+
+  process.stdout.write(`${String(value ?? "")}\n`);
+}
+
+function parseRegenArgs(tokens: string[]): { fromPath?: string; help: boolean } {
+  if (tokens.includes("--help") || tokens.includes("-h")) {
+    return { help: true };
+  }
+
+  const fromIndex = tokens.indexOf("--from");
+  if (fromIndex !== -1) {
+    const fromPath = tokens[fromIndex + 1];
+    if (!fromPath) {
+      throw new Error('Missing value for "--from".');
+    }
+    return { fromPath, help: false };
+  }
+
+  return { help: false };
+}
+
+async function handleAuthCommand(
+  manifest: AppCliManifest,
+  globals: GlobalOptions,
+  tokens: string[],
+): Promise<void> {
+  const subcommand = tokens[0] ?? "status";
+
+  switch (subcommand) {
+    case "login": {
+      if (manifest.auth.strategy !== "state-file") {
+        throw new Error("This CLI does not define a login flow.");
+      }
+
+      assertAuthEnvironment(manifest);
+      const loginCommand = manifest.commands.find(
+        (command) => command.flowId === manifest.auth.loginFlowId,
+      );
+
+      if (loginCommand) {
+        await runManifestCommand(manifest, loginCommand, globals, {});
+      } else {
+        const flowCommand: ManifestCommand = {
+          id: "auth-login",
+          path: ["auth", "login"],
+          description: "Generated auth login flow",
+          mode: "ui",
+          flowId: manifest.auth.loginFlowId,
+          inputs: [],
+          output: { type: "text" },
+        };
+        await runManifestCommand(manifest, flowCommand, globals, {});
+      }
+
+      process.stdout.write(`Saved auth state to ${getStateFilePath(manifest)}\n`);
+      return;
+    }
+
+    case "logout": {
+      const deleted = await deleteStateFile(manifest);
+      process.stdout.write(
+        deleted
+          ? `Removed ${getStateFilePath(manifest)}\n`
+          : `No saved state found at ${getStateFilePath(manifest)}\n`,
+      );
+      return;
+    }
+
+    case "status": {
+      let exists = true;
+      try {
+        await fs.access(getStateFilePath(manifest));
+      } catch {
+        exists = false;
+      }
+
+      printResult(
+        {
+          strategy: manifest.auth.strategy,
+          stateFile: getStateFilePath(manifest),
+          exists,
+          loginUrl: manifest.auth.loginUrl ?? null,
+        },
+        Boolean(globals.json),
+      );
+      return;
+    }
+
+    default:
+      throw new Error(`Unknown auth subcommand "${subcommand}".`);
+  }
+}
+
+async function handleRegenCommand(tokens: string[]): Promise<void> {
+  const parsed = parseRegenArgs(tokens);
+  if (parsed.help) {
+    process.stdout.write(`Usage:
+  {{CLI_BIN}} regen
+  {{CLI_BIN}} regen --from <manifest.json>
+`);
+    return;
+  }
+
+  if (parsed.fromPath) {
+    const sourcePath = path.resolve(process.cwd(), parsed.fromPath);
+    const nextManifest = validateManifestShape(
+      JSON.parse(await fs.readFile(sourcePath, "utf8")),
+    );
+    await writeManifestToProject(PROJECT_ROOT, nextManifest);
+    process.stdout.write(`Updated manifest.json from ${sourcePath}\n`);
+    return;
+  }
+
+  const manifest = await readManifestFromProject(PROJECT_ROOT);
+  process.stdout.write(
+    `Manifest is valid. Commands: ${manifest.commands.length}. Flows: ${manifest.flows.length}. Request recipes: ${manifest.requestRecipes.length}.\n`,
+  );
+}
+
+async function main(): Promise<void> {
+  const manifest = await readManifestFromProject(PROJECT_ROOT);
+  const parsed = parseGlobalFlags(process.argv.slice(2));
+
+  if (
+    parsed.rest.length === 0 ||
+    (parsed.rest.length === 1 &&
+      (parsed.rest[0] === "--help" || parsed.rest[0] === "-h"))
+  ) {
+    process.stdout.write(renderHelp(manifest));
+    return;
+  }
+
+  const [commandRoot, ...tail] = parsed.rest;
+  switch (commandRoot) {
+    case "help":
+      process.stdout.write(renderHelp(manifest));
+      return;
+    case "inspect":
+      printResult(buildInspectReport(manifest), true);
+      return;
+    case "regen":
+      await handleRegenCommand(tail);
+      return;
+    case "raw": {
+      if (tail.length === 0) {
+        throw new Error("raw requires agent-browser arguments.");
+      }
+      const exitCode = await executeRawAgentBrowser(manifest, parsed.globals, tail);
+      process.exitCode = exitCode;
+      return;
+    }
+    case "auth":
+      await handleAuthCommand(manifest, parsed.globals, tail);
+      return;
+    default:
+      break;
+  }
+
+  const command = findCommand(manifest, parsed.rest);
+  if (!command) {
+    throw new Error(`Unknown command "${parsed.rest.join(" ")}".`);
+  }
+
+  const commandTokens = parsed.rest.slice(command.path.length);
+  const parsedInputs = parseCommandInputs(commandTokens, command.inputs);
+  if (parsedInputs.help) {
+    process.stdout.write(renderCommandHelp(manifest, command));
+    return;
+  }
+
+  const execution = await runManifestCommand(
+    manifest,
+    command,
+    parsed.globals,
+    parsedInputs.values,
+  );
+
+  const jsonPreferred = Boolean(parsed.globals.json || command.output.type === "json");
+  if (!parsed.globals.json) {
+    process.stderr.write(`mode: ${execution.modeUsed}\n`);
+  }
+  printResult(execution.result, jsonPreferred);
+}
+
+await main().catch((error) => {
+  process.stderr.write(
+    `${error instanceof Error ? error.message : "CLI execution failed."}\n`,
+  );
+  process.exitCode = 1;
+});

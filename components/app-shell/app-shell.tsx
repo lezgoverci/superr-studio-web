@@ -1,10 +1,32 @@
 "use client";
 
-import { GitBranch, Layers, MessageSquare, Settings } from "lucide-react";
-import { usePathname } from "next/navigation";
+import {
+  Box,
+  Brain,
+  CircleUserRound,
+  Coins,
+  Compass,
+  GitBranch,
+  House,
+  Layers,
+  MessageSquare,
+  Wrench,
+} from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { api } from "@/lib/api-client";
+import { isWorkflowEditorRoute, resolveShellArea } from "@/lib/app-route-utils";
 import { useSession } from "@/lib/auth-client";
+import {
+  buildNextPath,
+  resolvePostWhopAccessRedirect,
+} from "@/lib/auth-redirect";
+import {
+  type HubMemberProfile,
+  type HubWhopAccess,
+  isWhopCommunityAccessActive,
+} from "@/lib/hub/types";
 import { cn } from "@/lib/utils";
 import { AppHeader } from "./app-header";
 import { AppNav } from "./app-nav";
@@ -12,20 +34,77 @@ import { AppShellProvider } from "./shell-context";
 import type { ShellNavItem, ShellUser } from "./types";
 
 const DEFAULT_PERMISSIONS = [
-  "route:dashboard:view",
+  "route:hub:view",
+  "route:journey:view",
+  "route:brain:view",
+  "route:earn:view",
+  "route:profile:view",
+  "route:studio:view",
+  "route:assistant:view",
   "route:workflows:view",
+  "route:sandboxes:view",
   "route:library:view",
-  "route:settings:view",
 ] as const;
 
-const NAV_ITEMS: ShellNavItem[] = [
+const WORKSPACE_NAV_ITEMS: ShellNavItem[] = [
   {
-    id: "chat",
-    label: "Chat",
-    description: "AI agent assistant",
-    href: "/app?chatStart=empty",
+    id: "home",
+    label: "Home",
+    description: "Hub home",
+    href: "/app",
+    icon: House,
+    requiredPermissions: ["route:hub:view"],
+  },
+  {
+    id: "journey",
+    label: "Journey",
+    description: "Progress and next steps",
+    href: "/app/journey",
+    icon: Compass,
+    requiredPermissions: ["route:journey:view"],
+  },
+  {
+    id: "brain",
+    label: "Brain",
+    description: "Connected NotebookLM context brain",
+    href: "/app/brain",
+    icon: Brain,
+    requiredPermissions: ["route:brain:view"],
+  },
+  {
+    id: "earn",
+    label: "Earn",
+    description: "Affiliate earnings and sharing",
+    href: "/app/earn",
+    icon: Coins,
+    requiredPermissions: ["route:earn:view"],
+  },
+  {
+    id: "profile",
+    label: "Profile",
+    description: "Member profile and goals",
+    href: "/app/me",
+    icon: CircleUserRound,
+    requiredPermissions: ["route:profile:view"],
+  },
+];
+
+const BUILDER_NAV_ITEMS: ShellNavItem[] = [
+  {
+    id: "studio",
+    label: "Studio",
+    description: "Builder access and guidance",
+    href: "/app/studio",
+    icon: Wrench,
+    requiredPermissions: ["route:studio:view"],
+  },
+  {
+    id: "assistant",
+    label: "Assistant",
+    description: "Full-page AI assistant",
+    href: "/app/assistant",
     icon: MessageSquare,
-    requiredPermissions: ["route:dashboard:view"],
+    requiredPermissions: ["route:assistant:view"],
   },
   {
     id: "workflows",
@@ -36,6 +115,14 @@ const NAV_ITEMS: ShellNavItem[] = [
     requiredPermissions: ["route:workflows:view"],
   },
   {
+    id: "sandboxes",
+    label: "Sandboxes",
+    description: "Managed sandbox environments",
+    href: "/app/sandboxes",
+    icon: Box,
+    requiredPermissions: ["route:sandboxes:view"],
+  },
+  {
     id: "library",
     label: "Library",
     description: "Artifacts and assets",
@@ -43,31 +130,164 @@ const NAV_ITEMS: ShellNavItem[] = [
     icon: Layers,
     requiredPermissions: ["route:library:view"],
   },
-  {
-    id: "settings",
-    label: "Settings",
-    description: "Team and preferences",
-    href: "/app/settings",
-    icon: Settings,
-    requiredPermissions: ["route:settings:view"],
-  },
 ];
 
-const WORKFLOW_EDITOR_PATH = /^\/app\/workflows\/[^/]+$/;
+const LOCKED_BUILDER_ITEM_IDS = new Set(["workflows", "sandboxes", "library"]);
+type AppShellProps = {
+  children: ReactNode;
+  initialMemberProfile: HubMemberProfile | null;
+  initialWhopAccess: HubWhopAccess | null;
+};
 
-function isWorkflowCanvasRoute(pathname: string): boolean {
+function resolveOnboardingRedirectPath({
+  hasUser,
+  memberProfile,
+  pathname,
+}: {
+  hasUser: boolean;
+  memberProfile: HubMemberProfile | null;
+  pathname: string;
+}): string | null {
+  if (hasUser && memberProfile && !memberProfile.onboardingCompletedAt) {
+    return pathname === "/app/welcome" ? null : "/app/welcome";
+  }
+
+  if (hasUser && memberProfile?.onboardingCompletedAt && !memberProfile.role) {
+    return pathname === "/app/welcome" || pathname === "/app/role"
+      ? null
+      : "/app/role";
+  }
+
+  if (
+    hasUser &&
+    pathname === "/app/welcome" &&
+    memberProfile?.onboardingCompletedAt &&
+    memberProfile.role
+  ) {
+    return "/app";
+  }
+
+  if (hasUser && pathname === "/app/role" && memberProfile?.role) {
+    return "/app";
+  }
+
+  return null;
+}
+
+function resolveBuilderRedirectPath({
+  isBuilderUnlocked,
+  pathname,
+}: {
+  isBuilderUnlocked: boolean;
+  pathname: string;
+}): string | null {
+  if (
+    !isBuilderUnlocked &&
+    (pathname.startsWith("/app/workflows") ||
+      pathname.startsWith("/app/sandboxes") ||
+      pathname.startsWith("/app/library"))
+  ) {
+    return "/app/studio";
+  }
+
+  return null;
+}
+
+function resolveWhopAccessRedirectPath({
+  hasUser,
+  hasWhopCommunityAccess,
+  pathname,
+  search,
+  joinNextPath,
+}: {
+  hasUser: boolean;
+  hasWhopCommunityAccess: boolean;
+  pathname: string;
+  search: string;
+  joinNextPath: string | null;
+}): string | null {
+  if (!hasUser) {
+    return null;
+  }
+
+  if (!hasWhopCommunityAccess) {
+    if (pathname === "/app/join") {
+      return null;
+    }
+
+    const joinUrl = new URL("/app/join", "http://localhost");
+    joinUrl.searchParams.set("next", buildNextPath(pathname, search));
+    return `${joinUrl.pathname}${joinUrl.search}`;
+  }
+
+  if (pathname === "/app/join") {
+    return resolvePostWhopAccessRedirect(joinNextPath);
+  }
+
+  return null;
+}
+
+function resolveRedirectPath({
+  hasUser,
+  hasWhopCommunityAccess,
+  isBuilderUnlocked,
+  joinNextPath,
+  memberProfile,
+  pathname,
+  search,
+}: {
+  hasUser: boolean;
+  hasWhopCommunityAccess: boolean;
+  isBuilderUnlocked: boolean;
+  joinNextPath: string | null;
+  memberProfile: HubMemberProfile | null;
+  pathname: string;
+  search: string;
+}): string | null {
+  const whopAccessRedirectPath = resolveWhopAccessRedirectPath({
+    hasUser,
+    hasWhopCommunityAccess,
+    pathname,
+    search,
+    joinNextPath,
+  });
+
+  if (whopAccessRedirectPath) {
+    return whopAccessRedirectPath;
+  }
+
+  if (hasUser && !hasWhopCommunityAccess) {
+    return null;
+  }
+
   return (
-    pathname === "/app/workflows/new" || WORKFLOW_EDITOR_PATH.test(pathname)
+    resolveOnboardingRedirectPath({
+      hasUser,
+      memberProfile,
+      pathname,
+    }) ??
+    resolveBuilderRedirectPath({
+      isBuilderUnlocked,
+      pathname,
+    })
   );
 }
 
-type AppShellProps = {
-  children: ReactNode;
-};
-
-export function AppShell({ children }: AppShellProps) {
+export function AppShell({
+  children,
+  initialMemberProfile,
+  initialWhopAccess,
+}: AppShellProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, isPending } = useSession();
+  const [memberProfile, setMemberProfile] = useState<HubMemberProfile | null>(
+    initialMemberProfile
+  );
+  const [whopAccess, setWhopAccess] = useState<HubWhopAccess | null>(
+    initialWhopAccess
+  );
 
   const permissions = useMemo(
     () => new Set<string>([...DEFAULT_PERMISSIONS]),
@@ -79,15 +299,87 @@ export function AppShell({ children }: AppShellProps) {
     [permissions]
   );
 
-  const navItems = useMemo(
+  const refreshMemberProfile = useCallback(async () => {
+    if (!session?.user) {
+      setMemberProfile(null);
+      return null;
+    }
+
+    try {
+      const profile = await api.hub.profile.get();
+      setMemberProfile(profile);
+      return profile;
+    } catch (error) {
+      console.error("[app-shell] Failed to refresh member profile:", error);
+      return null;
+    }
+  }, [session?.user]);
+
+  const refreshWhopAccess = useCallback(async () => {
+    if (!session?.user) {
+      setWhopAccess(null);
+      return null;
+    }
+
+    try {
+      const access = await api.hub.access.get();
+      setWhopAccess(access);
+      return access;
+    } catch (error) {
+      console.error("[app-shell] Failed to refresh Whop access:", error);
+      return null;
+    }
+  }, [session?.user]);
+
+  useEffect(() => {
+    if (session?.user && !initialMemberProfile) {
+      refreshMemberProfile().catch(() => undefined);
+    }
+  }, [initialMemberProfile, refreshMemberProfile, session?.user]);
+
+  useEffect(() => {
+    if (session?.user && !initialWhopAccess) {
+      refreshWhopAccess().catch(() => undefined);
+    }
+  }, [initialWhopAccess, refreshWhopAccess, session?.user]);
+
+  const memberLevel = memberProfile?.level ?? 1;
+  const isBuilderUnlocked = memberLevel >= 5;
+  const hasWhopCommunityAccess = isWhopCommunityAccessActive(whopAccess);
+  const builderEntryHref = isBuilderUnlocked
+    ? "/app/workflows/new"
+    : "/app/studio";
+  const currentArea = resolveShellArea(pathname);
+  const search = searchParams.toString();
+  const searchSuffix = search ? `?${search}` : "";
+  const joinNextPath = searchParams.get("next");
+
+  const workspaceNavItems = useMemo(
     () =>
-      NAV_ITEMS.filter((item) =>
+      WORKSPACE_NAV_ITEMS.filter((item) =>
         item.requiredPermissions.every((permission) =>
           hasPermission(permission)
         )
       ),
     [hasPermission]
   );
+
+  const builderNavItems = useMemo(
+    () =>
+      BUILDER_NAV_ITEMS.filter((item) => {
+        if (!isBuilderUnlocked && LOCKED_BUILDER_ITEM_IDS.has(item.id)) {
+          return false;
+        }
+
+        return item.requiredPermissions.every((permission) =>
+          hasPermission(permission)
+        );
+      }),
+    [hasPermission, isBuilderUnlocked]
+  );
+
+  const navItems =
+    currentArea === "builder" ? builderNavItems : workspaceNavItems;
 
   const user: ShellUser = session?.user
     ? {
@@ -97,9 +389,28 @@ export function AppShell({ children }: AppShellProps) {
         isAnonymous: false,
       }
     : null;
+  const redirectPath = resolveRedirectPath({
+    hasUser: Boolean(session?.user),
+    hasWhopCommunityAccess,
+    isBuilderUnlocked,
+    joinNextPath,
+    memberProfile,
+    pathname,
+    search: searchSuffix,
+  });
 
-  const isWorkflowCanvas = isWorkflowCanvasRoute(pathname);
-  const showSideNav = !isWorkflowCanvas;
+  useEffect(() => {
+    if (redirectPath) {
+      router.replace(redirectPath);
+    }
+  }, [redirectPath, router]);
+
+  const isWorkflowCanvas = isWorkflowEditorRoute(pathname);
+  const showSideNav = hasWhopCommunityAccess && !isWorkflowCanvas;
+
+  if (redirectPath) {
+    return <div className="h-dvh w-full bg-background" />;
+  }
 
   return (
     <AppShellProvider
@@ -108,7 +419,20 @@ export function AppShell({ children }: AppShellProps) {
         isAuthPending: isPending,
         permissions,
         hasPermission,
+        memberProfile,
+        whopAccess,
+        hasWhopCommunityAccess,
+        memberLevel,
+        isBuilderUnlocked,
+        currentArea,
+        builderEntryHref,
+        workspaceNavItems,
+        builderNavItems,
         navItems,
+        refreshMemberProfile,
+        refreshWhopAccess,
+        setMemberProfile,
+        setWhopAccess,
       }}
     >
       <div

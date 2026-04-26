@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { decrypt, encrypt } from "@/lib/db/integrations";
 import { accounts, integrations } from "@/lib/db/schema";
 import { generateId } from "@/lib/utils/id";
+import { getWhopAccessGuardResponse } from "@/lib/whop-access-guard";
 
 const API_KEY_PURPOSE = "ai-gateway";
 const API_KEY_NAME = "Workflow Builder Gateway Key";
@@ -146,6 +147,11 @@ export async function POST(request: Request) {
     return Response.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  const whopAccessGuard = await getWhopAccessGuardResponse(session.user.id);
+  if (whopAccessGuard) {
+    return whopAccessGuard;
+  }
+
   const account = await db.query.accounts.findFirst({
     where: and(
       eq(accounts.userId, session.user.id),
@@ -227,6 +233,11 @@ export async function DELETE(request: Request) {
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session?.user?.id) {
     return Response.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const whopAccessGuard = await getWhopAccessGuardResponse(session.user.id);
+  if (whopAccessGuard) {
+    return whopAccessGuard;
   }
 
   const { searchParams } = new URL(request.url);

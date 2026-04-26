@@ -1,0 +1,277 @@
+{
+  "version": 1,
+  "app": {
+    "name": "Bench PH",
+    "slug": "bench-ph",
+    "bin": "bench-ph",
+    "platform": "web",
+    "defaultMode": "auto",
+    "homeDir": ".bench-ph",
+    "defaultSessionName": "bench-ph",
+    "baseUrl": "https://shop.bench.com.ph/"
+  },
+  "auth": {
+    "strategy": "none",
+    "stateFile": "auth-state.json",
+    "env": []
+  },
+  "entities": [
+    {
+      "name": "product",
+      "plural": "products",
+      "description": "Observed products inferred from runtime capture."
+    }
+  ],
+  "commands": [
+    {
+      "id": "home-title",
+      "path": ["home", "title"],
+      "description": "Read the home page title.",
+      "mode": "ui",
+      "inputs": [],
+      "output": { "type": "text" },
+      "flowId": "home-title-ui"
+    },
+    {
+      "id": "collections-list",
+      "path": ["collections", "list"],
+      "description": "List all product categories/collections.",
+      "mode": "ui",
+      "inputs": [],
+      "output": { "type": "text" },
+      "flowId": "collections-list-ui"
+    },
+    {
+      "id": "categories-list",
+      "path": ["categories", "list"],
+      "description": "List all available categories.",
+      "mode": "ui",
+      "inputs": [],
+      "output": { "type": "text" },
+      "flowId": "categories-list-ui"
+    },
+    {
+      "id": "products-get",
+      "path": ["products", "get"],
+      "description": "Get product details by handle.",
+      "mode": "auto",
+      "inputs": [
+        {
+          "name": "handle",
+          "flag": "--handle",
+          "type": "string",
+          "description": "product handle",
+          "required": true
+        }
+      ],
+      "output": { "type": "json" },
+      "requestRecipeId": "products-get-api",
+      "flowId": "products-get-ui"
+    },
+    {
+      "id": "products-search",
+      "path": ["products", "search"],
+      "description": "Search for products by query.",
+      "mode": "auto",
+      "inputs": [
+        {
+          "name": "query",
+          "flag": "--query",
+          "type": "string",
+          "description": "search query",
+          "required": true
+        }
+      ],
+      "output": { "type": "json" },
+      "requestRecipeId": "products-search-api"
+    },
+    {
+      "id": "products-list",
+      "path": ["products", "list"],
+      "description": "List products in a collection.",
+      "mode": "auto",
+      "inputs": [
+        {
+          "name": "collection",
+          "flag": "--collection",
+          "type": "string",
+          "description": "collection handle",
+          "required": false
+        }
+      ],
+      "output": { "type": "json" },
+      "requestRecipeId": "products-list-api"
+    },
+    {
+      "id": "cart-view",
+      "path": ["cart", "view"],
+      "description": "View items in cart.",
+      "mode": "auto",
+      "inputs": [],
+      "output": { "type": "json" },
+      "requestRecipeId": "cart-view-api"
+    },
+    {
+      "id": "cart-add",
+      "path": ["cart", "add"],
+      "description": "Add item to cart.",
+      "mode": "auto",
+      "inputs": [
+        {
+          "name": "variantId",
+          "flag": "--variant-id",
+          "type": "string",
+          "description": "variant ID",
+          "required": true
+        },
+        {
+          "name": "quantity",
+          "flag": "--quantity",
+          "type": "number",
+          "description": "quantity",
+          "required": false,
+          "default": "1"
+        }
+      ],
+      "output": { "type": "json" },
+      "requestRecipeId": "cart-add-api"
+    }
+  ],
+  "requestRecipes": [
+    {
+      "id": "products-get-api",
+      "method": "GET",
+      "url": "/products/{{args.handle}}.js",
+      "headers": { "accept": "application/json" },
+      "query": {},
+      "responseType": "json",
+      "useCookies": false
+    },
+    {
+      "id": "products-search-api",
+      "method": "GET",
+      "url": "/search/suggest.json",
+      "headers": { "accept": "application/json" },
+      "query": { "q": "{{args.query}}", "resources[type]": "product" },
+      "responseType": "json",
+      "useCookies": false
+    },
+    {
+      "id": "products-list-api",
+      "method": "GET",
+      "url": "/collections/{{args.collection}}/products.json",
+      "headers": { "accept": "application/json" },
+      "query": {},
+      "responseType": "json",
+      "useCookies": false
+    },
+    {
+      "id": "cart-view-api",
+      "method": "GET",
+      "url": "/cart.js",
+      "headers": { "accept": "application/json" },
+      "query": {},
+      "responseType": "json",
+      "useCookies": true
+    },
+    {
+      "id": "cart-add-api",
+      "method": "POST",
+      "url": "/cart/add.js",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/x-www-form-urlencoded"
+      },
+      "query": {},
+      "body": "id={{args.variantId}}&quantity={{args.quantity | default: 1}}",
+      "responseType": "json",
+      "useCookies": true
+    }
+  ],
+  "flows": [
+    {
+      "id": "home-title-ui",
+      "description": "Open the home page and read its title.",
+      "steps": [
+        {
+          "action": "open",
+          "url": "{{app.baseUrl}}"
+        },
+        {
+          "action": "wait",
+          "ms": 1000
+        },
+        {
+          "action": "getTitle",
+          "saveAs": "pageTitle"
+        }
+      ],
+      "result": {
+        "capture": "pageTitle"
+      }
+    },
+    {
+      "id": "collections-list-ui",
+      "description": "Open the captured collections page and extract visible text.",
+      "steps": [
+        { "action": "open", "url": "{{app.baseUrl}}/collections" },
+        { "action": "wait", "ms": 1500 },
+        { "action": "getText", "target": "body", "saveAs": "pageText" }
+      ],
+      "result": { "capture": "pageText" }
+    },
+    {
+      "id": "categories-list-ui",
+      "description": "Open the home page and extract main navigation categories.",
+      "steps": [
+        { "action": "open", "url": "{{app.baseUrl}}" },
+        { "action": "wait", "ms": 1500 },
+        { "action": "getText", "target": "header nav", "saveAs": "categories" }
+      ],
+      "result": { "capture": "categories" }
+    },
+    {
+      "id": "products-get-ui",
+      "description": "Open a product detail page and capture the title and URL.",
+      "steps": [
+        {
+          "action": "open",
+          "url": "{{app.baseUrl}}/products/{{args.handle}}"
+        },
+        {
+          "action": "wait",
+          "ms": 1000
+        },
+        {
+          "action": "getTitle",
+          "saveAs": "pageTitle"
+        },
+        {
+          "action": "getUrl",
+          "saveAs": "pageUrl"
+        }
+      ],
+      "result": {
+        "template": {
+          "title": "{{captures.pageTitle}}",
+          "url": "{{captures.pageUrl}}"
+        }
+      }
+    }
+  ],
+  "selectors": [],
+  "regeneration": {
+    "capturedAt": "2026-03-10T07:29:20.004Z",
+    "source": "runtime-observation",
+    "sourceNotes": [
+      "Captured 6 page(s) with agent-browser.",
+      "Applied Shopify request heuristic for product detail endpoints."
+    ],
+    "fingerprints": {
+      "target": "https://shop.bench.com.ph/",
+      "totalPages": 6,
+      "detailPrefixes": ["products"],
+      "shopifyDetected": true
+    }
+  }
+}

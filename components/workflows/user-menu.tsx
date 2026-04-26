@@ -1,6 +1,7 @@
 "use client";
 
-import { Key, LogOut, Moon, Plug, Sun } from "lucide-react";
+import { Key, LogOut, Moon, Plug, Settings, Sun } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
   AuthDialog,
@@ -25,9 +26,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { signOut, useSession } from "@/lib/auth-client";
+import { useAppShellContext } from "../app-shell/shell-context";
 
 export const UserMenu = () => {
+  const router = useRouter();
   const { data: session, isPending } = useSession();
+  const { hasWhopCommunityAccess } = useAppShellContext();
   const { theme, setTheme } = useTheme();
   const { open: openOverlay } = useOverlay();
 
@@ -99,15 +103,23 @@ export const UserMenu = () => {
             </p>
           </div>
         </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => openOverlay(IntegrationsOverlay)}>
-          <Plug className="size-4" />
-          <span>Connections</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => openOverlay(ApiKeysOverlay)}>
-          <Key className="size-4" />
-          <span>API Keys</span>
-        </DropdownMenuItem>
+        {hasWhopCommunityAccess ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => openOverlay(IntegrationsOverlay)}>
+              <Plug className="size-4" />
+              <span>Connections</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => openOverlay(ApiKeysOverlay)}>
+              <Key className="size-4" />
+              <span>API Keys</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push("/app/settings")}>
+              <Settings className="size-4" />
+              <span>Settings</span>
+            </DropdownMenuItem>
+          </>
+        ) : null}
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <Sun className="size-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />

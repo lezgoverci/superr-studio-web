@@ -26,8 +26,11 @@ import { CodeEditor } from "@/components/ui/code-editor";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api-client";
+import {
+  clearUnusedConnectionFields,
+  getConnectionRequirements,
+} from "@/lib/connection-requirements";
 import { integrationsAtom } from "@/lib/integrations-store";
-import type { IntegrationType } from "@/lib/types/integration";
 import { generateWorkflowCode } from "@/lib/workflow-codegen";
 import {
   clearNodeStatusesAtom,
@@ -50,7 +53,6 @@ import {
   showDeleteDialogAtom,
   updateNodeDataAtom,
 } from "@/lib/workflow-store";
-import { findActionById } from "@/plugins";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { ActionConfig } from "./config/action-config";
 import { ActionGrid } from "./config/action-grid";
@@ -61,11 +63,112 @@ import { WorkflowRuns } from "./workflow-runs";
 // Regex constants
 const NON_ALPHANUMERIC_REGEX = /[^a-zA-Z0-9\s]/g;
 const WORD_SPLIT_REGEX = /\s+/;
+const CONNECTION_FIELD_KEYS = ["integrationId", "vercelIntegrationId"] as const;
 
-// System actions that need integrations (not in plugin registry)
-const SYSTEM_ACTION_INTEGRATIONS: Record<string, IntegrationType> = {
-  "Database Query": "database",
+type IntegrationRecord = {
+  id: string;
+  type: string;
 };
+
+function connectionFieldsChanged(
+  currentConfig: Record<string, unknown>,
+  nextConfig: Record<string, unknown>
+): boolean {
+  return CONNECTION_FIELD_KEYS.some(
+    (fieldKey) => nextConfig[fieldKey] !== currentConfig[fieldKey]
+  );
+}
+
+function reconcileSelectedNodeConnections(params: {
+  actionType: string;
+  currentConfig: Record<string, unknown>;
+  integrations: IntegrationRecord[];
+}): Record<string, unknown> | null {
+  const requirements = getConnectionRequirements({
+    actionType: params.actionType,
+    config: params.currentConfig,
+  });
+  const nextConfig = clearUnusedConnectionFields(
+    params.currentConfig,
+    requirements
+  );
+  let didChange = connectionFieldsChanged(params.currentConfig, nextConfig);
+
+  for (const requirement of requirements) {
+    const currentConnectionId = nextConfig[requirement.fieldKey];
+    if (typeof currentConnectionId !== "string" || currentConnectionId === "") {
+      continue;
+    }
+
+    const availableIntegrations = params.integrations.filter(
+      (integration) => integration.type === requirement.integrationType
+    );
+    const integrationExists = availableIntegrations.some(
+      (integration) => integration.id === currentConnectionId
+    );
+
+    if (integrationExists) {
+      continue;
+    }
+
+    if (availableIntegrations.length === 1) {
+      nextConfig[requirement.fieldKey] = availableIntegrations[0].id;
+    } else {
+      delete nextConfig[requirement.fieldKey];
+    }
+    didChange = true;
+  }
+
+  return didChange ? nextConfig : null;
+}
+
+function reconcileAutoSelectedConnections(params: {
+  actionType: string;
+  currentConfig: Record<string, unknown>;
+  integrations: IntegrationRecord[];
+}): Record<string, unknown> | null {
+  const requirements = getConnectionRequirements({
+    actionType: params.actionType,
+    config: params.currentConfig,
+  });
+  let nextConfig = clearUnusedConnectionFields(
+    params.currentConfig,
+    requirements
+  );
+  let didChange = connectionFieldsChanged(params.currentConfig, nextConfig);
+
+  for (const requirement of requirements) {
+    const currentConnectionId = nextConfig[requirement.fieldKey];
+    const filtered = params.integrations.filter(
+      (integration) => integration.type === requirement.integrationType
+    );
+    const hasValidConnection =
+      typeof currentConnectionId === "string" &&
+      filtered.some((integration) => integration.id === currentConnectionId);
+
+    if (!hasValidConnection && filtered.length === 1) {
+      nextConfig = {
+        ...nextConfig,
+        [requirement.fieldKey]: filtered[0].id,
+      };
+      didChange = true;
+    }
+  }
+
+  return didChange ? nextConfig : null;
+}
+
+function shouldAutoSelectConnections(key: string): boolean {
+  return key === "actionType" || key === "sandboxType";
+}
+
+function getUpdatedActionType(
+  key: string,
+  value: string,
+  config: Record<string, unknown>
+): string {
+  return (key === "actionType" ? value : (config.actionType as string)) || "";
+}
 
 // Multi-selection panel component
 const MultiSelectionPanel = ({
@@ -242,55 +345,21 @@ export const PanelInner = () => {
     const actionType = selectedNode.data.config?.actionType as
       | string
       | undefined;
-    const currentIntegrationId = selectedNode.data.config?.integrationId as
-      | string
-      | undefined;
-
-    // Skip if no action type or no integration configured
-    if (!(actionType && currentIntegrationId)) {
+    if (!actionType) {
       return;
     }
 
-    // Get the required integration type for this action
-    const action = findActionById(actionType);
-    const integrationType: IntegrationType | undefined =
-      (action?.integration as IntegrationType | undefined) ||
-      SYSTEM_ACTION_INTEGRATIONS[actionType];
-
-    if (!integrationType) {
-      return;
+    const nextConfig = reconcileSelectedNodeConnections({
+      actionType,
+      currentConfig: (selectedNode.data.config || {}) as Record<
+        string,
+        unknown
+      >,
+      integrations: globalIntegrations,
+    });
+    if (nextConfig) {
+      updateNodeData({ id: selectedNode.id, data: { config: nextConfig } });
     }
-
-    // Check if current integration still exists
-    const integrationExists = globalIntegrations.some(
-      (i) => i.id === currentIntegrationId
-    );
-
-    if (integrationExists) {
-      return;
-    }
-
-    // Current integration was deleted - find a replacement
-    const availableIntegrations = globalIntegrations.filter(
-      (i) => i.type === integrationType
-    );
-
-    if (availableIntegrations.length === 1) {
-      // Auto-select the only available integration
-      const newConfig = {
-        ...selectedNode.data.config,
-        integrationId: availableIntegrations[0].id,
-      };
-      updateNodeData({ id: selectedNode.id, data: { config: newConfig } });
-    } else if (availableIntegrations.length === 0) {
-      // No integrations available - clear the invalid reference
-      const newConfig = {
-        ...selectedNode.data.config,
-        integrationId: undefined,
-      };
-      updateNodeData({ id: selectedNode.id, data: { config: newConfig } });
-    }
-    // If multiple integrations exist, let the user choose manually
   }, [selectedNode, globalIntegrations, isOwner, updateNodeData]);
 
   // Generate workflow code
@@ -393,29 +462,13 @@ export const PanelInner = () => {
       updateNodeData({ id: selectedNode.id, data: { description } });
     }
   };
-  const autoSelectIntegration = useCallback(
+  const autoSelectConnections = useCallback(
     async (
       nodeId: string,
       actionType: string,
       currentConfig: Record<string, unknown>,
       abortSignal: AbortSignal
     ) => {
-      // Get integration type - check plugin registry first, then system actions
-      const action = findActionById(actionType);
-      const integrationType: IntegrationType | undefined =
-        (action?.integration as IntegrationType | undefined) ||
-        SYSTEM_ACTION_INTEGRATIONS[actionType];
-
-      if (!integrationType) {
-        // No integration needed, remove from pending
-        setPendingIntegrationNodes((prev: Set<string>) => {
-          const next = new Set(prev);
-          next.delete(nodeId);
-          return next;
-        });
-        return;
-      }
-
       try {
         const all = await api.integration.getAll();
 
@@ -424,16 +477,14 @@ export const PanelInner = () => {
           return;
         }
 
-        const filtered = all.filter((i) => i.type === integrationType);
+        const nextConfig = reconcileAutoSelectedConnections({
+          actionType,
+          currentConfig,
+          integrations: all,
+        });
 
-        // Auto-select if only one integration exists
-        if (filtered.length === 1 && !abortSignal.aborted) {
-          const newConfig = {
-            ...currentConfig,
-            actionType,
-            integrationId: filtered[0].id,
-          };
-          updateNodeData({ id: nodeId, data: { config: newConfig } });
+        if (nextConfig && !abortSignal.aborted) {
+          updateNodeData({ id: nodeId, data: { config: nextConfig } });
         }
       } catch (error) {
         console.error("Failed to auto-select integration:", error);
@@ -451,42 +502,51 @@ export const PanelInner = () => {
     [updateNodeData, setPendingIntegrationNodes]
   );
 
+  const queueAutoSelectConnections = useCallback(
+    (
+      nodeId: string,
+      key: string,
+      value: string,
+      newConfig: Record<string, unknown>
+    ) => {
+      if (!shouldAutoSelectConnections(key)) {
+        return;
+      }
+
+      const existingController = autoSelectAbortControllersRef.current[nodeId];
+      if (existingController) {
+        existingController.abort();
+      }
+
+      const newController = new AbortController();
+      autoSelectAbortControllersRef.current[nodeId] = newController;
+
+      setPendingIntegrationNodes((prev: Set<string>) =>
+        new Set(prev).add(nodeId)
+      );
+      autoSelectConnections(
+        nodeId,
+        getUpdatedActionType(key, value, newConfig),
+        newConfig,
+        newController.signal
+      );
+    },
+    [autoSelectConnections, setPendingIntegrationNodes]
+  );
+
   const handleUpdateConfig = (key: string, value: string) => {
-    if (selectedNode) {
-      let newConfig = { ...selectedNode.data.config, [key]: value };
-
-      // When action type changes, clear the integrationId since it may not be valid for the new action
-      if (key === "actionType" && selectedNode.data.config?.integrationId) {
-        newConfig = { ...newConfig, integrationId: undefined };
-      }
-
-      updateNodeData({ id: selectedNode.id, data: { config: newConfig } });
-
-      // When action type changes, auto-select integration if only one exists
-      if (key === "actionType") {
-        // Cancel any pending auto-select operation for this node
-        const existingController =
-          autoSelectAbortControllersRef.current[selectedNode.id];
-        if (existingController) {
-          existingController.abort();
-        }
-
-        // Create new AbortController for this operation
-        const newController = new AbortController();
-        autoSelectAbortControllersRef.current[selectedNode.id] = newController;
-
-        // Add to pending set before starting async check
-        setPendingIntegrationNodes((prev: Set<string>) =>
-          new Set(prev).add(selectedNode.id)
-        );
-        autoSelectIntegration(
-          selectedNode.id,
-          value,
-          newConfig,
-          newController.signal
-        );
-      }
+    if (!selectedNode) {
+      return;
     }
+
+    const currentConfig = (selectedNode.data.config || {}) as Record<
+      string,
+      unknown
+    >;
+    const newConfig = { ...currentConfig, [key]: value };
+
+    updateNodeData({ id: selectedNode.id, data: { config: newConfig } });
+    queueAutoSelectConnections(selectedNode.id, key, value, newConfig);
   };
 
   const handleUpdateWorkspaceName = async (newName: string) => {

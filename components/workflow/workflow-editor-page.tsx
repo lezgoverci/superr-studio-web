@@ -17,11 +17,14 @@ import {
 } from "@/lib/ai-agent/page-context/store";
 import { api } from "@/lib/api-client";
 import {
+  clearUnusedConnectionFields,
+  getConnectionRequirements,
+} from "@/lib/connection-requirements";
+import {
   integrationsAtom,
   integrationsLoadedAtom,
   integrationsVersionAtom,
 } from "@/lib/integrations-store";
-import type { IntegrationType } from "@/lib/types/integration";
 import {
   currentWorkflowIdAtom,
   currentWorkflowNameAtom,
@@ -47,32 +50,15 @@ import {
   type WorkflowVisibility,
   workflowNotFoundAtom,
 } from "@/lib/workflow-store";
-import { findActionById } from "@/plugins";
 
 type WorkflowPageProps = {
   params: Promise<{ workflowId: string }>;
 };
 
-// System actions that need integrations (not in plugin registry)
-const SYSTEM_ACTION_INTEGRATIONS: Record<string, IntegrationType> = {
-  "Database Query": "database",
-};
-
-// Helper to get required integration type for an action
-function getRequiredIntegrationType(
-  actionType: string
-): IntegrationType | undefined {
-  const action = findActionById(actionType);
-  return (
-    (action?.integration as IntegrationType | undefined) ||
-    SYSTEM_ACTION_INTEGRATIONS[actionType]
-  );
-}
-
 // Helper to check and fix a single node's integration
 type IntegrationFixResult = {
   nodeId: string;
-  newIntegrationId: string | undefined;
+  nextConfig: Record<string, unknown>;
 };
 
 function checkNodeIntegration(
@@ -85,29 +71,45 @@ function checkNodeIntegration(
     return null;
   }
 
-  const integrationType = getRequiredIntegrationType(actionType);
-  if (!integrationType) {
-    return null;
+  const currentConfig = (node.data.config || {}) as Record<string, unknown>;
+  const requirements = getConnectionRequirements({
+    actionType,
+    config: currentConfig,
+  });
+  const nextConfig = clearUnusedConnectionFields(currentConfig, requirements);
+  let didChange = ["integrationId", "vercelIntegrationId"].some(
+    (fieldKey) => nextConfig[fieldKey] !== currentConfig[fieldKey]
+  );
+
+  for (const requirement of requirements) {
+    const currentIntegrationId = nextConfig[requirement.fieldKey] as
+      | string
+      | undefined;
+    const hasValidIntegration =
+      currentIntegrationId && validIntegrationIds.has(currentIntegrationId);
+
+    if (hasValidIntegration) {
+      continue;
+    }
+
+    const available = allIntegrations.filter(
+      (integration) => integration.type === requirement.integrationType
+    );
+
+    if (available.length === 1) {
+      nextConfig[requirement.fieldKey] = available[0].id;
+      didChange = true;
+      continue;
+    }
+
+    if (available.length === 0 && currentIntegrationId) {
+      delete nextConfig[requirement.fieldKey];
+      didChange = true;
+    }
   }
 
-  const currentIntegrationId = node.data.config?.integrationId as
-    | string
-    | undefined;
-  const hasValidIntegration =
-    currentIntegrationId && validIntegrationIds.has(currentIntegrationId);
-
-  if (hasValidIntegration) {
-    return null;
-  }
-
-  // Find available integrations of this type
-  const available = allIntegrations.filter((i) => i.type === integrationType);
-
-  if (available.length === 1) {
-    return { nodeId: node.id, newIntegrationId: available[0].id };
-  }
-  if (available.length === 0 && currentIntegrationId) {
-    return { nodeId: node.id, newIntegrationId: undefined };
+  if (didChange) {
+    return { nodeId: node.id, nextConfig };
   }
   return null;
 }
@@ -443,18 +445,12 @@ function WorkflowEditor({ params }: WorkflowPageProps) {
           .filter((fix): fix is IntegrationFixResult => fix !== null);
 
         for (const fix of fixes) {
-          const node = nodes.find((n) => n.id === fix.nodeId);
-          if (node) {
-            updateNodeData({
-              id: fix.nodeId,
-              data: {
-                config: {
-                  ...node.data.config,
-                  integrationId: fix.newIntegrationId,
-                },
-              },
-            });
-          }
+          updateNodeData({
+            id: fix.nodeId,
+            data: {
+              config: fix.nextConfig,
+            },
+          });
         }
 
         lastAutoFixRef.current = {

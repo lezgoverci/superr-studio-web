@@ -5,7 +5,7 @@ export type AiAgentPageType =
   | "sessions"
   | "library"
   | "settings"
-  | "agent"
+  | "assistant"
   | "unknown";
 
 export type AiAgentPageContextSeed = {

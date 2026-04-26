@@ -17,7 +17,7 @@ import { flattenConfigFields, getAllActions } from "@/plugins";
 
 const OUTPUT_DIR = join(
   process.cwd(),
-  ".agent",
+  ".agents",
   "skills",
   "superr-workflow-generator",
   "resources"

@@ -37,6 +37,9 @@ type MissingRequiredField = {
 type MissingIntegration = {
   integrationType: IntegrationType;
   integrationLabel: string;
+  hasAvailableConnection: boolean;
+  fieldKey: string;
+  nodeId: string;
   nodeNames: string[];
 };
 
@@ -162,11 +165,15 @@ export function WorkflowIssuesOverlay({
                 </p>
                 <Button
                   className="shrink-0"
-                  onClick={() => handleAddIntegration(missing.integrationType)}
+                  onClick={() =>
+                    missing.hasAvailableConnection
+                      ? handleGoToStep(missing.nodeId, missing.fieldKey)
+                      : handleAddIntegration(missing.integrationType)
+                  }
                   size="sm"
                   variant="outline"
                 >
-                  Add
+                  {missing.hasAvailableConnection ? "Fix" : "Add"}
                 </Button>
               </div>
             ))}

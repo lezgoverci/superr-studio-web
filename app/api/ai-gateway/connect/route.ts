@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAiGatewayManagedKeysEnabled } from "@/lib/ai-gateway/config";
-import { auth } from "@/lib/auth";
+import { createAuth, resolveAuthBaseURL } from "@/lib/auth";
+import { getWhopAccessGuardResponse } from "@/lib/whop-access-guard";
 
 const DEFAULT_CALLBACK_PATH = "/app/settings";
 
@@ -22,9 +23,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Feature not enabled" }, { status: 403 });
   }
 
+  const auth = createAuth(resolveAuthBaseURL(request));
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const whopAccessGuard = await getWhopAccessGuardResponse(session.user.id);
+  if (whopAccessGuard) {
+    return whopAccessGuard;
   }
 
   const body = await request.json().catch(() => ({}));

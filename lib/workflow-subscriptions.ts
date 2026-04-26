@@ -50,6 +50,7 @@ type WorkflowSubscriptions = {
 // in Next.js dev mode. Without this, the PATCH route and stream route may
 // import separate copies of this module and operate on different Maps.
 const GLOBAL_KEY = "__workflow_subscriptions__" as const;
+const noopUnsubscribe = () => undefined;
 
 function getGlobalState(): WorkflowSubscriptions {
   const g = globalThis as unknown as Record<string, WorkflowSubscriptions>;
@@ -80,7 +81,9 @@ export function subscribe(
   }
 
   const subs = state.subscriptions.get(normalizedId);
-  if (!subs) return () => {};
+  if (!subs) {
+    return noopUnsubscribe;
+  }
 
   subs.add(subscriber);
 
@@ -113,7 +116,9 @@ export function broadcast(
     `[Workflow Subscriptions] Broadcasting ${operation.op} for ${normalizedId}, subscribers: ${subs?.size ?? 0}`
   );
 
-  if (!subs) return;
+  if (!subs) {
+    return;
+  }
 
   for (const subscriber of subs) {
     try {

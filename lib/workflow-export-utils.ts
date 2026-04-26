@@ -2,10 +2,12 @@ import { readdir, readFile } from "node:fs/promises";
 import { builtinModules } from "node:module";
 import { join } from "node:path";
 import { AUTO_GENERATED_TEMPLATES } from "@/lib/codegen-registry";
+import { actionUsesVercelSandbox } from "@/lib/connection-requirements";
 import type { IntegrationType } from "@/lib/types/integration";
 import { generateWorkflowModule } from "@/lib/workflow-codegen";
 import type { WorkflowEdge, WorkflowNode } from "@/lib/workflow-store";
 import {
+  actionRequiresIntegration,
   findActionById,
   getDependenciesForActions,
   getIntegration,
@@ -41,7 +43,10 @@ const SUPPORTED_SYSTEM_ACTIONS = new Set([
   RUN_WORKFLOW_ACTION,
   "Condition",
 ]);
-const EXPLICITLY_UNSUPPORTED_PLUGIN_ACTIONS = new Set(["ai-agent/run-agent"]);
+const EXPLICITLY_UNSUPPORTED_PLUGIN_ACTIONS = new Set([
+  "ai-agent/run-agent",
+  "code/execute",
+]);
 
 const BINARY_EXTENSIONS = new Set([
   ".ico",
@@ -482,6 +487,28 @@ function collectUsedActionTypes(nodes: WorkflowNode[]): Set<string> {
   );
 }
 
+function collectUsedConnectionTypes(
+  nodes: WorkflowNode[]
+): Set<IntegrationType> {
+  const usedConnectionTypes = new Set<IntegrationType>();
+
+  for (const node of nodes) {
+    if (node.data.type !== "action") {
+      continue;
+    }
+
+    const config = (node.data.config ?? {}) as Record<string, unknown>;
+    const actionType =
+      typeof config.actionType === "string" ? config.actionType : undefined;
+
+    if (actionUsesVercelSandbox(actionType, config)) {
+      usedConnectionTypes.add("vercel");
+    }
+  }
+
+  return usedConnectionTypes;
+}
+
 function finalizeDiagnostics(
   diagnostics: ExportDiagnostics,
   unknownActionTypes: Set<string>
@@ -548,6 +575,56 @@ function writeUnsupportedPluginStep(params: {
     });
 }
 
+function processActionTypeForExport(params: {
+  actionType: string;
+  stepFiles: Record<string, string>;
+  diagnostics: ExportDiagnostics;
+  usedIntegrationTypes: Set<IntegrationType>;
+  unknownActionTypes: Set<string>;
+}) {
+  const {
+    actionType,
+    stepFiles,
+    diagnostics,
+    usedIntegrationTypes,
+    unknownActionTypes,
+  } = params;
+
+  if (actionType === RUN_WORKFLOW_ACTION) {
+    diagnostics.unsupportedActions.push(RUN_WORKFLOW_ACTION);
+  }
+
+  const action = findActionById(actionType);
+  if (!action) {
+    if (!SUPPORTED_SYSTEM_ACTIONS.has(actionType)) {
+      unknownActionTypes.add(actionType);
+    }
+    return;
+  }
+
+  if (EXPLICITLY_UNSUPPORTED_PLUGIN_ACTIONS.has(action.id)) {
+    writeUnsupportedPluginStep({ stepFiles, diagnostics, action });
+    return;
+  }
+
+  if (actionRequiresIntegration(action.id)) {
+    usedIntegrationTypes.add(action.integration);
+  }
+
+  const template = resolvePluginStepTemplate(action);
+  if (!template) {
+    writeUnsupportedPluginStep({
+      stepFiles,
+      diagnostics,
+      action,
+      missingTemplate: true,
+    });
+    return;
+  }
+
+  stepFiles[buildPluginStepFilePath(action.stepImportPath)] = template;
+}
+
 export function generateStepFilesAndDiagnostics(
   templateFiles: Record<string, string>,
   usedActionTypes: Set<string>
@@ -569,37 +646,13 @@ export function generateStepFilesAndDiagnostics(
   }
 
   for (const actionType of usedActionTypes) {
-    if (actionType === RUN_WORKFLOW_ACTION) {
-      diagnostics.unsupportedActions.push(RUN_WORKFLOW_ACTION);
-    }
-
-    const action = findActionById(actionType);
-    if (!action) {
-      if (!SUPPORTED_SYSTEM_ACTIONS.has(actionType)) {
-        unknownActionTypes.add(actionType);
-      }
-      continue;
-    }
-
-    if (EXPLICITLY_UNSUPPORTED_PLUGIN_ACTIONS.has(action.id)) {
-      writeUnsupportedPluginStep({ stepFiles, diagnostics, action });
-      continue;
-    }
-
-    usedIntegrationTypes.add(action.integration);
-
-    const template = resolvePluginStepTemplate(action);
-    if (!template) {
-      writeUnsupportedPluginStep({
-        stepFiles,
-        diagnostics,
-        action,
-        missingTemplate: true,
-      });
-      continue;
-    }
-
-    stepFiles[buildPluginStepFilePath(action.stepImportPath)] = template;
+    processActionTypeForExport({
+      actionType,
+      stepFiles,
+      diagnostics,
+      usedIntegrationTypes,
+      unknownActionTypes,
+    });
   }
 
   finalizeDiagnostics(diagnostics, unknownActionTypes);
@@ -677,20 +730,31 @@ export async function buildExportPayload(workflow: WorkflowForExport): Promise<{
   usedIntegrationTypes: Set<IntegrationType>;
 }> {
   const boilerplateFiles = await readDirectoryRecursive(BOILERPLATE_PATH);
-  // Remove the boilerplate lockfile – we dynamically add dependencies to
-  // package.json so the shipped lockfile would be stale and cause
-  // ERR_PNPM_OUTDATED_LOCKFILE on Vercel's frozen-lockfile install.
-  delete boilerplateFiles["pnpm-lock.yaml"];
-  // Remove favicon.ico – binary files can't be deployed correctly
-  // through the Vercel file-based deployment API as plain strings.
-  delete boilerplateFiles["app/favicon.ico"];
+  const {
+    // Remove the boilerplate lockfile – we dynamically add dependencies to
+    // package.json so the shipped lockfile would be stale and cause
+    // ERR_PNPM_OUTDATED_LOCKFILE on Vercel's frozen-lockfile install.
+    "pnpm-lock.yaml": _removedBoilerplateLockfile,
+    // Remove favicon.ico – binary files can't be deployed correctly
+    // through the Vercel file-based deployment API as plain strings.
+    "app/favicon.ico": _removedBoilerplateFavicon,
+    ...filteredBoilerplateFiles
+  } = boilerplateFiles;
   const templateFiles = await readDirectoryRecursive(CODEGEN_TEMPLATES_PATH);
   const usedActionTypes = collectUsedActionTypes(workflow.nodes);
+  const usedConnectionTypes = collectUsedConnectionTypes(workflow.nodes);
   const { stepFiles, usedIntegrationTypes, diagnostics } =
     generateStepFilesAndDiagnostics(templateFiles, usedActionTypes);
+  for (const integrationType of usedConnectionTypes) {
+    usedIntegrationTypes.add(integrationType);
+  }
 
   const workflowFiles = generateWorkflowFiles(workflow);
-  const allFiles = { ...boilerplateFiles, ...stepFiles, ...workflowFiles };
+  const allFiles = {
+    ...filteredBoilerplateFiles,
+    ...stepFiles,
+    ...workflowFiles,
+  };
 
   const rootPackageJson = JSON.parse(
     await readFile(join(process.cwd(), "package.json"), "utf-8")

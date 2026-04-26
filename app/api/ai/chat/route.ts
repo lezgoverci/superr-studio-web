@@ -315,9 +315,19 @@ export async function POST(request: Request) {
     });
 
     const modelId = `${model.providerID}/${model.modelID}`;
+    const modelSettings: { sessionId?: string; directory?: string } = {};
+    const normalizedSessionId = body.sessionId?.trim();
+    if (normalizedSessionId) {
+      modelSettings.sessionId = normalizedSessionId;
+    }
+    const normalizedDirectory = connection.directory?.trim();
+    if (normalizedDirectory) {
+      modelSettings.directory = normalizedDirectory;
+    }
+
     const languageModel = provider(
       modelId,
-      body.sessionId?.trim() ? { sessionId: body.sessionId.trim() } : undefined
+      Object.keys(modelSettings).length > 0 ? modelSettings : undefined
     );
 
     const messagesWithoutId = messages.map((message) => {

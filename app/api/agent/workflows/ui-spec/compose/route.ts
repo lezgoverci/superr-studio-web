@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { AGENT_SCOPES, authenticateAgentRequest } from "@/lib/agent-auth";
+import { getWhopAccessGuardResponse } from "@/lib/whop-access-guard";
 import { composeWorkflowUiSpec } from "@/lib/workflow-ui-spec/compose";
 
 type ComposeUiSpecBody = {
@@ -43,6 +44,11 @@ export async function POST(request: Request) {
         { error: agentAuth.error },
         { status: agentAuth.status }
       );
+    }
+
+    const whopAccessGuard = await getWhopAccessGuardResponse(agentAuth.userId);
+    if (whopAccessGuard) {
+      return whopAccessGuard;
     }
 
     const parsedBody = parseComposeBody(await request.json().catch(() => null));
